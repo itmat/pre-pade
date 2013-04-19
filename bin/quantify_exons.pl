@@ -109,6 +109,8 @@ while($line = <INFILE>) {
 }
 close(INFILE);
 
+# If we can't determine which alignments are unique just by examining
+# them, make a pass through and flag non-unique alignments.
 if($noHItags eq 'true' && $secondary_as_non_unique eq 'false') {
     open(INFILE, $samfile);
     while ($line = <INFILE>) {
@@ -134,6 +136,8 @@ open(INFILE, $samfile);
 while ($line1 = <INFILE>) {
     $seqnum1 = "";
     $seqnum2 = "";
+
+    # Skip lines that don't have enough fields?
     @a = split(/\t/,$line1);
     if(@a < 10) {
 	next;
@@ -143,12 +147,18 @@ while ($line1 = <INFILE>) {
     if ($line1 eq '') {
 	last;
     }
+
+    # Get rid of the forward/reverse suffixes on read ids
     @a = split(/\t/,$line1);
     $a[0] =~ s!/1$!!;
     $a[0] =~ s!/2$!!;
     $a[0] =~ s/[^\d]//g;
+
     $seqnum1 = $a[0];
     $chr = $a[2];
+
+    # I guess setting forward_only to 'true' and $reverse_only to
+    # 'false' will result in us handling each read separately.
     if($rpf eq 'true') {
 	$forward_only = 'true';
 	$reverse_only = 'false';
