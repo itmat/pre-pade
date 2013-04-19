@@ -5,11 +5,12 @@ from __future__ import print_function
 import sys
 import pysam
 import argparse
+import re
 
 from Bio.SeqFeature import FeatureLocation, SeqFeature
 from Bio.Seq import Seq
 from Bio.Alphabet import NucleotideAlphabet
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from prepade.geneio import parse_rum_index_genes
 
 def read_chr_to_genes(fh):
@@ -35,6 +36,59 @@ def read_sam_file(gene_filename, sam_filename, output_fh):
                 if count > 0:
                     print(chr_, start, end, count, sep="\t", file=output_fh)
 
+CigarElem = namedtuple('CigarElem', ['count', 'op'])
+
+def parse_cigar(cigar):
+    pat = re.compile("\d+[A-Z]")
+
+    for op in pat.findall(cigar):
+        yield CigarElem(int(op[:-1]), op[-1])
+
+
+def remove_ds(cigar):
+    """
+
+    >>> remove_ds('21M1D54M')
+    '76M'
+
+    >>> remove_ds('8S4M1D63M')
+    '8S68M'
+
+    >>> remove_ds('15M1D15M2D29M2D16M')
+    '80M'
+
+    >>> remove_ds('21M1D41M177N13M')
+    '63M177N13M'
+
+    >>> remove_ds('41M354N20M1D14M')
+    '41M354N35M'
+
+    >>> remove_ds('4S26M1D45M')
+    '4S72M'
+
+
+    """
+
+
+
+    res = []
+
+
+    d_to_m = lambda x: CigarElem(x.count, 'M') if x.op == 'D' else x
+
+    parsed = parse_cigar(cigar)
+    converted = map(d_to_m, parsed)
+
+    res = []
+
+    for x in converted:
+        if x.op == 'M' and len(res) > 0 and res[-1].op == 'M':
+            res[-1] = CigarElem(res[-1].count + x.count, 'M')
+        else:
+            res.append(x)
+
+    return ''.join([str(x.count) + x.op for x in res])
+    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
