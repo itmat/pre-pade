@@ -163,6 +163,8 @@ while ($line1 = <INFILE>) {
 	$forward_only = 'true';
 	$reverse_only = 'false';
     } else {
+
+        # Read the next line and see if it's my reverse read
 	$line2 = <INFILE>;
 	chomp($line2);
 	@b = split(/\t/,$line2);
@@ -170,9 +172,16 @@ while ($line1 = <INFILE>) {
 	$b[0] =~ s!/2$!!;
 	$b[0] =~ s/[^\d]//g;
 	$seqnum2 = $b[0];
+
+        # If it's not my reverse read...
 	if ($seqnum1 != $seqnum2) {
 	    $len = -1 * (1 + length($line2));
 	    seek(INFILE, $len, 1);
+            
+            # If the last read is the 'first in segment', and the next
+            # read is not the reverse read, (fwd &&
+            # !reverse). Otherwise if last read is not first in
+            # segment, (!fwd && reverse).
 	    if($a[1] & 64) {
 		$forward_only = "true";
 		$reverse_only = "false";
@@ -181,10 +190,18 @@ while ($line1 = <INFILE>) {
 		$reverse_only = "true";
 	    }
 	} else {
+
+            # If last read is first, next read is last, or last read
+            # is last, next read is first, then these are consistent
+            # mappings
 	    if(($a[1] & 64 && $b[1] & 128) || ($a[1] & 128 && $b[1] & 64)) {
 		$forward_only = "false";
 		$reverse_only = "false";
 	    } else {
+                # Otherwise (I think) this means they're forward and
+                # reverse mappings that happen to be next to each
+                # other, but aren't considered part of the same
+                # alignment.
 		$len = -1 * (1 + length($line2));
 		seek(INFILE, $len, 1);
 		if($a[1] & 64) {
@@ -197,22 +214,30 @@ while ($line1 = <INFILE>) {
 	    }
 	}
     }
+
+    # If fwd and rev mapped but CIGAR string not available for either one, skip?
     if($forward_only eq 'false' && $reverse_only eq 'false') {
 	if($a[5] eq '*' && $b[5] eq '*') {
 	    next;
 	}
     }
+
+    # If fwd and rev mapped but CIGAR string only available for
+    # reverse, treat as reverse only
     if($forward_only eq 'false' && $reverse_only eq 'false') {
 	if($a[5] eq '*' && $b[5] ne '*') {
 	    $reverse_only = 'true';
 	}
     }
+
+    # Likewise if CIGAR string only available for fwd
     if($forward_only eq 'false' && $reverse_only eq 'false') {
 	if($b[5] eq '*' && $a[5] ne '*') {
 	    $forward_only = 'true';
 	}
     }
 
+    # Figure out whether to treat this as unique
     $unique = "true";
     if($noHItags eq "false") {
 	if($line1 =~ /IH:i:(\d+)/) {
