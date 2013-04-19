@@ -44,9 +44,38 @@ def parse_cigar(cigar):
     for op in pat.findall(cigar):
         yield CigarElem(int(op[:-1]), op[-1])
 
+def cigar_to_spans(cigar, start):
+
+    spans = []
+
+    for x in parse_cigar(cigar):
+        if x.op == 'M':
+            end = start + x.count - 1
+            spans.append(FeatureLocation(start, end))
+            start = end
+
+        elif x.op in 'DN':
+            start = start + x.count + 1
+
+        elif x.op == 'I':
+            start += 1
+
+    feats = []
+
+    for span in spans:
+        if len(feats) > 0 and span.start < feats[-1].location.end:
+            feats[-1].location.end = span.end
+        else:
+            feats.append(SeqFeature(location=span))
+
+    return SeqFeature(sub_features=feats)
+
+        
 
 def remove_ds(cigar):
-    """
+    """Removes D operations from Cigar string, replacing with Ms.
+
+    Replaces all Ds with Ms and then merges adjacent Ms together.
 
     >>> remove_ds('21M1D54M')
     '76M'
@@ -66,16 +95,8 @@ def remove_ds(cigar):
     >>> remove_ds('4S26M1D45M')
     '4S72M'
 
-
     """
-
-
-
-    res = []
-
-
     d_to_m = lambda x: CigarElem(x.count, 'M') if x.op == 'D' else x
-
     parsed = parse_cigar(cigar)
     converted = map(d_to_m, parsed)
 

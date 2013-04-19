@@ -497,6 +497,8 @@ close(OUTFILE);
 
 sub cigar2spans {
     ($matchstring, $start) = @_;
+    print "cigar2spans in: $matchstring, $start\n";
+
     $spans = "";
     $current_loc = $start;
     while($matchstring =~ /^(\d+)([^\d])/) {
@@ -532,6 +534,7 @@ sub cigar2spans {
 	    }
 	}
     }
+    print "cigar2spans out: $spans\n\n";
     return $spans;
 }
 
