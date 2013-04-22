@@ -50,6 +50,19 @@ def load_exon_index(fh, index_filename=None):
     return df
 
 
+def iterate_over_exons(exons, sam_filename):
+    samfile = pysam.Samfile(sam_filename)
+    for i in range(len(exons)):
+        count = 0
+        for aln in samfile.fetch(str(exons.chromosome[i]), exons.start[i], exons.end[i]):
+            count += 1
+
+        if count > 0:
+            print(exons.chromosome[i],
+                  exons.start[i],
+                  exons.end[i], count)
+
+
 def read_sam_file(gene_filename, sam_filename, output_fh):
 
     samfile = pysam.Samfile(sam_filename)
@@ -160,6 +173,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     exon_index = load_exon_index(args.rum_gene_info, index_filename=args.exon_index)
+    iterate_over_exons(exon_index, args.samfile)
 
-    read_sam_file(args.rum_gene_info, args.samfile, args.output)
-    
+#    read_sam_file(args.rum_gene_info, args.samfile, args.output)
+
