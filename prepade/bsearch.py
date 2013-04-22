@@ -1,18 +1,18 @@
-def bsearch_boundary(items, key, f=cmp):
+def bsearch_edge(items, key, f=cmp):
     
     """Returns the first i for which f(items[i - 1]) < key and f(items[i])
     >= key. An alternate comparison function can be given as f.
 
-    >>> bsearch_boundary('abcdefg', 'c')
+    >>> bsearch_edge('abcdefg', 'c')
     2
 
-    >>> bsearch_boundary('cdefg', 'a')
+    >>> bsearch_edge('cdefg', 'a')
     0
     
-    >>> bsearch_boundary('abcde', 'g')
+    >>> bsearch_edge('abcde', 'g')
     5
 
-    >>> bsearch_boundary('abfg', 'e')
+    >>> bsearch_edge('abfg', 'e')
     2
 
     """
@@ -50,9 +50,15 @@ def bsearch_boundary(items, key, f=cmp):
         else:
             q = r
 
-def bsearch_range(items, key, f_left, f_right):
-    p = bsearch(items, key, f_left)
-    q = bsearch(items, key, f_right)
-    return items[p:q]
+def bsearch_overlap(items, key, key_left, key_right):
+
+    cmp_left  = lambda a, b: cmp(key_right(a), key_left(b))
+
+    i = bsearch_edge(items, key, cmp_left)
+
+    while i < len(items) and key_left(items[i]) <= key_right(key):
+        yield items[i]
+        i += 1
+
 
 
