@@ -75,30 +75,35 @@ def load_exon_index(fh, index_filename=None):
 
     return df
 
+def genes_to_exons(genes):
+    for gene in genes:
+        for exon in gene.sub_features:
+            yield(exon)
 
 
 def iterate_over_exons(exons, sam_filename):
     samfile = pysam.Samfile(sam_filename)
-
     details = open('details', 'w')
 
-    for i in range(len(exons)):
-        chr_ = exons.chromosome[i]
-        start = exons.start[i]
-        end   = exons.end[i]
+    seen = set()
 
-        loc = FeatureLocation(start, end)
-        feat = SeqFeature(ref=str(chr_), location=loc)
-        exon = str(chr_) + ':' + str(start) + '-' + str(end)
+    for exon in exons:
+
+        key = exon.ref + ':' + str(exon.location.start) + '-' + str(exon.location.end)
+
+        if key in seen:
+            continue
+        seen.add(key)
 
         unique_read_ids = set()
         multi_read_ids = set()
 
         all_spans = []
 
-        for aln in samfile.fetch(str(chr_), start, end):
 
-            if is_consistent(aln, feat):
+        for aln in samfile.fetch(exon.ref, exon.location.start, exon.location.end):
+
+            if is_consistent(aln, exon):
                 num_alns = aln.opt('IH')
                 if num_alns > 1:
                     multi_read_ids.add(aln.qname)
@@ -109,7 +114,7 @@ def iterate_over_exons(exons, sam_filename):
         count_m = len(multi_read_ids)
 
         if count_u > 0:
-            yield(feat, count_u, count_m)
+            yield(exon, count_u, count_m)
     details.close()
 
 def read_sam_file(gene_filename, sam_filename, output_fh):
@@ -228,9 +233,11 @@ if __name__ == '__main__':
 
     output = args.output if args.output is not None else sys.stdout
 
-    exon_index = load_exon_index(args.rum_gene_info, index_filename=args.exon_index)
+    genes = parse_rum_index_genes(args.rum_gene_info)
+    exons = genes_to_exons(genes)
+
     print('feature', 'min', 'max', sep='\t', file=output)
-    for (exon, count_u, count_m) in iterate_over_exons(exon_index, args.samfile):
+    for (exon, count_u, count_m) in iterate_over_exons(exons, args.samfile):
         exon_str = '{chr_}:{start}-{end}'.format(
             chr_=exon.ref,
             start=exon.location.start,
