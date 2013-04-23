@@ -40,7 +40,7 @@ def load_exon_index(fh, index_filename=None):
     df = pd.DataFrame({
         'chromosome' : chrs,
         'start'      : starts,
-        'end'       : ends })
+        'end'        : ends })
 
     df = df.sort(columns=['chromosome', 'end'])
 
@@ -50,17 +50,20 @@ def load_exon_index(fh, index_filename=None):
     return df
 
 
+
 def iterate_over_exons(exons, sam_filename):
     samfile = pysam.Samfile(sam_filename)
     for i in range(len(exons)):
+        chr_ = exons.chromosome[i]
+        start = exons.start[i]
+        end   = exons.end[i]
         count = 0
-        for aln in samfile.fetch(str(exons.chromosome[i]), exons.start[i], exons.end[i]):
+        for aln in samfile.fetch(str(chr_), start, end):
             count += 1
 
         if count > 0:
-            print(exons.chromosome[i],
-                  exons.start[i],
-                  exons.end[i], count)
+            loc = FeatureLocation(start, end)
+            yield(SeqFeature(ref=chr_, location=loc), count)
 
 
 def read_sam_file(gene_filename, sam_filename, output_fh):
@@ -172,8 +175,15 @@ if __name__ == '__main__':
     parser.add_argument('--output', '-o', type=argparse.FileType('w'))
     args = parser.parse_args()
 
+    output = args.output if args.output is not None else sys.stdout
+
     exon_index = load_exon_index(args.rum_gene_info, index_filename=args.exon_index)
-    iterate_over_exons(exon_index, args.samfile)
+    for (exon, count) in iterate_over_exons(exon_index, args.samfile):
+        exon_str = '{chr_}:{start}-{end}'.format(
+            chr_=exon.ref,
+            start=exon.location.start,
+            end=exon.location.end)
+        print(exon_str, count, sep='\t', file=output)
 
 #    read_sam_file(args.rum_gene_info, args.samfile, args.output)
 
