@@ -87,7 +87,9 @@ def iterate_over_exons(exons, sam_filename):
         start = exons.start[i]
         end   = exons.end[i]
 
-        read_ids = set()
+        loc = FeatureLocation(start, end)
+        feat = SeqFeature(ref=str(chr_), location=loc)
+        exon = str(chr_) + ':' + str(start) + '-' + str(end)
 
         unique_read_ids = set()
         multi_read_ids = set()
@@ -96,25 +98,17 @@ def iterate_over_exons(exons, sam_filename):
 
         for aln in samfile.fetch(str(chr_), start, end):
 
-            all_spans.append((aln.pos, aln.cigar))
-            num_alns = aln.opt('IH')
-            if num_alns > 1:
-                multi_read_ids.add(aln.qname)
-            else:
-                unique_read_ids.add(aln.qname)
+            if is_consistent(aln, feat):
+                num_alns = aln.opt('IH')
+                if num_alns > 1:
+                    multi_read_ids.add(aln.qname)
+                else:
+                    unique_read_ids.add(aln.qname)
 
         count_u = len(unique_read_ids)
         count_m = len(multi_read_ids)
 
         if count_u > 0:
-            loc = FeatureLocation(start, end)
-            
-            feat = SeqFeature(ref=str(chr_), location=loc)
-            exon = str(chr_) + ':' + str(start) + '-' + str(end)
-            print(exon, 'unique:', count_u,
-                  'unique_reads:', unique_read_ids,
-                  'spans:', all_spans)
-            print(is_consistent(aln, feat))
             yield(feat, count_u, count_m)
     details.close()
 
