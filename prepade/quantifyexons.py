@@ -19,6 +19,32 @@ from prepade.geneio import parse_rum_index_genes
 
 CIGAR_CHARS = 'MIDNSHP=X'
 
+def is_consistent(aln, exon):
+    exon_start = exon.location.start
+    exon_end   = exon.location.end
+    strand = -1 if aln.is_reverse else 1
+    spans = cigar_to_spans(aln.cigar, aln.pos, strand).sub_features
+
+    for i, span in enumerate(spans):
+
+        span_start = span.location.start 
+        span_end   = span.location.end   
+
+        if i == 0:
+            consistent_start = span_start >= exon_start
+        else:
+            consistent_start = span_start == exon_start
+
+        if i == len(spans) - 1:
+            consistent_end = span_end <= exon_end
+        else:
+            consistent_end = span_end == exon_end
+
+        if consistent_start and consistent_end:
+            return True
+
+    return False
+
 def load_exon_index(fh, index_filename=None):
 
     if index_filename is not None and os.path.exists(index_filename):
@@ -66,8 +92,11 @@ def iterate_over_exons(exons, sam_filename):
         unique_read_ids = set()
         multi_read_ids = set()
 
+        all_spans = []
+
         for aln in samfile.fetch(str(chr_), start, end):
 
+            all_spans.append((aln.pos, aln.cigar))
             num_alns = aln.opt('IH')
             if num_alns > 1:
                 multi_read_ids.add(aln.qname)
@@ -81,10 +110,11 @@ def iterate_over_exons(exons, sam_filename):
             loc = FeatureLocation(start, end)
             
             feat = SeqFeature(ref=str(chr_), location=loc)
-#            print('feature:', feat, 'unique:', count_u,
-#                  'unique_reads:', unique_read_ids,
-#                  'multi_reads:', multi_read_ids,
-#                  'multi:', count_m, file=details)
+            exon = str(chr_) + ':' + str(start) + '-' + str(end)
+            print(exon, 'unique:', count_u,
+                  'unique_reads:', unique_read_ids,
+                  'spans:', all_spans)
+            print(is_consistent(aln, feat))
             yield(feat, count_u, count_m)
     details.close()
 
@@ -95,7 +125,7 @@ def read_sam_file(gene_filename, sam_filename, output_fh):
     for aln in samfile.fetch():
 
         if aln.cigar is not None:
-            spans = cigar_to_spans(aln.cigar, aln.pos)
+            spans = cigar_to_spans(aln.cigar, aln.pos, strand)
         else:
             spans = None
 
@@ -115,9 +145,12 @@ def read_sam_file(gene_filename, sam_filename, output_fh):
 
 CigarElem = namedtuple('CigarElem', ['count', 'op'])
 
-def cigar_to_spans(cigar, start):
+def cigar_to_spans(cigar, start, strand):
 
     spans = []
+
+    if cigar is None:
+        return SeqFeature()
 
     for (op, bases) in cigar:
         opname = CIGAR_CHARS[op]
@@ -139,6 +172,8 @@ def cigar_to_spans(cigar, start):
             feats[-1].location.end = span.end
         else:
             feats.append(SeqFeature(location=span))
+    start = feats[0].location.start
+    end   = feats[-1].location.end
 
     return SeqFeature(sub_features=feats)
 
