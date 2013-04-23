@@ -31,9 +31,9 @@ def load_exon_index(fh, index_filename=None):
     starts = []
     ends = []
 
-    for (chr_, gene) in parse_rum_index_genes(fh):
+    for gene in parse_rum_index_genes(fh):
         for exon in gene.sub_features:
-            chrs.append(chr_)
+            chrs.append(gene.ref)
             starts.append(exon.location.start)
             ends.append(exon.location.end)
 
@@ -53,17 +53,31 @@ def load_exon_index(fh, index_filename=None):
 
 def iterate_over_exons(exons, sam_filename):
     samfile = pysam.Samfile(sam_filename)
+
+    details = open('details', 'w')
+
     for i in range(len(exons)):
         chr_ = exons.chromosome[i]
         start = exons.start[i]
         end   = exons.end[i]
-        count = 0
-        for aln in samfile.fetch(str(chr_), start, end):
-            count += 1
+        count_u = 0
+        count_m = 0
+        alns = []
 
-        if count > 0:
+        for aln in samfile.fetch(str(chr_), start, end):
+            alns.append(aln)
+            num_alns = aln.opt('IH')
+            if num_alns > 1:
+                count_m += 1
+            else:
+                count_u += 1
+
+        if count_u > 0:
             loc = FeatureLocation(start, end)
-            yield(SeqFeature(ref=chr_, location=loc), count)
+            
+            feat = SeqFeature(ref=chr_, location=loc)
+#            print(feat, alns, file=details)
+            yield(feat, count_u, count_m)
 
 
 def read_sam_file(gene_filename, sam_filename, output_fh):
@@ -178,12 +192,13 @@ if __name__ == '__main__':
     output = args.output if args.output is not None else sys.stdout
 
     exon_index = load_exon_index(args.rum_gene_info, index_filename=args.exon_index)
-    for (exon, count) in iterate_over_exons(exon_index, args.samfile):
+    print('feature', 'min', 'max', sep='\t', file=output)
+    for (exon, count_u, count_m) in iterate_over_exons(exon_index, args.samfile):
         exon_str = '{chr_}:{start}-{end}'.format(
             chr_=exon.ref,
             start=exon.location.start,
             end=exon.location.end)
-        print(exon_str, count, sep='\t', file=output)
+        print(exon_str, count_u, count_u + count_m, sep='\t', file=output)
 
 #    read_sam_file(args.rum_gene_info, args.samfile, args.output)
 

@@ -12,10 +12,13 @@ exon_quant_old : exons $(SAM)
 	perl $(RUM)/bin/quantify_exons.pl $^ $@
 
 exon_quant_new : $(RUM_INDEX_GENE_INFO) $(BAM)
-	python -m prepade.quantifyexons --rum-gene-info $^ -o $@
+	python -m prepade.quantifyexons --exon-index exon_index --rum-gene-info $^ -o $@
 
 exon_quant_old_filtered : exon_quant_old
 	python -m prepade.csvfilter -w 'x["min"] > 0' $< -o $@ --int min
 
+joined : exon_quant_old_filtered exon_quant_new
+	python -m prepade.csvjoin -j feature $^ -o $@
+
 clean :
-	rm -f exons exon_quant_old exon_quant_new exon_quant_old_filtered
+	rm -f exons exon_quant_old_filtered exon_quant_new exon_quant_old_filtered
