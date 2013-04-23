@@ -60,25 +60,33 @@ def iterate_over_exons(exons, sam_filename):
         chr_ = exons.chromosome[i]
         start = exons.start[i]
         end   = exons.end[i]
-        count_u = 0
-        count_m = 0
-        alns = []
+
+        read_ids = set()
+
+        unique_read_ids = set()
+        multi_read_ids = set()
 
         for aln in samfile.fetch(str(chr_), start, end):
-            alns.append(aln)
+
             num_alns = aln.opt('IH')
             if num_alns > 1:
-                count_m += 1
+                multi_read_ids.add(aln.qname)
             else:
-                count_u += 1
+                unique_read_ids.add(aln.qname)
+
+        count_u = len(unique_read_ids)
+        count_m = len(multi_read_ids)
 
         if count_u > 0:
             loc = FeatureLocation(start, end)
             
-            feat = SeqFeature(ref=chr_, location=loc)
-#            print(feat, alns, file=details)
+            feat = SeqFeature(ref=str(chr_), location=loc)
+#            print('feature:', feat, 'unique:', count_u,
+#                  'unique_reads:', unique_read_ids,
+#                  'multi_reads:', multi_read_ids,
+#                  'multi:', count_m, file=details)
             yield(feat, count_u, count_m)
-
+    details.close()
 
 def read_sam_file(gene_filename, sam_filename, output_fh):
 
