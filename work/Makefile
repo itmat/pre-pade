@@ -31,7 +31,7 @@ joined : exon_quant_old_filtered exon_quant_new
 	python -m prepade.csvjoin -j feature $^ -o $@
 
 comparison : exon_quant_old_filtered exon_quant_new
-	python -m comparequants $^ -o $@
+	python -m comparequants $^ -o $@ --diffs diffs
 
 clean :
 	rm -f exons exon_quant_old_filtered exon_quant_new exon_quant_old_filtered
