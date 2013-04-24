@@ -88,7 +88,10 @@ def iterate_over_exons(exons, sam_filename):
 
     seen = set()
 
-    for exon in exons:
+    for i, exon in enumerate(exons):
+
+        if i % 1000 == 0:
+            logging.info("Done {i} exons".format(i=i))
 
         key = exon.ref + ':' + str(exon.location.start) + '-' + str(exon.location.end)
 
@@ -310,9 +313,19 @@ if __name__ == '__main__':
     parser.add_argument('--rum-gene-info', type=file)
     parser.add_argument('--exon-index')
     parser.add_argument('samfile')
-
+    parser.add_argument('--log')
     parser.add_argument('--output', '-o', type=argparse.FileType('w'))
     args = parser.parse_args()
+
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        filename=args.log,
+                        filemode='w')
+
+    console = logging.StreamHandler()
+    formatter = logging.Formatter('%(levelname)-8s %(message)s')
+    console.setFormatter(formatter)
 
     output = args.output if args.output is not None else sys.stdout
 
