@@ -20,8 +20,11 @@ from prepade.geneio import parse_rum_index_genes
 
 CIGAR_CHARS = 'MIDNSHP=X'
 
-
+want_exon = ('1', 10445623, 10445924 )
+(want_chr, want_start, want_end) = want_exon
 want = False
+
+
 
 def is_consistent(aln, exon):
     exon_start = exon.location.start
@@ -94,7 +97,7 @@ def iterate_over_exons(exons, sam_filename):
     for i, exon in enumerate(exons):
         global want
 
-        want = exon.location.ref == '1' and exon.location.start == 17196164 and exon.location.end == 17197506
+        want = exon.location.ref == want_chr and exon.location.start == want_start - 1 and exon.location.end ==  want_end
 
         if i % 1000 == 0:
             logging.info("Done {i} exons".format(i=i))
@@ -201,7 +204,7 @@ def cigar_to_spans(cigar, start, strand):
     for (op, bases) in cigar:
         opname = CIGAR_CHARS[op]
         if opname == 'M':
-            end = start + bases - 1
+            end = start + bases
             spans.append(FeatureLocation(start, end))
             start = end
 
@@ -214,7 +217,7 @@ def cigar_to_spans(cigar, start, strand):
     feats = []
 
     for span in spans:
-        if len(feats) > 0 and feats[-1].location.end + 1 >= span.start:
+        if len(feats) > 0 and feats[-1].location.end >= span.start:
             start = feats[-1].location.start
             end   = span.end
             loc   = FeatureLocation(start, end)
@@ -256,7 +259,7 @@ def spans_overlap(exon, spans):
     for span in spans:
         lspan = span.location.start
         rspan = span.location.end
-        yield not (rspan < lexon or lspan > rexon) 
+        yield not (rspan <= lexon or lspan >= rexon) 
 
 
 def spans_are_consistent(exon, spans):
@@ -359,7 +362,7 @@ if __name__ == '__main__':
     for (exon, count_u, count_m) in iterate_over_exons(exons, args.samfile):
         exon_str = '{chr_}:{start}-{end}'.format(
             chr_=exon.ref,
-            start=exon.location.start,
+            start=exon.location.start+1,
             end=exon.location.end)
         print(exon_str, count_u, count_u + count_m, sep='\t', file=output)
 
