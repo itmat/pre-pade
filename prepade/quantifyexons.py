@@ -20,7 +20,7 @@ from prepade.geneio import parse_rum_index_genes
 
 CIGAR_CHARS = 'MIDNSHP=X'
 
-want_exon = ('1', 10445623, 10445924 )
+want_exon = ('1', 15508896, 15512095)
 (want_chr, want_start, want_end) = want_exon
 want = False
 
@@ -97,7 +97,7 @@ def iterate_over_exons(exons, sam_filename):
     for i, exon in enumerate(exons):
         global want
 
-        want = exon.location.ref == want_chr and exon.location.start == want_start - 1 and exon.location.end ==  want_end
+        want = exon.location.ref == want_chr and exon.location.start == want_start - 1
 
         if i % 1000 == 0:
             logging.info("Done {i} exons".format(i=i))
@@ -209,7 +209,7 @@ def cigar_to_spans(cigar, start, strand):
             start = end
 
         elif opname in 'DN':
-            start = start + bases + 1
+            start = start + bases
 
         elif opname == 'I':
             start += 1
@@ -217,7 +217,7 @@ def cigar_to_spans(cigar, start, strand):
     feats = []
 
     for span in spans:
-        if len(feats) > 0 and feats[-1].location.end >= span.start:
+        if len(feats) > 0 and feats[-1].location.end + 1>= span.start:
             start = feats[-1].location.start
             end   = span.end
             loc   = FeatureLocation(start, end)
@@ -227,6 +227,8 @@ def cigar_to_spans(cigar, start, strand):
     start = feats[0].location.start
     end   = feats[-1].location.end
 
+    if want:
+        print('spans are', *feats)
     return SeqFeature(sub_features=feats)
 
     
