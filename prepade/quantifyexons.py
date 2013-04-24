@@ -11,6 +11,7 @@ import argparse
 import re
 import pandas as pd
 
+from itertools import groupby
 from Bio.SeqFeature import FeatureLocation, SeqFeature
 from Bio.Seq import Seq
 from Bio.Alphabet import NucleotideAlphabet
@@ -100,14 +101,20 @@ def iterate_over_exons(exons, sam_filename):
 
         all_spans = []
 
+        alns = list(samfile.fetch(exon.ref, exon.location.start, exon.location.end))
 
-        for aln in samfile.fetch(exon.ref, exon.location.start, exon.location.end):
-            if match(exon, [aln]):
-                num_alns = aln.opt('IH')
+        key_fn = lambda x: (x.qname, x.opt('HI'))
+
+        alns = sorted(alns, key=key_fn)
+
+        for (qname, hi), pair in groupby(alns, key=key_fn):
+            pair = list(pair)
+            if match(exon, pair):
+                num_alns = pair[0].opt('IH')
                 if num_alns > 1:
-                    multi_read_ids.add(aln.qname)
+                    multi_read_ids.add(qname)
                 else:
-                    unique_read_ids.add(aln.qname)
+                    unique_read_ids.add(qname)
 
         count_u = len(unique_read_ids)
         count_m = len(multi_read_ids)
