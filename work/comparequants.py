@@ -21,6 +21,7 @@ if __name__ == '__main__':
     joined = pd.merge(df_a, df_b, how='outer', suffixes=['_old', '_new'], left_index=True, right_index=True)
     output = args.output if args.output is not None else sys.stdout
     joined['min_old'][joined['min_old'].isnull()] = 0
+    joined['min_new'][joined['min_new'].isnull()] = 0
     
     joined['diff'] = joined['min_new'] - joined['min_old']
     joined['diff_squared'] = joined['diff'] ** 2

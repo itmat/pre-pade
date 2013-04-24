@@ -20,6 +20,9 @@ from prepade.geneio import parse_rum_index_genes
 
 CIGAR_CHARS = 'MIDNSHP=X'
 
+
+want = False
+
 def is_consistent(aln, exon):
     exon_start = exon.location.start
     exon_end   = exon.location.end
@@ -89,6 +92,9 @@ def iterate_over_exons(exons, sam_filename):
     seen = set()
 
     for i, exon in enumerate(exons):
+        global want
+
+        want = exon.location.ref == '1' and exon.location.start == 17196164 and exon.location.end == 17197506
 
         if i % 1000 == 0:
             logging.info("Done {i} exons".format(i=i))
@@ -109,6 +115,11 @@ def iterate_over_exons(exons, sam_filename):
         key_fn = lambda x: (x.qname, x.opt('HI'))
 
         alns = sorted(alns, key=key_fn)
+
+        if want:
+            print('Got', len(alns), 'candidate alignments')
+            print(*alns)
+
 
         for (qname, hi), pair in groupby(alns, key=key_fn):
             pair = list(pair)
@@ -177,7 +188,11 @@ def read_sam_file(gene_filename, sam_filename, output_fh):
 CigarElem = namedtuple('CigarElem', ['count', 'op'])
 
 def cigar_to_spans(cigar, start, strand):
-
+    global want
+    if want:
+        print('cigar_to_spans', cigar, start, strand)
+        cigar = remove_ds(cigar)
+        print('without ds:', cigar)
     spans = []
 
     if cigar is None:
@@ -199,8 +214,11 @@ def cigar_to_spans(cigar, start, strand):
     feats = []
 
     for span in spans:
-        if len(feats) > 0 and span.start < feats[-1].location.end:
-            feats[-1].location.end = span.end
+        if len(feats) > 0 and feats[-1].location.end + 1 >= span.start:
+            start = feats[-1].location.start
+            end   = span.end
+            loc   = FeatureLocation(start, end)
+            feats[-1] = SeqFeature(location=loc)
         else:
             feats.append(SeqFeature(location=span))
     start = feats[0].location.start
@@ -220,6 +238,11 @@ def match(exon, alns):
         spans = cigar_to_spans(aln.cigar, aln.pos, strand).sub_features
         overlaps.extend(spans_overlap(exon, spans))
         consistents.extend(spans_are_consistent(exon, spans))
+
+    global want
+    if want:
+        print('overlaps are', overlaps)
+        print('consistent is', consistents)
 
     any_overlap    = any(overlaps)
     all_consistent = all(consistents)
