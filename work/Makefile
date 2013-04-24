@@ -1,7 +1,17 @@
-RUM_INDEX_GENE_INFO=arabidopsis_genes.txt
-BAM=sorted.bam
+
+RUM_INDEX_GENE_INFO=mm10_refseq_ucsc_gene_info.txt
+BAM=rum.sorted.bam
 SAM=RUM.sam
 RUM=~/src/rum
+
+rum.bam : RUM.sam
+	samtools view -bS $< > $@
+
+rum.sorted.bam : rum.bam
+	samtools sort $< rum.sorted
+
+rum.sorted.bai : rum.sorted.bam
+	samtools index $< $@
 
 all : exon_quant_new exon_quant_old_filtered
 
