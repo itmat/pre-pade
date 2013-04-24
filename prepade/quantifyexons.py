@@ -102,8 +102,7 @@ def iterate_over_exons(exons, sam_filename):
 
 
         for aln in samfile.fetch(exon.ref, exon.location.start, exon.location.end):
-
-            if is_consistent(aln, exon):
+            if match(exon, [aln]):
                 num_alns = aln.opt('IH')
                 if num_alns > 1:
                     multi_read_ids.add(aln.qname)
@@ -116,6 +115,29 @@ def iterate_over_exons(exons, sam_filename):
         if count_u > 0:
             yield(exon, count_u, count_m)
     details.close()
+
+
+#            ============  
+# o c         aaa   aaa    ?
+# o c        aaaaaa        
+# o c              aaaaaa  
+# o c  aaa   aaa           Ok because non-first read span starts at exon start
+# o i  aaa     aaa         Inconsistent because non-first read span starts after exon start
+# o i
+
+# n c  ---   ============
+# o c        [  (    )  ]
+# o c        [(      )  ]
+# o c        [  (      )]
+# n c   (  ) [          ]
+# n c        [          ]  (  )
+# o i     (  [    )     ]
+# o i        [      (   ]  )
+
+# if it's first span, it must start at or after exon start
+# if it's not first span, it must start at exon start
+# if it's last span, must end at or before exon end
+# if it's not last span, it must end at exon end
 
 def read_sam_file(gene_filename, sam_filename, output_fh):
 
@@ -176,7 +198,61 @@ def cigar_to_spans(cigar, start, strand):
 
     return SeqFeature(sub_features=feats)
 
+    
+def match(exon, alns):
+    stack = []
+
+    overlaps = []
+    consistents = []
+
+    for aln in alns:
+        strand = -1 if aln.is_reverse else 1
+        spans = cigar_to_spans(aln.cigar, aln.pos, strand).sub_features
+        overlaps.extend(spans_overlap(exon, spans))
+        consistents.extend(spans_are_consistent(exon, spans))
+
+    any_overlap    = any(overlaps)
+    all_consistent = all(consistents)
+
+    return any_overlap and all_consistent
         
+def spans_overlap(exon, spans):
+    lexon = exon.location.start
+    rexon = exon.location.end
+
+    for span in spans:
+        lspan = span.location.start
+        rspan = span.location.end
+        yield not (rspan < lexon or lspan > rexon) 
+
+
+def spans_are_consistent(exon, spans):
+
+    lexon = exon.location.start
+    rexon = exon.location.end
+
+    last_span = len(spans) - 1
+
+    for i, span in enumerate(spans):
+        lspan = span.location.start
+        rspan = span.location.end
+        
+        is_first = i == 0
+        is_last  = i == last_span
+
+        if i == 0:
+            l_ok = lspan >= lexon
+        else:
+            l_ok = lspan == lexon
+
+        if i == last_span:
+            r_ok = rspan <= rexon
+        else:
+            r_ok = rspan == rexon
+
+        yield l_ok and r_ok
+
+
 
 def remove_ds(cigar):
     """Removes D operations from Cigar string, replacing with Ms.
