@@ -210,17 +210,21 @@ def spans_are_consistent(exon, spans):
         is_first = i == 0
         is_last  = i == last_span
 
-        if i == 0:
-            l_ok = lspan >= lexon
-        else:
-            l_ok = lspan == lexon or lspan >= rexon
+        if rspan <= lexon or lspan >= rexon:
+            yield True
 
-        if i == last_span:
-            r_ok = rspan <= rexon
         else:
-            r_ok = rspan == rexon or rspan <= lexon
+            if i == 0:
+                l_ok = lspan >= lexon
+            else:
+                l_ok = lspan == lexon
 
-        yield l_ok and r_ok
+            if i == last_span:
+                r_ok = rspan <= rexon
+            else:
+                r_ok = rspan == rexon
+
+            yield l_ok and r_ok
 
 
 

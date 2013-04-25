@@ -1,6 +1,6 @@
 import unittest
 from Bio.SeqFeature import SeqFeature, FeatureLocation
-from prepade.quantifyexons import cigar_to_spans
+from prepade.quantifyexons import cigar_to_spans, spans_are_consistent
 
 class QuantifyExonsTest(unittest.TestCase):
 
@@ -37,3 +37,19 @@ class QuantifyExonsTest(unittest.TestCase):
 
             self.assertEquals(spans, expected)
 
+
+    def test_spans_are_consistent(self):
+        exon = SeqFeature(ref='chr1',
+                          location=FeatureLocation(4351909, 4352081))
+
+        spans = [ 
+            SeqFeature(
+                ref='chr1',
+                location=FeatureLocation(4352004, 4352081)),
+            SeqFeature(
+                ref='chr1',
+                location=FeatureLocation(4352201, 4352224))]
+
+        res = list(spans_are_consistent(exon, spans))
+            
+        self.assertEquals([True, True], res)
