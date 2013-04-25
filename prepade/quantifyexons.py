@@ -76,8 +76,14 @@ def iterate_over_exons(exons, sam_filename):
 
         all_spans = []
 
-        alns = list(samfile.fetch(exon.ref, exon.location.start, exon.location.end))
-
+        try:
+            alns = list(samfile.fetch(exon.ref, exon.location.start, exon.location.end))
+        except ValueError as e:
+            logging.warn('error fetching reads for {ref}:{start}-{end}'.format(
+                    ref=exon.ref, 
+                    start=exon.location.start,
+                    end=exon.location.end), exc_info=e)
+            alns = []
         key_fn = lambda x: (x.qname, x.opt('HI'))
 
         alns = sorted(alns, key=key_fn)
