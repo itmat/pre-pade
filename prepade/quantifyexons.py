@@ -281,12 +281,15 @@ if __name__ == '__main__':
     parser.add_argument('--exon-index')
     parser.add_argument('samfile')
     parser.add_argument('--log')
+    parser.add_argument('--debug', '-d', action='store_true')
     parser.add_argument('--output', '-o', type=argparse.FileType('w'))
     parser.add_argument('--iterate-sam', '-s', default='exons', choices=['exons', 'reads'])
 
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG,
+    level = logging.DEBUG if args.debug else logging.INFO 
+
+    logging.basicConfig(level=level,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
                         filename=args.log,
