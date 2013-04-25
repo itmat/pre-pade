@@ -15,14 +15,9 @@ from Bio.SeqFeature import FeatureLocation, SeqFeature
 from Bio.Seq import Seq
 from Bio.Alphabet import NucleotideAlphabet
 from collections import defaultdict, namedtuple
-from prepade.geneio import parse_rum_index_genes
+from prepade.geneio import parse_rum_index_genes, read_exons
 
 CIGAR_CHARS = 'MIDNSHP=X'
-
-want_exon = ('1', 15508896, 15512095)
-(want_chr, want_start, want_end) = want_exon
-want = False
-
 
 def load_exon_index(fh, index_filename=None):
 
@@ -70,9 +65,6 @@ def iterate_over_exons(exons, sam_filename):
     seen = set()
 
     for i, exon in enumerate(exons):
-        global want
-
-        want = exon.location.ref == want_chr and exon.location.start == want_start - 1
 
         if i % 1000 == 0:
             logging.info("Done {i} exons".format(i=i))
@@ -94,19 +86,18 @@ def iterate_over_exons(exons, sam_filename):
 
         alns = sorted(alns, key=key_fn)
 
-        if want:
-            print('Got', len(alns), 'candidate alignments')
-            print(*alns)
-
+        logging.debug('Got' + str(len(alns)) + 'candidate alignments')
 
         for (qname, hi), pair in groupby(alns, key=key_fn):
+
+            logging.debug('  candidate %s[%d]', qname, hi)
             pair = list(pair)
             if match(exon, pair):
                 num_alns = pair[0].opt('IH')
                 if num_alns > 1:
-                    multi_read_ids.add(qname)
+                    multi_read_ids.add((qname, hi))
                 else:
-                    unique_read_ids.add(qname)
+                    unique_read_ids.add((qname, hi))
 
         count_u = len(unique_read_ids)
         count_m = len(multi_read_ids)
@@ -144,11 +135,6 @@ def read_sam_file(gene_filename, sam_filename, output_fh):
 CigarElem = namedtuple('CigarElem', ['count', 'op'])
 
 def cigar_to_spans(cigar, start, strand):
-    global want
-    if want:
-        print('cigar_to_spans', cigar, start, strand)
-        cigar = remove_ds(cigar)
-        print('without ds:', cigar)
     spans = []
 
     if cigar is None:
@@ -180,8 +166,6 @@ def cigar_to_spans(cigar, start, strand):
     start = feats[0].location.start
     end   = feats[-1].location.end
 
-    if want:
-        print('spans are', *feats)
     return SeqFeature(sub_features=feats)
 
     
@@ -196,11 +180,6 @@ def match(exon, alns):
         spans = cigar_to_spans(aln.cigar, aln.pos, strand).sub_features
         overlaps.extend(spans_overlap(exon, spans))
         consistents.extend(spans_are_consistent(exon, spans))
-
-    global want
-    if want:
-        print('overlaps are', overlaps)
-        print('consistent is', consistents)
 
     any_overlap    = any(overlaps)
     all_consistent = all(consistents)
@@ -292,13 +271,15 @@ def remove_ds(cigar):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--rum-gene-info', type=file)
+    parser.add_argument('--exons', type=file)
     parser.add_argument('--exon-index')
     parser.add_argument('samfile')
     parser.add_argument('--log')
     parser.add_argument('--output', '-o', type=argparse.FileType('w'))
+
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG,
+    logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
                         filename=args.log,
@@ -310,8 +291,12 @@ if __name__ == '__main__':
 
     output = args.output if args.output is not None else sys.stdout
 
-    genes = parse_rum_index_genes(args.rum_gene_info)
-    exons = genes_to_exons(genes)
+    if args.rum_gene_info is not None:
+
+        genes = parse_rum_index_genes(args.rum_gene_info)
+        exons = genes_to_exons(genes)
+    elif 'exons' in args:
+        exons = read_exons(args.exons)
 
     print('feature', 'min', 'max', sep='\t', file=output)
     for (exon, count_u, count_m) in iterate_over_exons(exons, args.samfile):

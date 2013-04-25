@@ -34,7 +34,6 @@ if __name__ == '__main__':
 
         print(metric, ':', var, avg_var)
 
-
     min_is_diff = joined['min_diff'] != 0
     max_is_diff = joined['max_diff'] != 0
     joined[min_is_diff | max_is_diff].to_csv(args.diffs, sep='\t')
