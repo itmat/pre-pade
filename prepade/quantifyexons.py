@@ -136,6 +136,8 @@ def cigar_to_spans(cigar, start, strand):
     if cigar is None:
         return SeqFeature()
 
+    cigar = remove_ds(cigar)
+
     for (op, bases) in cigar:
         opname = CIGAR_CHARS[op]
         if opname == 'M':
