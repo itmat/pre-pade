@@ -314,7 +314,12 @@ if __name__ == '__main__':
             chr_=exon.ref,
             start=exon.location.start+1,
             end=exon.location.end)
-        print(exon_str, count_u, count_u + count_m, sep='\t', file=output)
+        min_count = count_u
+        if count_u > 0:
+            max_count = count_u + count_m
+        else:
+            max_count = 0
+        print(exon_str, min_count, max_count, sep='\t', file=output)
 
 #    read_sam_file(args.rum_gene_info, args.samfile, args.output)
 
