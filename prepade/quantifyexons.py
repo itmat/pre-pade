@@ -93,6 +93,7 @@ def iterate_over_exons(exons, sam_filename):
             logging.debug('  candidate %s[%d]', qname, hi)
             pair = list(pair)
             if match(exon, pair):
+                logging.debug('    found a match')
                 num_alns = pair[0].opt('IH')
                 if num_alns > 1:
                     multi_read_ids.add((qname, hi))
@@ -177,9 +178,13 @@ def match(exon, alns):
     for aln in alns:
         strand = -1 if aln.is_reverse else 1
         spans = cigar_to_spans(aln.cigar, aln.pos, strand).sub_features
+        debug_spans = ', '.join([ str(s.location.start) + '-' + str(s.location.end) for s in spans ])
+        logging.debug('    spans are %s', debug_spans)
         overlaps.extend(spans_overlap(exon, spans))
         consistents.extend(spans_are_consistent(exon, spans))
 
+    logging.debug('overlap %s', overlaps)
+    logging.debug('consistent %s', consistents)
     any_overlap    = any(overlaps)
     all_consistent = all(consistents)
 
@@ -278,7 +283,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO,
+    logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
                         filename=args.log,
