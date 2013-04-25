@@ -1,6 +1,6 @@
 # Started 13:31:46
-RUM_INDEX_GENE_INFO=mm10_refseq_ucsc_gene_info.txt
-#RUM_INDEX_GENE_INFO=arabidopsis_genes.txt
+#RUM_INDEX_GENE_INFO=mm10_refseq_ucsc_gene_info.txt
+RUM_INDEX_GENE_INFO=arabidopsis_genes.txt
 BAM=rum_sorted.bam
 SAM=RUM.sam
 RUM=~/src/rum

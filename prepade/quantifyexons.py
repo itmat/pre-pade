@@ -174,27 +174,25 @@ def cigar_to_spans(cigar, start, strand):
 
     
 def match(exon, alns):
-    stack = []
 
-    overlaps = []
-    consistents = []
+    overlap = []
+    consistent = []
+
+    span_groups = []
 
     for aln in alns:
         strand = -1 if aln.is_reverse else 1
-#        logging.debug('    cigar is %s', aln.cigar)
         spans = cigar_to_spans(aln.cigar, aln.pos, strand).sub_features
-#        debug_spans = ', '.join([ str(s.location.start) + '-' + str(s.location.end) for s in spans ])
-#        logging.debug('    spans are %s', debug_spans)
-        overlaps.extend(spans_overlap(exon, spans))
-        consistents.extend(spans_are_consistent(exon, spans))
+        span_groups.append(spans)
+        overlap.extend(spans_overlap(exon, spans))
 
-#    logging.debug('overlap %s', overlaps)
-#    logging.debug('consistent %s', consistents)
+    if not any(overlap):
+        return False
 
-    overlaps = np.array(overlaps)
-    consistents = np.array(consistents)
+    for spans in span_groups:
+        consistent.extend(spans_are_consistent(exon, spans))
 
-    return any(overlaps) and all(consistents)
+    return all(consistent)
 
         
 def spans_overlap(exon, spans):
@@ -218,9 +216,6 @@ def spans_are_consistent(exon, spans):
         lspan = span.location.start
         rspan = span.location.end
         
-        is_first = i == 0
-        is_last  = i == last_span
-
         if rspan <= lexon or lspan >= rexon:
             yield True
 
