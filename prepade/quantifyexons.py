@@ -2,7 +2,6 @@
 
 from __future__ import print_function, division
 
-
 import logging
 import os
 import sys
@@ -56,6 +55,9 @@ def load_exon_index(fh, index_filename=None):
     return df
 
 def genes_to_exons(genes):
+    """Given an iterator over genes, returns an iterator over exons.
+
+    """
     for gene in genes:
         for exon in gene.sub_features:
             yield(exon)
@@ -113,28 +115,6 @@ def iterate_over_exons(exons, sam_filename):
             yield(exon, count_u, count_m)
     details.close()
 
-
-#            ============  
-# o c         aaa   aaa    ?
-# o c        aaaaaa        
-# o c              aaaaaa  
-# o c  aaa   aaa           Ok because non-first read span starts at exon start
-# o i  aaa     aaa         Inconsistent because non-first read span starts after exon start
-# o i
-
-# n c  ---   ============
-# o c        [  (    )  ]
-# o c        [(      )  ]
-# o c        [  (      )]
-# n c   (  ) [          ]
-# n c        [          ]  (  )
-# o i     (  [    )     ]
-# o i        [      (   ]  )
-
-# if it's first span, it must start at or after exon start
-# if it's not first span, it must start at exon start
-# if it's last span, must end at or before exon end
-# if it's not last span, it must end at exon end
 
 def read_sam_file(gene_filename, sam_filename, output_fh):
 
