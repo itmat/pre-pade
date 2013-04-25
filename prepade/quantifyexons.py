@@ -9,6 +9,7 @@ import pysam
 import argparse
 import re
 import pandas as pd
+import numpy as np
 
 from itertools import groupby
 from Bio.SeqFeature import FeatureLocation, SeqFeature
@@ -19,11 +20,7 @@ from prepade.geneio import parse_rum_index_genes, read_exons
 
 CIGAR_CHARS = 'MIDNSHP=X'
 
-def load_exon_index(fh, index_filename=None):
-
-    if index_filename is not None and os.path.exists(index_filename):
-        logging.info("Loading exons from index at " + index_filename)
-        return pd.read_table(index_filename)
+def load_exon_index(fh):
 
     chr_to_exons = defaultdict(list)
 
@@ -31,11 +28,13 @@ def load_exon_index(fh, index_filename=None):
     starts = []
     ends = []
 
-    for gene in parse_rum_index_genes(fh):
-        for exon in gene.sub_features:
-            chrs.append(gene.ref)
-            starts.append(exon.location.start)
-            ends.append(exon.location.end)
+    genes = parse_rum_index_genes(fh)
+    exons = genes_to_exons(genes)
+
+    for exon in exons:
+        chrs.append(gene.ref)
+        starts.append(exon.location.start)
+        ends.append(exon.location.end)
 
     df = pd.DataFrame({
         'chromosome' : chrs,
@@ -43,9 +42,6 @@ def load_exon_index(fh, index_filename=None):
         'end'        : ends })
 
     df = df.sort(columns=['chromosome', 'end'])
-
-    if index_filename is not None:
-        df.to_csv(index_filename, sep='\t')
 
     return df
 
@@ -181,10 +177,15 @@ def match(exon, alns):
         overlaps.extend(spans_overlap(exon, spans))
         consistents.extend(spans_are_consistent(exon, spans))
 
-    any_overlap    = any(overlaps)
-    all_consistent = all(consistents)
+    overlaps = np.array(overlaps)
+    consistents = np.array(consistents)
 
-    return any_overlap and all_consistent
+    inconsistent = np.zeros((len(overlaps),), bool)
+    
+    return any(overlaps) and all(consistents)
+
+
+
         
 def spans_overlap(exon, spans):
     lexon = exon.location.start
@@ -213,12 +214,12 @@ def spans_are_consistent(exon, spans):
         if i == 0:
             l_ok = lspan >= lexon
         else:
-            l_ok = lspan == lexon
+            l_ok = lspan == lexon or lspan >= rexon
 
         if i == last_span:
             r_ok = rspan <= rexon
         else:
-            r_ok = rspan == rexon
+            r_ok = rspan == rexon or rspan <= lexon
 
         yield l_ok and r_ok
 
@@ -276,6 +277,7 @@ if __name__ == '__main__':
     parser.add_argument('samfile')
     parser.add_argument('--log')
     parser.add_argument('--output', '-o', type=argparse.FileType('w'))
+    parser.add_argument('--iterate-sam', '-s', default='exons', choices=['exons', 'reads'])
 
     args = parser.parse_args()
 
