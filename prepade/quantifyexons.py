@@ -98,8 +98,7 @@ def iterate_over_exons(exons, sam_filename):
         count_u = len(unique_read_ids)
         count_m = len(multi_read_ids)
 
-        if count_u > 0:
-            yield(exon, count_u, count_m)
+        yield(exon, count_u, count_m)
     details.close()
 
 
