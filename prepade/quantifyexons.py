@@ -88,14 +88,14 @@ def iterate_over_exons(exons, sam_filename):
 
         alns = sorted(alns, key=key_fn)
 
-#        logging.debug('Got' + str(len(alns)) + 'candidate alignments')
+#        logging.debug('Got %d candidate alignments', len(alns))
 
         for (qname, hi), pair in groupby(alns, key=key_fn):
-
+#            logging.debug(' ')
 #            logging.debug('  candidate %s[%d]', qname, hi)
             pair = list(pair)
             if match(exon, pair):
-#                logging.debug('    found a match')
+#                logging.debug('    found a match!')
                 num_alns = pair[0].opt('IH')
                 if num_alns > 1:
                     multi_read_ids.add((qname, hi))
@@ -138,7 +138,7 @@ CigarElem = namedtuple('CigarElem', ['count', 'op'])
 
 def cigar_to_spans(cigar, start, strand):
     spans = []
-
+#    logging.debug('cigar is %s, start is %d', cigar, start)
     if cigar is None:
         return SeqFeature()
 
@@ -155,7 +155,7 @@ def cigar_to_spans(cigar, start, strand):
             start = start + bases
 
         elif opname == 'I':
-            start += 1
+            pass #start += 1
 
     feats = []
 
@@ -175,6 +175,8 @@ def cigar_to_spans(cigar, start, strand):
     
 def match(exon, alns):
 
+#    logging.info('    exon is %d-%d', exon.location.start, exon.location.end)
+
     overlap = []
     consistent = []
 
@@ -185,13 +187,16 @@ def match(exon, alns):
         spans = cigar_to_spans(aln.cigar, aln.pos, strand).sub_features
         span_groups.append(spans)
         overlap.extend(spans_overlap(exon, spans))
+#        logging.debug('    spans are %s', ', '.join([str(s.location.start) + '-' + str(s.location.end) for s in spans]))
+
+#    logging.debug('  overlap is %s', overlap)
 
     if not any(overlap):
         return False
 
     for spans in span_groups:
         consistent.extend(spans_are_consistent(exon, spans))
-
+#    logging.debug('  consistent is %s', consistent)
     return all(consistent)
 
         
