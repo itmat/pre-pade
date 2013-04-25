@@ -20,17 +20,25 @@ if __name__ == '__main__':
 
     joined = pd.merge(df_a, df_b, how='outer', suffixes=['_old', '_new'], left_index=True, right_index=True)
     output = args.output if args.output is not None else sys.stdout
-    joined['min_old'][joined['min_old'].isnull()] = 0
-    joined['min_new'][joined['min_new'].isnull()] = 0
+
+    for key in ['min_old', 'min_new', 'max_old', 'max_new']:
+        joined[key][joined[key].isnull()] = 0
     
-    joined['diff'] = joined['min_new'] - joined['min_old']
-    joined['diff_squared'] = joined['diff'] ** 2
+    for metric in ['min', 'max']:
 
-    var = joined['diff_squared'].sum()
+        joined[metric + '_diff'] = joined[metric + '_new'] - joined[metric + '_old']
+        joined[metric+ '_diff_squared'] = joined[metric + '_diff'] ** 2
+        var = joined[metric + '_diff_squared'].sum()
 
-    avg_var = var / len(joined)
-    print(var, avg_var)
+        avg_var = var / len(joined)
+
+        print(metric, ':', var, avg_var)
+
+
+    min_is_diff = joined['min_diff'] != 0
+    max_is_diff = joined['max_diff'] != 0
+    joined[min_is_diff | max_is_diff].to_csv(args.diffs, sep='\t')
 
     joined.to_csv(args.output, sep='\t')
 
-    joined[joined['diff'] != 0].to_csv(args.diffs, sep='\t')
+
