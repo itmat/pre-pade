@@ -1,4 +1,5 @@
 from Bio.SeqFeature import FeatureLocation, SeqFeature
+import re
 
 def parse_rum_index_genes(fh):
     for line in fh:
@@ -9,6 +10,8 @@ def parse_rum_index_genes(fh):
         exon_starts = map(int, exon_starts.rstrip(",").split(","))
         exon_ends   = map(int, exon_ends.rstrip(",").split(","))
 
+        exon_starts = [ x - 1 for x in exon_starts ]
+
         exon_locs = [FeatureLocation(*x, strand=strand) for x in zip(exon_starts, exon_ends)]
 
         exons = [ SeqFeature(ref=chr_, location=loc, strand=strand, type='exon')
@@ -17,3 +20,12 @@ def parse_rum_index_genes(fh):
         gene = SeqFeature(ref=chr_, location=gene_loc, strand=strand, type='gene', sub_features=exons)
 
         yield gene
+
+def read_exons(fh):
+    pat = re.compile('(.*):(\d+)-(\d+)')
+    for line in fh:
+        m = pat.match(line)
+        (chr_, start, end) = m.groups()
+
+        yield SeqFeature(ref=chr_, 
+                         location=FeatureLocation(int(start) -1, int(end)))

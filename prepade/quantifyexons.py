@@ -2,7 +2,6 @@
 
 from __future__ import print_function, division
 
-
 import logging
 import os
 import sys
@@ -16,35 +15,9 @@ from Bio.SeqFeature import FeatureLocation, SeqFeature
 from Bio.Seq import Seq
 from Bio.Alphabet import NucleotideAlphabet
 from collections import defaultdict, namedtuple
-from prepade.geneio import parse_rum_index_genes
+from prepade.geneio import parse_rum_index_genes, read_exons
 
 CIGAR_CHARS = 'MIDNSHP=X'
-
-def is_consistent(aln, exon):
-    exon_start = exon.location.start
-    exon_end   = exon.location.end
-    strand = -1 if aln.is_reverse else 1
-    spans = cigar_to_spans(aln.cigar, aln.pos, strand).sub_features
-
-    for i, span in enumerate(spans):
-
-        span_start = span.location.start 
-        span_end   = span.location.end   
-
-        if i == 0:
-            consistent_start = span_start >= exon_start
-        else:
-            consistent_start = span_start == exon_start
-
-        if i == len(spans) - 1:
-            consistent_end = span_end <= exon_end
-        else:
-            consistent_end = span_end == exon_end
-
-        if consistent_start and consistent_end:
-            return True
-
-    return False
 
 def load_exon_index(fh, index_filename=None):
 
@@ -77,6 +50,9 @@ def load_exon_index(fh, index_filename=None):
     return df
 
 def genes_to_exons(genes):
+    """Given an iterator over genes, returns an iterator over exons.
+
+    """
     for gene in genes:
         for exon in gene.sub_features:
             yield(exon)
@@ -110,14 +86,18 @@ def iterate_over_exons(exons, sam_filename):
 
         alns = sorted(alns, key=key_fn)
 
+        logging.debug('Got' + str(len(alns)) + 'candidate alignments')
+
         for (qname, hi), pair in groupby(alns, key=key_fn):
+
+            logging.debug('  candidate %s[%d]', qname, hi)
             pair = list(pair)
             if match(exon, pair):
                 num_alns = pair[0].opt('IH')
                 if num_alns > 1:
-                    multi_read_ids.add(qname)
+                    multi_read_ids.add((qname, hi))
                 else:
-                    unique_read_ids.add(qname)
+                    unique_read_ids.add((qname, hi))
 
         count_u = len(unique_read_ids)
         count_m = len(multi_read_ids)
@@ -125,28 +105,6 @@ def iterate_over_exons(exons, sam_filename):
         yield(exon, count_u, count_m)
     details.close()
 
-
-#            ============  
-# o c         aaa   aaa    ?
-# o c        aaaaaa        
-# o c              aaaaaa  
-# o c  aaa   aaa           Ok because non-first read span starts at exon start
-# o i  aaa     aaa         Inconsistent because non-first read span starts after exon start
-# o i
-
-# n c  ---   ============
-# o c        [  (    )  ]
-# o c        [(      )  ]
-# o c        [  (      )]
-# n c   (  ) [          ]
-# n c        [          ]  (  )
-# o i     (  [    )     ]
-# o i        [      (   ]  )
-
-# if it's first span, it must start at or after exon start
-# if it's not first span, it must start at exon start
-# if it's last span, must end at or before exon end
-# if it's not last span, it must end at exon end
 
 def read_sam_file(gene_filename, sam_filename, output_fh):
 
@@ -176,7 +134,6 @@ def read_sam_file(gene_filename, sam_filename, output_fh):
 CigarElem = namedtuple('CigarElem', ['count', 'op'])
 
 def cigar_to_spans(cigar, start, strand):
-
     spans = []
 
     if cigar is None:
@@ -185,12 +142,12 @@ def cigar_to_spans(cigar, start, strand):
     for (op, bases) in cigar:
         opname = CIGAR_CHARS[op]
         if opname == 'M':
-            end = start + bases - 1
+            end = start + bases
             spans.append(FeatureLocation(start, end))
             start = end
 
         elif opname in 'DN':
-            start = start + bases + 1
+            start = start + bases
 
         elif opname == 'I':
             start += 1
@@ -198,8 +155,11 @@ def cigar_to_spans(cigar, start, strand):
     feats = []
 
     for span in spans:
-        if len(feats) > 0 and span.start < feats[-1].location.end:
-            feats[-1].location.end = span.end
+        if len(feats) > 0 and feats[-1].location.end + 1>= span.start:
+            start = feats[-1].location.start
+            end   = span.end
+            loc   = FeatureLocation(start, end)
+            feats[-1] = SeqFeature(location=loc)
         else:
             feats.append(SeqFeature(location=span))
     start = feats[0].location.start
@@ -232,7 +192,7 @@ def spans_overlap(exon, spans):
     for span in spans:
         lspan = span.location.start
         rspan = span.location.end
-        yield not (rspan < lexon or lspan > rexon) 
+        yield not (rspan <= lexon or lspan >= rexon) 
 
 
 def spans_are_consistent(exon, spans):
@@ -310,13 +270,15 @@ def remove_ds(cigar):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--rum-gene-info', type=file)
+    parser.add_argument('--exons', type=file)
     parser.add_argument('--exon-index')
     parser.add_argument('samfile')
     parser.add_argument('--log')
     parser.add_argument('--output', '-o', type=argparse.FileType('w'))
+
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG,
+    logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
                         filename=args.log,
@@ -328,14 +290,18 @@ if __name__ == '__main__':
 
     output = args.output if args.output is not None else sys.stdout
 
-    genes = parse_rum_index_genes(args.rum_gene_info)
-    exons = genes_to_exons(genes)
+    if args.rum_gene_info is not None:
+
+        genes = parse_rum_index_genes(args.rum_gene_info)
+        exons = genes_to_exons(genes)
+    elif 'exons' in args:
+        exons = read_exons(args.exons)
 
     print('feature', 'min', 'max', sep='\t', file=output)
     for (exon, count_u, count_m) in iterate_over_exons(exons, args.samfile):
         exon_str = '{chr_}:{start}-{end}'.format(
             chr_=exon.ref,
-            start=exon.location.start,
+            start=exon.location.start+1,
             end=exon.location.end)
         print(exon_str, count_u, count_u + count_m, sep='\t', file=output)
 
