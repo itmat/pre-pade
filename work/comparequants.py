@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, division
 
 import pandas as pd
 import argparse
@@ -36,7 +36,10 @@ if __name__ == '__main__':
 
     min_is_diff = joined['min_diff'] != 0
     max_is_diff = joined['max_diff'] != 0
+    
     joined[min_is_diff | max_is_diff].to_csv(args.diffs, sep='\t')
+
+    print('Diffs with min: ' + str(sum(min_is_diff)) + ' (' + str(sum(min_is_diff) / len(joined)) + ')')
 
     joined.to_csv(args.output, sep='\t')
 
