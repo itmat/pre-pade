@@ -179,6 +179,7 @@ def match(exon, alns):
 
     for aln in alns:
         strand = -1 if aln.is_reverse else 1
+        logging.debug('    cigar is %s', aln.cigar)
         spans = cigar_to_spans(aln.cigar, aln.pos, strand).sub_features
         debug_spans = ', '.join([ str(s.location.start) + '-' + str(s.location.end) for s in spans ])
         logging.debug('    spans are %s', debug_spans)
