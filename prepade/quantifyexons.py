@@ -16,6 +16,7 @@ from itertools import groupby
 from prepade.geneio import parse_rum_index_genes, read_exons
 
 class CigarOp:
+    """Constants representing the CIGAR operations."""
 
     M = 0
     I = 1
