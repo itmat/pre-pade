@@ -2,20 +2,17 @@
 
 from __future__ import print_function, division
 
-import logging
-import os
-import sys
-import pysam
 import argparse
-import re
-import pandas as pd
+import logging
 import numpy as np
+import pandas as pd
+import pysam
+import sys
 
-from itertools import groupby
 from Bio.SeqFeature import FeatureLocation, SeqFeature
 from Bio.Seq import Seq
-from Bio.Alphabet import NucleotideAlphabet
-from collections import defaultdict, namedtuple
+from collections import defaultdict
+from itertools import groupby
 from prepade.geneio import parse_rum_index_genes, read_exons
 
 CIGAR_CHARS = 'MIDNSHP=X'
