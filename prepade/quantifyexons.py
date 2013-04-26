@@ -131,7 +131,6 @@ def read_sam_file(gene_filename, sam_filename, output_fh):
 #            if count > 0:
 #                print(chr_, start, end, count, sep="\t", file=output_fh)
 
-CigarElem = namedtuple('CigarElem', ['count', 'op'])
 
 def cigar_to_spans(cigar, start, strand):
     spans = []
@@ -208,7 +207,24 @@ def spans_overlap(exon, spans):
 
 
 def spans_are_consistent(exon, spans):
+    """Return bools indicating which read segments are consistent with exon.
 
+    :param exon:
+      A SeqFeature representing an exon.
+
+    :param spans:
+      A list of SeqFeatures, each representing a read segment.
+
+    :return:
+
+      Array of booleans, one for each read segment. Any segment that
+      spans a junction at either edge of the exon is considered
+      inconsistent. Any segment other than the first that starts in
+      the middle of the exon is inconsistent, and likewise any segment
+      other than the last that ends in the middle of the exon is
+      considered inconsistent. All other exons are consistent.
+    
+    """
     lexon = exon.location.start
     rexon = exon.location.end
 
@@ -237,6 +253,7 @@ def spans_are_consistent(exon, spans):
 
 
 def remove_ds(cigar):
+
     """Removes D operations from Cigar string, replacing with Ms.
 
     Replaces all Ds with Ms and then merges adjacent Ms together.
