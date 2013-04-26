@@ -1,5 +1,5 @@
 from Bio.SeqFeature import FeatureLocation, SeqFeature
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from itertools import groupby
 import re
 import numpy as np
@@ -41,14 +41,13 @@ class ExonIndex(object):
         # exon gets n event representing its start, and on
         # representing its end.
         events = []
-        Event = namedtuple('Event', ['etype', 'location', 'key'])
+        Event = namedtuple('Event', ['etype', 'location', 'exon'])
         for exon in exons:
-            ref   = exon.ref
             start = exon.location.start
             end   = exon.location.end
-            key = '%s:%d-%d' % (ref, start + 1, end)
-            events.append(Event('start', start, key))
-            events.append(Event('end',   end,   key))
+
+            events.append(Event('start', start, exon))
+            events.append(Event('end',   end,   exon))
 
         # Now sort the events by location, and iterate over them. As we
         # go, keep a set of the exons that we're currently
@@ -57,49 +56,53 @@ class ExonIndex(object):
         # all bases of that span.
         events = sorted(events, key=lambda x: x.location)
 
-        overlap = set()
+        overlap = defaultdict(set)
 
-        starts = []
-        keys   = []
+        starts = defaultdict(list)
+        keys   = defaultdict(list)
 
-        for location, values in groupby(events, lambda x: x.location):
+        for (ref, location), values in groupby(events, lambda x: (x.exon.ref, x.location)):
         
             for event in values:
+                start = event.exon.location.start
+                end   = event.exon.location.end
+                key = (ref, start, end)
+
                 if event.etype == 'start':
-                    overlap.add(event.key)
+                    overlap[ref].add(key)
                 else:
-                    overlap.remove(event.key)
+                    overlap[ref].remove(key)
 
-            starts.append(location)
-            keys.append(set(overlap))
+            starts[ref].append(location)
+            keys[ref].append(set(overlap[ref]))
 
-
-
-        self.start = np.array(starts, int)
-
+        self.start = starts
         self.keys  = keys
         
-    def get_exons(self, start, end):
-        n = len(self.start)
+    def get_exons(self, ref, start, end):
+
+        n = len(self.start[ref])
         p = 0
-        q = len(self.start)
+        q = len(self.start[ref])
         
         while (p < q):
             r = p + (q - p) // 2
 
-            if r + 1 < n and self.start[r + 1] <= start:
+            if r + 1 < n and self.start[ref][r + 1] <= start:
                 p = r
 
-            elif self.start[r] > start:
+            elif self.start[ref][r] > start:
                 q = r
 
             else:
                 break
 
-        keys = set()
+        seen = set()
 
-        while r < n and self.start[r] < end:
-            keys.update(self.keys[r])
+        while r < n and self.start[ref][r] < end:
+            for key in self.keys[ref][r]:
+                if key not in seen:
+                    (exon_ref, exon_start, exon_end) = key
+                    seen.add(key)
+                    yield(SeqFeature(ref=exon_ref, location=FeatureLocation(exon_start, exon_end)))
             r += 1
-
-        return read_exons(keys)
