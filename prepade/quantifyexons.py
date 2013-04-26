@@ -85,14 +85,17 @@ def iterate_over_exons(exons, sam_filename):
 
         alns = sorted(alns, key=key_fn)
 
-#        logging.debug('Got %d candidate alignments', len(alns))
+        if __debug__:
+            logging.debug('Got %d candidate alignments', len(alns))
 
         for (qname, hi), pair in groupby(alns, key=key_fn):
-#            logging.debug(' ')
-#            logging.debug('  candidate %s[%d]', qname, hi)
+            if __debug__:
+                logging.debug(' ')
+                logging.debug('  candidate %s[%d]', qname, hi)
             pair = list(pair)
             if match(exon, pair):
-#                logging.debug('    found a match!')
+                if __debug__:
+                    logging.debug('    found a match!')
                 num_alns = pair[0].opt('IH')
                 if num_alns > 1:
                     multi_read_ids.add((qname, hi))
@@ -113,7 +116,7 @@ def read_sam_file(gene_filename, sam_filename, output_fh):
     for aln in samfile.fetch():
 
         if aln.cigar is not None:
-            spans = cigar_to_spans(aln.cigar, aln.pos, strand)
+            spans = cigar_to_spans(aln.cigar, aln.pos)
         else:
             spans = None
 
@@ -132,11 +135,12 @@ def read_sam_file(gene_filename, sam_filename, output_fh):
 #                print(chr_, start, end, count, sep="\t", file=output_fh)
 
 
-def cigar_to_spans(cigar, start, strand):
+def cigar_to_spans(cigar, start):
     spans = []
-#    logging.debug('cigar is %s, start is %d', cigar, start)
+    if __debug__:
+        logging.debug('cigar is %s, start is %d', cigar, start)
     if cigar is None:
-        return SeqFeature()
+        return []
 
     cigar = remove_ds(cigar)
 
@@ -153,67 +157,64 @@ def cigar_to_spans(cigar, start, strand):
         elif opname == 'I':
             pass #start += 1
 
-    feats = []
+    res = []
 
     for span in spans:
-        if len(feats) > 0 and feats[-1].location.end + 1>= span.start:
-            start = feats[-1].location.start
+        if len(res) > 0 and res[-1].end + 1>= span.start:
+            start = res[-1].start
             end   = span.end
-            loc   = FeatureLocation(start, end)
-            feats[-1] = SeqFeature(location=loc)
+            res[-1] = FeatureLocation(start, end)
         else:
-            feats.append(SeqFeature(location=span))
-    start = feats[0].location.start
-    end   = feats[-1].location.end
+            res.append(span)
 
-    return SeqFeature(sub_features=feats)
+    return res
 
+def format_spans(spans):
+    return ', '.join([ '%s-%s' % (s.start, s.end) for s in spans ])
     
 def match(exon, alns):
 
-#    logging.info('    exon is %d-%d', exon.location.start, exon.location.end)
+    if __debug__:
+        logging.debug('    exon is %d-%d', exon.location.start, exon.location.end)
 
     overlap = []
     consistent = []
 
-    span_groups = []
+    span_groups = [ cigar_to_spans(aln.cigar, aln.pos) for aln in alns ]
 
-    for aln in alns:
-        strand = -1 if aln.is_reverse else 1
-        spans = cigar_to_spans(aln.cigar, aln.pos, strand).sub_features
-        span_groups.append(spans)
-        overlap.extend(spans_overlap(exon, spans))
-#        logging.debug('    spans are %s', ', '.join([str(s.location.start) + '-' + str(s.location.end) for s in spans]))
-
-#    logging.debug('  overlap is %s', overlap)
+    for spans in span_groups:
+        my_overlap = spans_overlap(exon.location, spans)
+        overlap.extend(my_overlap)
+        if __debug__:
+            logging.debug('    spans are %s, overlap is %s', 
+                          format_spans(spans), my_overlap)
 
     if not any(overlap):
         return False
 
     for spans in span_groups:
-        consistent.extend(spans_are_consistent(exon, spans))
-#    logging.debug('  consistent is %s', consistent)
+        consistent.extend(spans_are_consistent(exon.location, spans))
+
+    if __debug__:
+        logging.debug('  consistent is %s', consistent)
+
     return all(consistent)
 
         
 def spans_overlap(exon, spans):
-    lexon = exon.location.start
-    rexon = exon.location.end
 
     for span in spans:
-        lspan = span.location.start
-        rspan = span.location.end
-        yield not (rspan <= lexon or lspan >= rexon) 
+        yield not (span.end <= exon.start or span.start >= exon.end) 
 
 
 def spans_are_consistent(exon, spans):
     """Return bools indicating which read segments are consistent with exon.
 
     :param exon:
-      A SeqFeature representing an exon.
+      A FeatureLocation representing an exon.
 
     :param spans:
-      A list of SeqFeatures, each representing a read segment.
+      A list of FeatureLocations, each representing a read segment.
 
     :return:
 
@@ -225,28 +226,24 @@ def spans_are_consistent(exon, spans):
       considered inconsistent. All other exons are consistent.
     
     """
-    lexon = exon.location.start
-    rexon = exon.location.end
 
     last_span = len(spans) - 1
 
     for i, span in enumerate(spans):
-        lspan = span.location.start
-        rspan = span.location.end
         
-        if rspan <= lexon or lspan >= rexon:
+        if span.end <= exon.start or span.start >= exon.end:
             yield True
 
         else:
             if i == 0:
-                l_ok = lspan >= lexon
+                l_ok = span.start >= exon.start
             else:
-                l_ok = lspan == lexon
+                l_ok = span.start == exon.start
 
             if i == last_span:
-                r_ok = rspan <= rexon
+                r_ok = span.end <= exon.end
             else:
-                r_ok = rspan == rexon
+                r_ok = span.end == exon.end
 
             yield l_ok and r_ok
 

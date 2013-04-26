@@ -34,9 +34,9 @@ class QuantifyExonsTest(unittest.TestCase):
         for args, expected in cases:
             got = cigar_to_spans(*args)
             spans = []
-            for feature in got.sub_features:
-                spans.append((feature.location.start,
-                              feature.location.end))
+            for feature in got:
+                spans.append((feature.start,
+                              feature.end))
 
             self.assertEquals(spans, expected)
 
@@ -83,3 +83,7 @@ class QuantifyExonsTest(unittest.TestCase):
         self.assertEquals([True, True], list(spans_are_consistent(exon, spans_f)))
         self.assertEquals([True, True], list(spans_are_consistent(exon, spans_r)))
 
+
+#2013-04-25 16:48:12 root         INFO         exon is   93463292-93463472
+#2013-04-25 16:48:12 root         DEBUG        spans are 93463398-93463473, 93474313-93474338
+#2013-04-25 16:48:12 root         DEBUG      overlap is [True, False]
