@@ -15,7 +15,17 @@ from collections import defaultdict
 from itertools import groupby
 from prepade.geneio import parse_rum_index_genes, read_exons
 
-CIGAR_CHARS = 'MIDNSHP=X'
+class CigarOp:
+
+    M = 0
+    I = 1
+    D = 2
+    N = 3
+    S = 4
+    H = 5
+    P = 6
+    EQUAL = 7
+    X = 8
 
 def load_exon_index(fh):
 
@@ -93,7 +103,7 @@ def iterate_over_exons(exons, sam_filename):
                 logging.debug(' ')
                 logging.debug('  candidate %s[%d]', qname, hi)
             pair = list(pair)
-            if match(exon, pair):
+            if matches(exon, pair):
                 if __debug__:
                     logging.debug('    found a match!')
                 num_alns = pair[0].opt('IH')
@@ -136,26 +146,39 @@ def read_sam_file(gene_filename, sam_filename, output_fh):
 
 
 def cigar_to_spans(cigar, start):
+    """Converts a CIGAR data structure and position to list of FeatureLocations.
+
+    :param cigar:
+      List of tuples like what is returned by the 'cigar' property
+      from a Pysam alignment.
+
+    :param start:
+       Start location, using 0-based indexing.
+
+    :return:
+
+      List of FeatureLocation objects representing the spans of the
+      reference that this segment matches.
+      
+    """
     spans = []
     if __debug__:
         logging.debug('cigar is %s, start is %d', cigar, start)
+
     if cigar is None:
         return []
 
     cigar = remove_ds(cigar)
 
     for (op, bases) in cigar:
-        opname = CIGAR_CHARS[op]
-        if opname == 'M':
+
+        if op == CigarOp.M:
             end = start + bases
             spans.append(FeatureLocation(start, end))
             start = end
 
-        elif opname in 'DN':
+        elif op == CigarOp.D or op == CigarOp.N:
             start = start + bases
-
-        elif opname == 'I':
-            pass #start += 1
 
     res = []
 
@@ -170,14 +193,34 @@ def cigar_to_spans(cigar, start):
     return res
 
 def format_spans(spans):
+    """Format a list of FeatureLocations representing spans as a string."""
     return ', '.join([ '%s-%s' % (s.start, s.end) for s in spans ])
     
-def match(exon, alns):
+def matches(exon, alns):
+    """Returns True if the given alignments match the given exon.
 
+    At least one segment from the alignments must overlap the exon,
+    and all of the segments must be 'consistent' with the exon,
+    meaning that the read must not cross a junction, and a gap in the
+    read cannot occur in the middle of the exon.
+
+    :param exon:
+       A SeqFeature representing the exon.
+
+    :param alns:
+      List of alignments to check. There should typically be either
+       one or two alns; one in the case of single-end reads or a read
+       where only one of the pair aligned, and two where both reads
+       aligned.
+
+    :return:
+       Boolean indicating whether the fragment matches.
+
+    """
     if __debug__:
         logging.debug('    exon is %d-%d', exon.location.start, exon.location.end)
 
-    overlap = []
+    overlap    = []
     consistent = []
 
     span_groups = [ cigar_to_spans(aln.cigar, aln.pos) for aln in alns ]
@@ -185,6 +228,7 @@ def match(exon, alns):
     for spans in span_groups:
         my_overlap = spans_overlap(exon.location, spans)
         overlap.extend(my_overlap)
+
         if __debug__:
             logging.debug('    spans are %s, overlap is %s', 
                           format_spans(spans), my_overlap)
@@ -208,6 +252,7 @@ def spans_overlap(exon, spans):
 
 
 def spans_are_consistent(exon, spans):
+
     """Return bools indicating which read segments are consistent with exon.
 
     :param exon:
@@ -226,7 +271,6 @@ def spans_are_consistent(exon, spans):
       considered inconsistent. All other exons are consistent.
     
     """
-
     last_span = len(spans) - 1
 
     for i, span in enumerate(spans):
@@ -248,10 +292,8 @@ def spans_are_consistent(exon, spans):
             yield l_ok and r_ok
 
 
-
 def remove_ds(cigar):
-
-    """Removes D operations from Cigar string, replacing with Ms.
+    """Removes D operations from CigarOp string, replacing with Ms.
 
     Replaces all Ds with Ms and then merges adjacent Ms together.
 
@@ -275,10 +317,7 @@ def remove_ds(cigar):
 
     """
 
-    M = 0
-    D = 2
-
-    d_to_m = lambda (op, bases): (M, bases) if op == D else (op, bases)
+    d_to_m = lambda (op, bases): (CigarOp.M, bases) if op == CigarOp.D else (op, bases)
     converted = map(d_to_m, cigar)
     res = []
 
