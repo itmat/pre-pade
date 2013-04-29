@@ -42,6 +42,12 @@ def qname_and_hi(aln):
     """Returns a tuple of the qname and 'HI' tag for the given AlignedRead."""
     return (aln.qname, aln.opt('HI'))
 
+
+def sam_iter(samfile):
+    while True:
+        rec = samfile.next()
+        yield rec
+
 def iterate_over_sam(exons, sam_filename):
     """Return exon quantifications by iterating over SAM file.
 
@@ -71,7 +77,7 @@ def iterate_over_sam(exons, sam_filename):
     unique_counts = defaultdict(lambda: 0)
     multi_counts = defaultdict(lambda: 0)
 
-    mapped = ifilter(lambda x: not x.is_unmapped, samfile.fetch())
+    mapped = ifilter(lambda x: not x.is_unmapped, sam_iter(samfile))
 
     for key, pair in groupby(mapped, key=qname_and_hi):
 
