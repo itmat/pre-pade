@@ -13,7 +13,7 @@ from Bio.SeqFeature import FeatureLocation, SeqFeature
 from Bio.Seq import Seq
 from collections import defaultdict
 from itertools import groupby
-from prepade.geneio import parse_rum_index_genes, read_exons
+from prepade.geneio import parse_rum_index_genes, read_exons, ExonIndex
 
 class CigarOp:
     """Constants representing the CIGAR operations."""
@@ -62,6 +62,56 @@ def genes_to_exons(genes):
             yield(exon)
 
 
+def qname_and_hi(aln):
+    return (aln.qname, aln.opt('HI'))
+
+def mapped_alns(alns):
+    for a in alns:
+        if a.is_unmapped:
+            continue
+        else:
+            yield a
+
+def iterate_over_sam(exons, sam_filename):
+    logging.info('Building exon index')
+    idx = ExonIndex(exons)
+    samfile = pysam.Samfile(args.samfile)
+    unique_counts = defaultdict(lambda: 0)
+    multi_counts = defaultdict(lambda: 0)
+
+    mapped = mapped_alns(samfile.fetch())
+
+    for key, pair in groupby(mapped, key=qname_and_hi):
+
+        pair = list(pair)
+        ref = samfile.getrname(pair[0].tid)
+        num_alns = pair[0].opt('IH')
+        spans = []
+        for aln in pair:
+            spans.extend(cigar_to_spans(aln.cigar, aln.pos))
+
+        overlapping = set()
+
+        for span in spans:
+            for exon in idx.get_exons(ref, span.start, span.end):
+                key = (exon.ref, 
+                       exon.location.start,
+                       exon.location.end)
+                    
+                if matches(exon, pair):
+                    overlapping.add(key)
+
+        for key in overlapping:
+            if num_alns > 1:
+                multi_counts[key] += 1
+            else:
+                unique_counts[key] += 1
+
+    for key in unique_counts:
+        (ref, start, end) = key
+        exon = SeqFeature(ref=ref, location=FeatureLocation(start, end))
+        yield(exon, unique_counts[key], multi_counts[key])
+
 def iterate_over_exons(exons, sam_filename):
     samfile = pysam.Samfile(sam_filename)
     details = open('details', 'w')
@@ -92,9 +142,8 @@ def iterate_over_exons(exons, sam_filename):
                     start=exon.location.start,
                     end=exon.location.end), exc_info=e)
             alns = []
-        key_fn = lambda x: (x.qname, x.opt('HI'))
 
-        alns = sorted(alns, key=key_fn)
+        alns = sorted(alns, key=qname_and_hi)
 
         if __debug__:
             logging.debug('Got %d candidate alignments', len(alns))
@@ -119,31 +168,6 @@ def iterate_over_exons(exons, sam_filename):
         yield(exon, count_u, count_m)
     details.close()
 
-
-def read_sam_file(gene_filename, sam_filename, output_fh):
-
-    samfile = pysam.Samfile(sam_filename)
-
-    for aln in samfile.fetch():
-
-        if aln.cigar is not None:
-            spans = cigar_to_spans(aln.cigar, aln.pos)
-        else:
-            spans = None
-
-        print(aln.qname)
-        print(samfile.mate(aln))
-        
-#        for exon in exons:
-#            start = exon.location.start
-#            end   = exon.location.end
-#            count = 0
-#            for rec in samfile.fetch(chr_, start, end):
-#                process_sam_rec(rec)
-#                count += 1#
-#
-#            if count > 0:
-#                print(chr_, start, end, count, sep="\t", file=output_fh)
 
 
 def cigar_to_spans(cigar, start):
@@ -343,7 +367,7 @@ if __name__ == '__main__':
     parser.add_argument('--log')
     parser.add_argument('--debug', '-d', action='store_true')
     parser.add_argument('--output', '-o', type=argparse.FileType('w'))
-    parser.add_argument('--iterate-sam', '-s', default='exons', choices=['exons', 'reads'])
+    parser.add_argument('--iterate-sam', '-s', action='store_true')
 
     args = parser.parse_args()
 
@@ -368,8 +392,14 @@ if __name__ == '__main__':
     elif 'exons' in args:
         exons = read_exons(args.exons)
 
+    if args.iterate_sam:
+        counts = iterate_over_sam(exons, args.samfile)
+
+    else:
+        counts = iterate_over_exons(exons, args.samfile)
+            
     print('feature', 'min', 'max', sep='\t', file=output)
-    for (exon, count_u, count_m) in iterate_over_exons(exons, args.samfile):
+    for (exon, count_u, count_m) in counts:
         exon_str = '{chr_}:{start}-{end}'.format(
             chr_=exon.ref,
             start=exon.location.start+1,
@@ -381,5 +411,5 @@ if __name__ == '__main__':
             max_count = 0
         print(exon_str, min_count, max_count, sep='\t', file=output)
 
-#    read_sam_file(args.rum_gene_info, args.samfile, args.output)
+
 
