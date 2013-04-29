@@ -1,6 +1,8 @@
 from Bio.SeqFeature import FeatureLocation, SeqFeature
 from collections import namedtuple, defaultdict
 from itertools import groupby
+
+import logging
 import re
 import numpy as np
 
@@ -54,15 +56,22 @@ class ExonIndex(object):
         # overlapping. Build a list of sorted, disjoint spans, and
         # associate with each span the list of exons that are present in
         # all bases of that span.
-        events = sorted(events, key=lambda x: x.location)
+
+        key_fn = lambda x: (x.exon.ref, x.location)
+
+        logging.info('Sorting events')
+        events = sorted(events, key=key_fn)
 
         overlap = defaultdict(set)
 
         starts = defaultdict(list)
         keys   = defaultdict(list)
 
-        for (ref, location), values in groupby(events, lambda x: (x.exon.ref, x.location)):
-        
+
+        old = set()
+
+        for (ref, location), values in groupby(events, key_fn):
+
             for event in values:
                 start = event.exon.location.start
                 end   = event.exon.location.end
@@ -71,7 +80,10 @@ class ExonIndex(object):
                 if event.etype == 'start':
                     overlap[ref].add(key)
                 else:
-                    overlap[ref].remove(key)
+                    try:
+                        overlap[ref].remove(key)
+                    except KeyError as e:
+                        pass
 
             starts[ref].append(location)
             keys[ref].append(set(overlap[ref]))
