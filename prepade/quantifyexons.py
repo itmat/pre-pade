@@ -45,8 +45,24 @@ def qname_and_hi(aln):
 def iterate_over_sam(exons, sam_filename):
     """Return exon quantifications by iterating over SAM file.
 
-    Reads all the exons into an index in memory, and then iterates
-    over all the aligments in order in the given SAM file.
+    Reads all the exons into an index in memory. Then iterates over
+    all the aligments in order in the given SAM file, accumulating
+    counts for each exon.
+
+    :param exons: 
+      Sequence of SeqFeature objects representing exons.
+
+    :param sam_filename:
+      Identifies the SAM file. Reads that are part of the same pair
+      must be next to each other in the file, and the HI and IH tags
+      must be used.
+
+    :return:
+      An iterator over (exon, unique_count, non_unique_count) tuples,
+      where exon is a SeqFeature object, unique count is the number of
+      unique mappers that overlap it consistently, and
+      non_unique_count is the number of non-unique mappers that
+      overlap it consistently
     
     """
     logging.info('Building exon index')
@@ -88,7 +104,27 @@ def iterate_over_sam(exons, sam_filename):
         exon = SeqFeature(ref=ref, location=FeatureLocation(start, end))
         yield(exon, unique_counts[key], multi_counts[key])
 
-def iterate_over_exons(exons, sam_filename):
+def iterate_over_exons(exons, bam_filename):
+    """Return exon quantifications by iterating over the exons file.
+
+    Iterates over all the exons in the given sequence, and for each
+    one, fetches all overlapping reads from the specified BAM file.
+
+    :param exons: 
+      Sequence of SeqFeature objects representing exons.
+
+    :param sam_filename:
+      Identifies the BAM file. It must be an indexed BAM file, and the
+      HI and IH tags must be used.
+
+    :return:
+      An iterator over (exon, unique_count, non_unique_count) tuples,
+      where exon is a SeqFeature object, unique count is the number of
+      unique mappers that overlap it consistently, and
+      non_unique_count is the number of non-unique mappers that
+      overlap it consistently
+
+    """
     samfile = pysam.Samfile(sam_filename)
     details = ope
 
@@ -249,7 +285,20 @@ def matches(exon, alns):
 
         
 def spans_overlap(exon, spans):
+    """Return bools indicating which spans overlap the exon.
 
+    :param exon:
+      A FeatureLocation representing an exon.
+
+    :param spans:
+      A list of FeatureLocations, each representing a read segment.
+
+    :return:
+
+      Array of booleans, one for each read segment, indicating which
+      segments overlap the exon.
+
+    """
     for span in spans:
         yield not (span.end <= exon.start or span.start >= exon.end) 
 
