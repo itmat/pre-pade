@@ -385,7 +385,8 @@ def remove_ds(cigar):
 
     return res
 
-if __name__ == '__main__':
+def main():
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--rum-gene-info', type=file)
     parser.add_argument('--exons', type=file)
@@ -439,4 +440,5 @@ if __name__ == '__main__':
         print(exon_str, min_count, max_count, sep='\t', file=output)
 
 
-
+if __name__ == '__main__':
+    main()
