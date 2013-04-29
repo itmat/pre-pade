@@ -388,7 +388,35 @@ def remove_ds(cigar):
 
 def main():
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="""
+        
+        This program expects two types of input: a set of alignments
+        which can be in SAM or BAM format, and a list of exons, which
+        can be in a variety of formats.
+
+        Alignments
+        ----------
+
+        The alignments can either be given as a SAM file, a BAM file,
+        or an indeed BAM file. If the input is an indexed BAM file, we
+        will take advantage of the index by iterating over the list of
+        exons and fetching any overlapping reads from the BAM file. If
+        it is a non-indexed BAM file or a SAM file, or if you give the
+        --ignore-index option, we will instead load all the exons into
+        memory, and then iterate over all the alignments to accumulate
+        the counts.
+
+        The HI and IH tags must be set properly in the file. Assuming
+        those tags are set, any indexed BAM file should be
+        acceptable. If the input is given as a SAM file or a BAM file
+        without an index, then the forward and reverse reads from the
+        same fragment must be adjacent to each other in the file.
+
+        Note that using an indexed BAM file may actually be slower
+        than iterating over all the reads in the SAM file. 
+
+        """)
     input_grp = parser.add_mutually_exclusive_group(required=True)
 
     input_grp.add_argument('--rum-gene-info', 
@@ -406,7 +434,7 @@ def main():
     parser.add_argument('--output', '-o', 
                         type=argparse.FileType('w'),
                         help="Location of output file")
-    parser.add_argument('--iterate-sam', '-s', action='store_true',
+    parser.add_argument('--ignore-index', action='store_true',
                         help="""By default, we expect the alignments to be given as an indexed BAM file. We iterate over the exons and select the overlapping reads from the BAM file using the index. Giving the --iterate-sam flag causes us to instead read in all the exons into memory and then iterate over a SAM file.""")
 
 
