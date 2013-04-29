@@ -125,10 +125,7 @@ def iterate_over_exons(exons, bam_filename):
       overlap it consistently
 
     """
-    samfile = pysam.Samfile(sam_filename)
-    details = ope
-
-    n('details', 'w')
+    samfile = pysam.Samfile(bam_filename)
 
     seen = set()
 
@@ -162,7 +159,7 @@ def iterate_over_exons(exons, bam_filename):
         if __debug__:
             logging.debug('Got %d candidate alignments', len(alns))
 
-        for (qname, hi), pair in groupby(alns, key=key_fn):
+        for (qname, hi), pair in groupby(alns, key=qname_and_hi):
             if __debug__:
                 logging.debug(' ')
                 logging.debug('  candidate %s[%d]', qname, hi)
@@ -180,8 +177,6 @@ def iterate_over_exons(exons, bam_filename):
         count_m = len(multi_read_ids)
 
         yield(exon, count_u, count_m)
-    details.close()
-
 
 
 def cigar_to_spans(cigar, start):
@@ -388,14 +383,26 @@ def remove_ds(cigar):
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--rum-gene-info', type=file)
-    parser.add_argument('--exons', type=file)
-    parser.add_argument('--exon-index')
+    input_grp = parser.add_mutually_exclusive_group(required=True)
+
+    input_grp.add_argument('--rum-gene-info', 
+                       type=file,
+                       help="Input as a gene file from a RUM index")
+
+    input_grp.add_argument('--exons',
+                       help="Input as a list of exons, one on each line, like 'chr1:234-678'",
+                       type=file)
+
     parser.add_argument('samfile')
-    parser.add_argument('--log')
-    parser.add_argument('--debug', '-d', action='store_true')
-    parser.add_argument('--output', '-o', type=argparse.FileType('w'))
-    parser.add_argument('--iterate-sam', '-s', action='store_true')
+
+    parser.add_argument('--debug', '-d', action='store_true',
+                        help="Turn on debug-level logging")
+    parser.add_argument('--output', '-o', 
+                        type=argparse.FileType('w'),
+                        help="Location of output file")
+    parser.add_argument('--iterate-sam', '-s', action='store_true',
+                        help="""By default, we expect the alignments to be given as an indexed BAM file. We iterate over the exons and select the overlapping reads from the BAM file using the index. Giving the --iterate-sam flag causes us to instead read in all the exons into memory and then iterate over a SAM file.""")
+
 
     args = parser.parse_args()
 
@@ -404,7 +411,6 @@ def main():
     logging.basicConfig(level=level,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
-                        filename=args.log,
                         filemode='w')
 
     console = logging.StreamHandler()
