@@ -12,7 +12,7 @@ import sys
 from Bio.SeqFeature import FeatureLocation, SeqFeature
 from Bio.Seq import Seq
 from collections import defaultdict
-from itertools import groupby
+from itertools import groupby, ifilter
 from prepade.geneio import parse_rum_index_genes, read_exons, ExonIndex
 
 class CigarOp:
@@ -28,30 +28,6 @@ class CigarOp:
     EQUAL = 7
     X = 8
 
-def load_exon_index(fh):
-
-    chr_to_exons = defaultdict(list)
-
-    chrs = []
-    starts = []
-    ends = []
-
-    genes = parse_rum_index_genes(fh)
-    exons = genes_to_exons(genes)
-
-    for exon in exons:
-        chrs.append(gene.ref)
-        starts.append(exon.location.start)
-        ends.append(exon.location.end)
-
-    df = pd.DataFrame({
-        'chromosome' : chrs,
-        'start'      : starts,
-        'end'        : ends })
-
-    df = df.sort(columns=['chromosome', 'end'])
-
-    return df
 
 def genes_to_exons(genes):
     """Given an iterator over genes, returns an iterator over exons.
@@ -63,23 +39,23 @@ def genes_to_exons(genes):
 
 
 def qname_and_hi(aln):
+    """Returns a tuple of the qname and 'HI' tag for the given AlignedRead."""
     return (aln.qname, aln.opt('HI'))
 
-def mapped_alns(alns):
-    for a in alns:
-        if a.is_unmapped:
-            continue
-        else:
-            yield a
-
 def iterate_over_sam(exons, sam_filename):
+    """Return exon quantifications by iterating over SAM file.
+
+    Reads all the exons into an index in memory, and then iterates
+    over all the aligments in order in the given SAM file.
+    
+    """
     logging.info('Building exon index')
     idx = ExonIndex(exons)
-    samfile = pysam.Samfile(args.samfile)
+    samfile = pysam.Samfile(sam_filename)
     unique_counts = defaultdict(lambda: 0)
     multi_counts = defaultdict(lambda: 0)
 
-    mapped = mapped_alns(samfile.fetch())
+    mapped = ifilter(lambda x: not x.is_unmapped, samfile.fetch())
 
     for key, pair in groupby(mapped, key=qname_and_hi):
 
@@ -114,7 +90,9 @@ def iterate_over_sam(exons, sam_filename):
 
 def iterate_over_exons(exons, sam_filename):
     samfile = pysam.Samfile(sam_filename)
-    details = open('details', 'w')
+    details = ope
+
+    n('details', 'w')
 
     seen = set()
 
