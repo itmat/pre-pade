@@ -42,3 +42,27 @@ class ExonIndexTest(unittest.TestCase):
         self.assertEquals(0, len(list(idx.get_exons('chr1', 30, 34))))
         self.assertEquals(1, len(list(idx.get_exons('chr1', 35, 45))))
         self.assertEquals(0, len(list(idx.get_exons('chr1', 45, 100))))
+
+
+    def test_multiple_refs(self):
+
+        exons = [
+            'chr1:5-10',
+            'chr1:11-20',
+            'chr1:15-30',
+            'chr1:18-25',
+            'chr1:35-40',
+
+            'chr1:5-10',
+            'chr2:11-20',
+            'chr3:15-30',
+            'chr4:18-25',
+            'chr3:35-40',
+
+            'chr1:5-10',
+            'chr3:11-20',
+            'chr13:15-30',
+            'chr3:318-25',
+            'chr3:35-40',
+        ]
+        idx = ExonIndex(read_exons(exons))
