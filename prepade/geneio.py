@@ -30,6 +30,8 @@ def read_exons(fh):
     pat = re.compile('(.*):(\d+)-(\d+)')
     for line in fh:
         m = pat.match(line)
+        if m is None:
+            raise Exception("Can't parse exon from '{line}'".format(line=line))
         (chr_, start, end) = m.groups()
 
         yield SeqFeature(ref=chr_, 
@@ -44,6 +46,7 @@ class ExonIndex(object):
         # representing its end.
         events = []
         Event = namedtuple('Event', ['etype', 'location', 'exon'])
+        logging.debug("Converting exon locations into start and end events")
         for exon in exons:
             start = exon.location.start
             end   = exon.location.end
@@ -59,7 +62,7 @@ class ExonIndex(object):
 
         key_fn = lambda x: (x.exon.ref, x.location)
 
-        logging.info('Sorting events')
+        logging.debug('Sorting events')
         events = sorted(events, key=key_fn)
 
         overlap = defaultdict(set)
@@ -70,6 +73,7 @@ class ExonIndex(object):
 
         old = set()
 
+        logging.debug("Overlap list based on sorted events")
         for (ref, location), values in groupby(events, key_fn):
 
             for event in values:

@@ -14,6 +14,8 @@ from Bio.Seq import Seq
 from collections import defaultdict
 from itertools import groupby, ifilter
 from prepade.geneio import parse_rum_index_genes, read_exons, ExonIndex
+from prepade.samutils import AlignmentFileType, input_file_ordering, has_hi_and_ih_tags, qname_and_hi, sam_iter
+from prepade.clutils import UsageException
 
 class CigarOp:
     """Constants representing the CIGAR operations."""
@@ -28,7 +30,6 @@ class CigarOp:
     EQUAL = 7
     X = 8
 
-
 def genes_to_exons(genes):
     """Given an iterator over genes, returns an iterator over exons.
 
@@ -36,17 +37,6 @@ def genes_to_exons(genes):
     for gene in genes:
         for exon in gene.sub_features:
             yield(exon)
-
-
-def qname_and_hi(aln):
-    """Returns a tuple of the qname and 'HI' tag for the given AlignedRead."""
-    return (aln.qname, aln.opt('HI'))
-
-
-def sam_iter(samfile):
-    while True:
-        rec = samfile.next()
-        yield rec
 
 def iterate_over_sam(exons, sam_filename):
     """Return exon quantifications by iterating over SAM file.
@@ -79,6 +69,7 @@ def iterate_over_sam(exons, sam_filename):
 
     mapped = ifilter(lambda x: not x.is_unmapped, sam_iter(samfile))
 
+    logging.info("Iterating over alignments to accumulate counts")
     for key, pair in groupby(mapped, key=qname_and_hi):
 
         pair = list(pair)
@@ -104,6 +95,8 @@ def iterate_over_sam(exons, sam_filename):
                 multi_counts[key] += 1
             else:
                 unique_counts[key] += 1
+
+    logging.info("Done accumulating counts")
 
     for key in unique_counts:
         (ref, start, end) = key
@@ -236,6 +229,7 @@ def format_spans(spans):
     """Format a list of FeatureLocations representing spans as a string."""
     return ', '.join([ '%s-%s' % (s.start, s.end) for s in spans ])
     
+
 def matches(exon, alns):
     """Returns True if the given alignments match the given exon.
 
@@ -386,57 +380,39 @@ def remove_ds(cigar):
 
     return res
 
+
 def main():
 
     parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         description="""
-        
-        This program expects two types of input: a set of alignments
-        which can be in SAM or BAM format, and a list of exons, which
-        can be in a variety of formats.
-
-        Alignments
-        ----------
-
-        The alignments can either be given as a SAM file, a BAM file,
-        or an indeed BAM file. If the input is an indexed BAM file, we
-        will take advantage of the index by iterating over the list of
-        exons and fetching any overlapping reads from the BAM file. If
-        it is a non-indexed BAM file or a SAM file, or if you give the
-        --ignore-index option, we will instead load all the exons into
-        memory, and then iterate over all the alignments to accumulate
-        the counts.
-
-        The HI and IH tags must be set properly in the file. Assuming
-        those tags are set, any indexed BAM file should be
-        acceptable. If the input is given as a SAM file or a BAM file
-        without an index, then the forward and reverse reads from the
-        same fragment must be adjacent to each other in the file.
-
-        Note that using an indexed BAM file may actually be slower
-        than iterating over all the reads in the SAM file. 
-
+Generates quantifications, given a list of exons and a set of
+alignments. The alignments can either be given as (1) a SAM file
+sorted by read name, (2) a BAM file sorted by read name, or (3) an
+indexed BAM file (which would have to be sorted by chromosomal
+position in order to be indexed). The HI and IH tags must be set
+properly in the file, regardless of the input format. You can give the
+list of exons in one of two ways: (1) a file with one exon on each
+line, in the format CHR:START-END, or (2) the 'gene info' file from a
+RUM index.
         """)
-    input_grp = parser.add_mutually_exclusive_group(required=True)
 
-    input_grp.add_argument('--rum-gene-info', 
-                       type=file,
-                       help="Input as a gene file from a RUM index")
-
-    input_grp.add_argument('--exons',
-                       help="Input as a list of exons, one on each line, like 'chr1:234-678'",
-                       type=file)
-
-    parser.add_argument('samfile')
+    parser.add_argument('--rum-gene-info', 
+                       action='store_true',
+                       help="Indicate that exons is a 'gene info' file from a RUM index")
 
     parser.add_argument('--debug', '-d', action='store_true',
                         help="Turn on debug-level logging")
+
     parser.add_argument('--output', '-o', 
                         type=argparse.FileType('w'),
                         help="Location of output file")
-    parser.add_argument('--ignore-index', action='store_true',
-                        help="""By default, we expect the alignments to be given as an indexed BAM file. We iterate over the exons and select the overlapping reads from the BAM file using the index. Giving the --iterate-sam flag causes us to instead read in all the exons into memory and then iterate over a SAM file.""")
 
+    parser.add_argument('--log', '-l',
+                        help="Write log messages here; defaults so sys.stderr")
+
+    parser.add_argument('exons')
+    parser.add_argument('alignments')
 
     args = parser.parse_args()
 
@@ -445,6 +421,7 @@ def main():
     logging.basicConfig(level=level,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
+                        filename=args.log,
                         filemode='w')
 
     console = logging.StreamHandler()
@@ -453,19 +430,56 @@ def main():
 
     output = args.output if args.output is not None else sys.stdout
 
-    if args.rum_gene_info is not None:
+    logging.info("Checking alignment file")
 
-        genes = parse_rum_index_genes(args.rum_gene_info)
-        exons = genes_to_exons(genes)
-    elif 'exons' in args:
-        exons = read_exons(args.exons)
+    ordering = input_file_ordering(args.alignments)
+    has_tags = has_hi_and_ih_tags(args.alignments)
 
-    if args.iterate_sam:
-        counts = iterate_over_sam(exons, args.samfile)
+    # Check the alignments file to make sure it's ordered properly and
+    # that it has IH and HI tags.
+    if ordering is None and not has_tags:
+        raise UsageException("""
+The alignments must be either an indexed BAM file or a BAM or SAM file
+        ordered by read name. {alignments} does not seem to meet either of those
+formats. Also, the HI and IH tags must be set for all aligned reads,
+and that does not seem to be the case either. You will probably need
+        to preprocess the input file to add those tags.""".format(args))
+
+    elif ordering is None:
+        raise UsageException("""
+
+The alignments must be either an indexed BAM file or a BAM or SAM file
+ordered by read name. {alignments} does not seem to meet either of
+those formats. You should be able to sort it by read name by doing:
+        
+  sort -n {alignments} OUTPUT_FILE
+        """.format(**(args.__dict__)))
+
+    elif not has_tags:
+        raise UsageException("""
+The HI and IH tags must be set for all aligned reads, and that does
+not seem to be the case in {filename}. You will probably need to
+preprocess the input file to add those tags.""")
+
+    if ordering == AlignmentFileType.INDEXED:
+        logging.info("The alignment file is an indexed BAM file")
+    elif ordering == AlignmentFileType.ORDERED_BY_READ_NAME:
+        logging.info("The alignment file appears to be ordered by read name")
+
+    if args.rum_gene_info:
+        with open(args.exons) as infile:
+            genes = parse_rum_index_genes(infile)
+            exons = list(genes_to_exons(genes))
 
     else:
-        counts = iterate_over_exons(exons, args.samfile)
-            
+        with open(args.exons) as infile:
+            exons = list(read_exons(infile))
+                
+    if ordering == AlignmentFileType.ORDERED_BY_READ_NAME:
+        counts = iterate_over_sam(exons, args.alignments)
+    else:
+        counts = iterate_over_exons(exons, args.alignments)
+
     print('feature', 'min', 'max', sep='\t', file=output)
     for (exon, count_u, count_m) in counts:
         exon_str = '{chr_}:{start}-{end}'.format(
@@ -481,4 +495,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except UsageException as e:
+        print(e, file=sys.stderr)
