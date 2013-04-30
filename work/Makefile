@@ -22,10 +22,14 @@ exons : $(RUM_INDEX_GENE_INFO)
 exon_quant_old : exons $(SAM)
 	perl $(RUM)/bin/quantify_exons.pl $^ $@
 
-exon_quant_new : exons $(BAM) $(BAM).bai
-#	python -m prepade.quantifyexons --rum-gene-info $^ -o $@
-#	python -m prepade.quantifyexons --exons exons $(BAM) -o $@
-	python -m prepade.quantifyexons --exons exons $(SAM) -o $@ --iterate-sam
+exon_quant_new_sam : exons $(SAM)
+	python -m prepade.quantifyexons exons $(SAM) -o $@
+
+exon_quant_new_bam : exons rum.bam
+	python -m prepade.quantifyexons exons rum.bam -o $@
+
+exon_quant_new_indexed : exons rum_sorted.bam rum_sorted.bam.bai
+	python -m prepade.quantifyexons exons rum_sorted.bam -o $@
 
 exon_quant_old_filtered : exon_quant_old
 	python -m prepade.csvfilter -w 'x["min"] > 0' $< -o $@ --int min
@@ -33,7 +37,7 @@ exon_quant_old_filtered : exon_quant_old
 joined : exon_quant_old_filtered exon_quant_new
 	python -m prepade.csvjoin -j feature $^ -o $@
 
-comparison : exon_quant_old_filtered exon_quant_new
+comparison_% : exon_quant_old_filtered exon_quant_new_%
 	python -m comparequants $^ -o $@ --diffs diffs
 
 clean :
