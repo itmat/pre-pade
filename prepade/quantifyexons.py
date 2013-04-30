@@ -409,14 +409,14 @@ from a RUM index.""")
                        action='store_true',
                        help="Indicate that exons is a 'gene info' file from a RUM index")
 
-    parser.add_argument('--debug', '-d', action='store_true',
+    parser.add_argument('-d', '--debug', action='store_true',
                         help="Turn on debug-level logging")
 
-    parser.add_argument('--output', '-o', 
+    parser.add_argument('-o', '--output',
                         type=argparse.FileType('w'),
                         help="Location of output file")
 
-    parser.add_argument('--log', '-l',
+    parser.add_argument('-l', '--log',
                         help="Write log messages here; defaults so sys.stderr")
 
     parser.add_argument('exons')
