@@ -38,6 +38,14 @@ def genes_to_exons(genes):
         for exon in gene.sub_features:
             yield(exon)
 
+def alns_by_qname_and_hi(alns):
+    for qname, grp in groupby(alns, key=lambda x: x.qname):
+
+        grp = sorted(list(grp), key=lambda x: x.opt('HI'))
+
+        for hi, subgrp in groupby(grp, key=lambda x: x.opt('HI')):
+            yield subgrp
+
 def iterate_over_sam(exons, sam_filename):
     """Return exon quantifications by iterating over SAM file.
 
@@ -70,7 +78,7 @@ def iterate_over_sam(exons, sam_filename):
     mapped = ifilter(lambda x: not x.is_unmapped, sam_iter(samfile))
 
     logging.info("Iterating over alignments to accumulate counts")
-    for key, pair in groupby(mapped, key=qname_and_hi):
+    for pair in alns_by_qname_and_hi(mapped):
 
         pair = list(pair)
         ref = samfile.getrname(pair[0].tid)
@@ -386,16 +394,16 @@ def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description="""
+
 Generates quantifications, given a list of exons and a set of
-alignments. The alignments can either be given as (1) a SAM file
-sorted by read name, (2) a BAM file sorted by read name, or (3) an
-indexed BAM file (which would have to be sorted by chromosomal
-position in order to be indexed). The HI and IH tags must be set
-properly in the file, regardless of the input format. You can give the
-list of exons in one of two ways: (1) a file with one exon on each
-line, in the format CHR:START-END, or (2) the 'gene info' file from a
-RUM index.
-        """)
+alignments. The alignments can either be given as (1) a SAM or BAM
+file where all alignments for the same read are on consecutive lines,
+or as (2) an indexed BAM file (which would have to be sorted by
+chromosomal position in order to be indexed). The HI and IH tags must
+be set properly in the file, regardless of the input format. You can
+give the list of exons in one of two ways: (1) a file with one exon on
+each line, in the format CHR:START-END, or (2) the 'gene info' file
+from a RUM index.""")
 
     parser.add_argument('--rum-gene-info', 
                        action='store_true',
@@ -439,18 +447,22 @@ RUM index.
     # that it has IH and HI tags.
     if ordering is None and not has_tags:
         raise UsageException("""
-The alignments must be either an indexed BAM file or a BAM or SAM file
-        ordered by read name. {alignments} does not seem to meet either of those
-formats. Also, the HI and IH tags must be set for all aligned reads,
-and that does not seem to be the case either. You will probably need
-        to preprocess the input file to add those tags.""".format(args))
+The alignments must be either an indexed BAM file, or a BAM or SAM
+file where all alignments for a single fragment are on consecutive
+lines (e.g. sorted by read name). {alignments} does not seem to meet
+either of thoseformats. Also, the HI and IH tags must be set for all
+aligned reads,and that does not seem to be the case either. You will
+probably need to preprocess the input file to add those tags.
+""".format(args))
 
     elif ordering is None:
         raise UsageException("""
 
-The alignments must be either an indexed BAM file or a BAM or SAM file
-ordered by read name. {alignments} does not seem to meet either of
-those formats. You should be able to sort it by read name by doing:
+The alignments must be either an indexed BAM file, or a BAM or SAM
+file where all alignments for a single fragment are on consecutive
+lines (e.g. ordered by read name). {alignments} does not seem to meet
+either of those formats. You should be able to sort it by read name by
+doing:
         
   sort -n {alignments} OUTPUT_FILE
         """.format(**(args.__dict__)))
