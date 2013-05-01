@@ -14,21 +14,9 @@ from Bio.Seq import Seq
 from collections import defaultdict
 from itertools import groupby, ifilter
 from prepade.geneio import parse_rum_index_genes, read_exons, ExonIndex
-from prepade.samutils import AlignmentFileType, input_file_ordering, has_hi_and_ih_tags, qname_and_hi, sam_iter
+from prepade.samutils import AlignmentFileType, input_file_ordering, has_hi_and_ih_tags, qname_and_hi, sam_iter, CigarOp
 from prepade.clutils import UsageException
 
-class CigarOp:
-    """Constants representing the CIGAR operations."""
-
-    M = 0
-    I = 1
-    D = 2
-    N = 3
-    S = 4
-    H = 5
-    P = 6
-    EQUAL = 7
-    X = 8
 
 def genes_to_exons(genes):
     """Given an iterator over genes, returns an iterator over exons.

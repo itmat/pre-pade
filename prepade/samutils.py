@@ -5,6 +5,20 @@ class AlignmentFileType:
     INDEXED               = 0
     ORDERED_BY_READ_NAME  = 1
 
+class CigarOp:
+    """Constants representing the CIGAR operations."""
+
+    M = 0
+    I = 1
+    D = 2
+    N = 3
+    S = 4
+    H = 5
+    P = 6
+    EQUAL = 7
+    X = 8
+
+
 def qname_and_hi(aln):
     """Returns a tuple of the qname and 'HI' tag for the given AlignedRead."""
     return (aln.qname, aln.opt('HI'))
