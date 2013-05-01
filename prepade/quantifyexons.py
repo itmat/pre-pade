@@ -65,15 +65,17 @@ def iterate_over_sam(exons, sam_filename):
 
         overlapping = set()
 
+        # Go through all the spans and add to 'overlapping' a key for
+        # each exon that a span overlaps.
         for span in spans:
             for exon in idx.get_exons(ref, span.start, span.end):
-                key = (exon.ref, 
-                       exon.location.start,
-                       exon.location.end)
+                key = (exon.ref, exon.location.start, exon.location.end)
                     
                 if matches(exon, pair):
                     overlapping.add(key)
 
+        # Overlapping now has a key for each exon that any span from
+        # this pair of alignments overlaps.
         for key in overlapping:
             if num_alns > 1:
                 multi_counts[key] += 1
