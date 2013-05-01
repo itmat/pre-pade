@@ -13,20 +13,27 @@ from Bio.SeqFeature import FeatureLocation, SeqFeature
 from Bio.Seq import Seq
 from collections import defaultdict
 from itertools import groupby, ifilter
-from prepade.geneio import parse_rum_index_genes, read_exons, ExonIndex
-from prepade.samutils import AlignmentFileType, input_file_ordering, has_hi_and_ih_tags, qname_and_hi, sam_iter, CigarOp
 from prepade.clutils import UsageException
+from prepade.geneio import (
+    parse_rum_index_genes, read_exons, ExonIndex, genes_to_exons)
+from prepade.samutils import (
+    AlignmentFileType, input_file_ordering, has_hi_and_ih_tags, qname_and_hi, 
+    sam_iter, CigarOp)
 
-
-def genes_to_exons(genes):
-    """Given an iterator over genes, returns an iterator over exons.
-
-    """
-    for gene in genes:
-        for exon in gene.sub_features:
-            yield(exon)
 
 def alns_by_qname_and_hi(alns):
+    """Group alignments by qname and HI tag
+
+    :param alns:
+      An iterator over alignments. All alignments with the same qname
+      must be contiguous. Within a group of alignments with the same
+      qname, the ordering of the reads by HI tag does not matter.
+
+    :return:
+      An iterator over lists of alignments, grouped by qname and the
+      value of the HI tags.
+
+    """
     for qname, grp in groupby(alns, key=lambda x: x.qname):
 
         grp = sorted(list(grp), key=lambda x: x.opt('HI'))
@@ -35,6 +42,7 @@ def alns_by_qname_and_hi(alns):
             yield subgrp
 
 def iterate_over_sam(exons, sam_filename):
+
     """Return exon quantifications by iterating over SAM file.
 
     Reads all the exons into an index in memory. Then iterates over
@@ -150,18 +158,11 @@ def iterate_over_exons(exons, bam_filename):
             alns = []
 
         alns = sorted(alns, key=qname_and_hi)
-
-        if __debug__:
-            logging.debug('Got %d candidate alignments', len(alns))
-
+    
         for (qname, hi), pair in groupby(alns, key=qname_and_hi):
-            if __debug__:
-                logging.debug(' ')
-                logging.debug('  candidate %s[%d]', qname, hi)
+
             pair = list(pair)
             if matches(exon, pair):
-                if __debug__:
-                    logging.debug('    found a match!')
                 num_alns = pair[0].opt('IH')
                 if num_alns > 1:
                     multi_read_ids.add((qname, hi))
@@ -191,8 +192,6 @@ def cigar_to_spans(cigar, start):
       
     """
     spans = []
-    if __debug__:
-        logging.debug('cigar is %s, start is %d', cigar, start)
 
     if cigar is None:
         return []
@@ -247,8 +246,6 @@ def matches(exon, alns):
        Boolean indicating whether the fragment matches.
 
     """
-    if __debug__:
-        logging.debug('    exon is %d-%d', exon.location.start, exon.location.end)
 
     overlap    = []
     consistent = []
@@ -259,18 +256,11 @@ def matches(exon, alns):
         my_overlap = spans_overlap(exon.location, spans)
         overlap.extend(my_overlap)
 
-        if __debug__:
-            logging.debug('    spans are %s, overlap is %s', 
-                          format_spans(spans), my_overlap)
-
     if not any(overlap):
         return False
 
     for spans in span_groups:
         consistent.extend(spans_are_consistent(exon.location, spans))
-
-    if __debug__:
-        logging.debug('  consistent is %s', consistent)
 
     return all(consistent)
 

@@ -122,3 +122,10 @@ class ExonIndex(object):
                     seen.add(key)
                     yield(SeqFeature(ref=exon_ref, location=FeatureLocation(exon_start, exon_end)))
             r += 1
+def genes_to_exons(genes):
+    """Given an iterator over genes, returns an iterator over exons.
+
+    """
+    for gene in genes:
+        for exon in gene.sub_features:
+            yield(exon)
