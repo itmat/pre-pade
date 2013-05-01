@@ -1,4 +1,5 @@
 import pysam
+from Bio.SeqFeature import FeatureLocation, SeqFeature
 from itertools import groupby, ifilter, islice
 
 class AlignmentFileType:
@@ -27,7 +28,7 @@ def qname_and_hi(aln):
 def sam_iter(samfile, skip_unmapped=True):
     while True:
         rec = samfile.next()
-        if skip_unmapped and x.is_unmapped:
+        if skip_unmapped and rec.is_unmapped:
             continue
         else:
             yield rec

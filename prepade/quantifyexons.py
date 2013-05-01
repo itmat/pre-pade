@@ -12,13 +12,15 @@ import sys
 from Bio.SeqFeature import FeatureLocation, SeqFeature
 from Bio.Seq import Seq
 from collections import defaultdict
-from itertools import groupby, ifilter
-from prepade.clutils import UsageException, setup_logging
+from itertools import groupby, ifilter, chain
+from prepade.clutils import (
+    UsageException, setup_logging, get_output_fh, 
+    require_sam_ordering_and_hi_tags)
 from prepade.geneio import (
     parse_rum_index_genes, read_exons, ExonIndex, genes_to_exons)
 from prepade.samutils import (
     AlignmentFileType, input_file_ordering, has_hi_and_ih_tags, qname_and_hi, 
-    sam_iter)
+    sam_iter, alns_by_qname_and_hi, cigar_to_spans, spans_for_aln)
 
 
 def iterate_over_sam(exons, sam_filename):
@@ -188,7 +190,7 @@ def matches(exon, alns):
     span_groups = map(spans_for_aln, alns)
         
     # Make sure at least one of the spans overlaps the exon
-    overlap = map(spans_overlap, chain.from_iterable(span_groups))
+    overlap = [ spans_overlap(exon, span) for span in chain.from_iterable(span_groups) ]
     if not any(overlap):
         return False
 
@@ -197,8 +199,8 @@ def matches(exon, alns):
     # segments are treated differently from the first and last
     # segments of each read.
     for spans in span_groups:
-        if not all(spans_are_consistent(exon.location, spans))
-            return false
+        if not all(spans_are_consistent(exon.location, spans)):
+            return False
 
     return True
 

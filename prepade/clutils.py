@@ -1,3 +1,6 @@
+import logging
+from prepade.samutils import input_file_ordering, has_hi_and_ih_tags, AlignmentFileType
+
 class UsageException(Exception):
     pass
 
