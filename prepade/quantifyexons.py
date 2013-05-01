@@ -51,10 +51,8 @@ def iterate_over_sam(exons, sam_filename):
     unique_counts = defaultdict(lambda: 0)
     multi_counts = defaultdict(lambda: 0)
 
-    mapped = ifilter(lambda x: not x.is_unmapped, sam_iter(samfile))
-
     logging.info("Iterating over alignments to accumulate counts")
-    for pair in alns_by_qname_and_hi(mapped):
+    for pair in alns_by_qname_and_hi(sam_iter(samfile)):
 
         pair = list(pair)
         ref = samfile.getrname(pair[0].tid)
@@ -63,24 +61,25 @@ def iterate_over_sam(exons, sam_filename):
         for aln in pair:
             spans.extend(cigar_to_spans(aln.cigar, aln.pos))
 
-        overlapping = set()
+        seen = set()
 
-        # Go through all the spans and add to 'overlapping' a key for
-        # each exon that a span overlaps.
+        # Go through all the spans and find all the exons overlapped
+        # by any span. For each of those exons, check to see if it
+        # 'matches'. If it does, increment one of the counts (unique
+        # or multi depending on how many alignments there are for this
+        # read). Since we might come across the same exon more than
+        # once, keep a set of 'seen' exons so we don't double-count.
         for span in spans:
             for exon in idx.get_exons(ref, span.start, span.end):
                 key = (exon.ref, exon.location.start, exon.location.end)
-                    
-                if matches(exon, pair):
-                    overlapping.add(key)
 
-        # Overlapping now has a key for each exon that any span from
-        # this pair of alignments overlaps.
-        for key in overlapping:
-            if num_alns > 1:
-                multi_counts[key] += 1
-            else:
-                unique_counts[key] += 1
+                if key not in seen:
+                    if matches(exon, pair):
+                        if num_alns > 1:
+                            multi_counts[key] += 1
+                        else:
+                            unique_counts[key] += 1                        
+                        seen.add(key)
 
     logging.info("Done accumulating counts")
 
@@ -184,22 +183,24 @@ def matches(exon, alns):
 
     """
 
-    overlap    = []
-    consistent = []
-
-    span_groups = [ cigar_to_spans(aln.cigar, aln.pos) for aln in alns ]
-
-    for spans in span_groups:
-        my_overlap = spans_overlap(exon.location, spans)
-        overlap.extend(my_overlap)
-
+    # Get a list of lists of spans; one list of spans for each aligned
+    # read for this fragment.
+    span_groups = map(spans_for_aln, alns)
+        
+    # Make sure at least one of the spans overlaps the exon
+    overlap = map(spans_overlap, chain.from_iterable(span_groups))
     if not any(overlap):
         return False
 
+    # Now make sure that all of the spans are "consistent" with the
+    # exon. We check each group separately, because internal read
+    # segments are treated differently from the first and last
+    # segments of each read.
     for spans in span_groups:
-        consistent.extend(spans_are_consistent(exon.location, spans))
+        if not all(spans_are_consistent(exon.location, spans))
+            return false
 
-    return all(consistent)
+    return True
 
         
 def spans_overlap(exon, spans):
@@ -244,23 +245,29 @@ def spans_are_consistent(exon, spans):
     last_span = len(spans) - 1
 
     for i, span in enumerate(spans):
-        
+
+        # If the span doesn't overlap the exon at all, it certainly
+        # isn't inconsistent with it.
         if span.end <= exon.start or span.start >= exon.end:
             yield True
 
         else:
+            # If it's the first span for the read, it can start either
+            # at or after the exon start. If it's not the first span,
+            # then it must start at the exon start, indicating that an
+            # intron was skipped.
             if i == 0:
                 l_ok = span.start >= exon.start
             else:
                 l_ok = span.start == exon.start
 
+            # And the opposite is true for right edge of the span
             if i == last_span:
                 r_ok = span.end <= exon.end
             else:
                 r_ok = span.end == exon.end
 
             yield l_ok and r_ok
-
 
 
 def main():
@@ -312,7 +319,7 @@ from a RUM index.""")
     else:
         with open(args.exons) as infile:
             exons = list(read_exons(infile))
-                
+
     if ordering == AlignmentFileType.ORDERED_BY_READ_NAME:
         counts = iterate_over_sam(exons, args.alignments)
     else:
@@ -330,6 +337,7 @@ from a RUM index.""")
         else:
             max_count = 0
         print(exon_str, min_count, max_count, sep='\t', file=output)
+
 
 
 if __name__ == '__main__':

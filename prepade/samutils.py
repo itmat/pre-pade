@@ -24,17 +24,20 @@ def qname_and_hi(aln):
     return (aln.qname, aln.opt('HI'))
 
 
-def sam_iter(samfile):
+def sam_iter(samfile, skip_unmapped=True):
     while True:
         rec = samfile.next()
-        yield rec
+        if skip_unmapped and x.is_unmapped:
+            continue
+        else:
+            yield rec
 
 def has_hi_and_ih_tags(filename):
     
     samfile = pysam.Samfile(filename)
     
     try:
-        mapped = ifilter(lambda x: not x.is_unmapped, sam_iter(samfile))    
+        mapped = sam_iter(samfile)
     
         count = 0
 
@@ -83,7 +86,7 @@ def input_file_is_indexed(filename):
     count = 0    
     samfile = pysam.Samfile(filename)         
 
-    mapped = list(islice(ifilter(lambda x: not x.is_unmapped, sam_iter(samfile)), 100))
+    mapped = list(islice(sam_iter(samfile), 100))
     rec = mapped[0]
     
     try:
@@ -116,8 +119,7 @@ def input_file_is_ordered_by_read_name(filename):
         # select the first 10000 of those groups.
         groups = islice(
             grouped_by_qname(
-                filter_mapped(
-                    sam_iter(samfile))),
+                    sam_iter(samfile)),
             10000)
 
         # Each of the alignments in each group should have an IH tag
@@ -156,6 +158,9 @@ def alns_by_qname_and_hi(alns):
 
         for hi, subgrp in groupby(grp, key=lambda x: x.opt('HI')):
             yield subgrp
+
+def spans_for_aln(aln):
+    return cigar_to_spans(aln.cigar, aln.pos)
 
 def cigar_to_spans(cigar, start):
     """Converts a CIGAR data structure and position to list of FeatureLocations.
