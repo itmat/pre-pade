@@ -76,7 +76,7 @@ def iterate_over_sam(exons, sam_filename):
                 key = (exon.ref, exon.location.start, exon.location.end)
 
                 if key not in seen:
-                    if matches(exon, pair):
+                    if matches_exon(exon, pair):
                         if num_alns > 1:
                             multi_counts[key] += 1
                         else:
@@ -112,7 +112,7 @@ def iterate_over_exons(exons, bam_filename):
 
     """
     samfile = pysam.Samfile(bam_filename)
-
+ 
     seen = set()
 
     for i, exon in enumerate(exons):
@@ -129,8 +129,6 @@ def iterate_over_exons(exons, bam_filename):
         unique_read_ids = set()
         multi_read_ids = set()
 
-        all_spans = []
-
         try:
             alns = list(samfile.fetch(exon.ref, exon.location.start, exon.location.end))
         except ValueError as e:
@@ -145,7 +143,7 @@ def iterate_over_exons(exons, bam_filename):
         for (qname, hi), pair in groupby(alns, key=qname_and_hi):
 
             pair = list(pair)
-            if matches(exon, pair):
+            if matches_exon(exon, pair):
                 num_alns = pair[0].opt('IH')
                 if num_alns > 1:
                     multi_read_ids.add((qname, hi))
@@ -163,7 +161,7 @@ def format_spans(spans):
     return ', '.join([ '%s-%s' % (s.start, s.end) for s in spans ])
     
 
-def matches(exon, alns):
+def matches_exon(exon, alns):
     """Returns True if the given alignments match the given exon.
 
     At least one segment from the alignments must overlap the exon,
@@ -185,12 +183,16 @@ def matches(exon, alns):
 
     """
 
+    overlap = []
+    consistent = []
+
     # Get a list of lists of spans; one list of spans for each aligned
     # read for this fragment.
     span_groups = map(spans_for_aln, alns)
         
     # Make sure at least one of the spans overlaps the exon
-    overlap = [ spans_overlap(exon, span) for span in chain.from_iterable(span_groups) ]
+    for spans in span_groups:
+        overlap.extend(spans_overlap(exon.location, spans))
     if not any(overlap):
         return False
 
@@ -198,11 +200,11 @@ def matches(exon, alns):
     # exon. We check each group separately, because internal read
     # segments are treated differently from the first and last
     # segments of each read.
-    for spans in span_groups:
-        if not all(spans_are_consistent(exon.location, spans)):
-            return False
 
-    return True
+    for spans in span_groups:
+        consistent.extend(spans_are_consistent(exon.location, spans))
+
+    return all(consistent)
 
         
 def spans_overlap(exon, spans):
