@@ -136,3 +136,112 @@ def input_file_is_ordered_by_read_name(filename):
 
     finally:
         samfile.close()
+
+def alns_by_qname_and_hi(alns):
+    """Group alignments by qname and HI tag
+
+    :param alns:
+      An iterator over alignments. All alignments with the same qname
+      must be contiguous. Within a group of alignments with the same
+      qname, the ordering of the reads by HI tag does not matter.
+
+    :return:
+      An iterator over lists of alignments, grouped by qname and the
+      value of the HI tags.
+
+    """
+    for qname, grp in groupby(alns, key=lambda x: x.qname):
+
+        grp = sorted(list(grp), key=lambda x: x.opt('HI'))
+
+        for hi, subgrp in groupby(grp, key=lambda x: x.opt('HI')):
+            yield subgrp
+
+def cigar_to_spans(cigar, start):
+    """Converts a CIGAR data structure and position to list of FeatureLocations.
+
+    :param cigar:
+      List of tuples like what is returned by the 'cigar' property
+      from a Pysam alignment.
+
+    :param start:
+       Start location, using 0-based indexing.
+
+    :return:
+
+      List of FeatureLocation objects representing the spans of the
+      reference that this segment matches.
+      
+    """
+    spans = []
+
+    if cigar is None:
+        return []
+
+    cigar = remove_ds(cigar)
+
+    for (op, bases) in cigar:
+
+        if op == CigarOp.M:
+            end = start + bases
+            spans.append(FeatureLocation(start, end))
+            start = end
+
+        elif op == CigarOp.D or op == CigarOp.N:
+            start = start + bases
+
+    res = []
+
+    for span in spans:
+        if len(res) > 0 and res[-1].end + 1>= span.start:
+            start = res[-1].start
+            end   = span.end
+            res[-1] = FeatureLocation(start, end)
+        else:
+            res.append(span)
+
+    return res
+
+
+def remove_ds(cigar):
+    """Removes D operations from CigarOp string, replacing with Ms.
+
+    Replaces all Ds with Ms and then merges adjacent Ms together.
+
+    >>> remove_ds([ (0, 21), (2, 1), (0, 54) ])
+    [(0, 76)]
+
+    >>> remove_ds([(4, 8), (0, 4), (2, 1), (0, 63)])
+    [(4, 8), (0, 68)]
+
+    >>> remove_ds([(0, 15), (2, 1), (0, 15), (2, 2), (0, 29), (2, 2), (0, 16)])
+    [(0, 80)]
+
+    >>> remove_ds([(0, 21), (2, 1), (0, 41), (3, 177), (0, 13)])
+    [(0, 63), (3, 177), (0, 13)]
+
+    >>> remove_ds([(0, 41), (3, 354), (0, 20), (2, 1), (0, 14)])
+    [(0, 41), (3, 354), (0, 35)]
+
+    >>> remove_ds([(4, 4), (0, 26), (2, 1), (0, 45)])
+    [(4, 4), (0, 72)]
+
+    """
+
+    d_to_m = lambda (op, bases): (CigarOp.M, bases) if op == CigarOp.D else (op, bases)
+    converted = map(d_to_m, cigar)
+    res = []
+
+    res = [converted[0]]
+
+    for (op, bases) in converted[1:]:
+        (last_op, last_bases) = res[-1]
+        
+        if op == last_op:
+            res[-1] = (op, bases + last_bases)
+        else:
+            res.append((op, bases))
+
+    return res
+
+

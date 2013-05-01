@@ -13,33 +13,13 @@ from Bio.SeqFeature import FeatureLocation, SeqFeature
 from Bio.Seq import Seq
 from collections import defaultdict
 from itertools import groupby, ifilter
-from prepade.clutils import UsageException
+from prepade.clutils import UsageException, setup_logging
 from prepade.geneio import (
     parse_rum_index_genes, read_exons, ExonIndex, genes_to_exons)
 from prepade.samutils import (
     AlignmentFileType, input_file_ordering, has_hi_and_ih_tags, qname_and_hi, 
-    sam_iter, CigarOp)
+    sam_iter)
 
-
-def alns_by_qname_and_hi(alns):
-    """Group alignments by qname and HI tag
-
-    :param alns:
-      An iterator over alignments. All alignments with the same qname
-      must be contiguous. Within a group of alignments with the same
-      qname, the ordering of the reads by HI tag does not matter.
-
-    :return:
-      An iterator over lists of alignments, grouped by qname and the
-      value of the HI tags.
-
-    """
-    for qname, grp in groupby(alns, key=lambda x: x.qname):
-
-        grp = sorted(list(grp), key=lambda x: x.opt('HI'))
-
-        for hi, subgrp in groupby(grp, key=lambda x: x.opt('HI')):
-            yield subgrp
 
 def iterate_over_sam(exons, sam_filename):
 
@@ -175,51 +155,6 @@ def iterate_over_exons(exons, bam_filename):
         yield(exon, count_u, count_m)
 
 
-def cigar_to_spans(cigar, start):
-    """Converts a CIGAR data structure and position to list of FeatureLocations.
-
-    :param cigar:
-      List of tuples like what is returned by the 'cigar' property
-      from a Pysam alignment.
-
-    :param start:
-       Start location, using 0-based indexing.
-
-    :return:
-
-      List of FeatureLocation objects representing the spans of the
-      reference that this segment matches.
-      
-    """
-    spans = []
-
-    if cigar is None:
-        return []
-
-    cigar = remove_ds(cigar)
-
-    for (op, bases) in cigar:
-
-        if op == CigarOp.M:
-            end = start + bases
-            spans.append(FeatureLocation(start, end))
-            start = end
-
-        elif op == CigarOp.D or op == CigarOp.N:
-            start = start + bases
-
-    res = []
-
-    for span in spans:
-        if len(res) > 0 and res[-1].end + 1>= span.start:
-            start = res[-1].start
-            end   = span.end
-            res[-1] = FeatureLocation(start, end)
-        else:
-            res.append(span)
-
-    return res
-
 def format_spans(spans):
     """Format a list of FeatureLocations representing spans as a string."""
     return ', '.join([ '%s-%s' % (s.start, s.end) for s in spans ])
@@ -325,47 +260,6 @@ def spans_are_consistent(exon, spans):
             yield l_ok and r_ok
 
 
-def remove_ds(cigar):
-    """Removes D operations from CigarOp string, replacing with Ms.
-
-    Replaces all Ds with Ms and then merges adjacent Ms together.
-
-    >>> remove_ds([ (0, 21), (2, 1), (0, 54) ])
-    [(0, 76)]
-
-    >>> remove_ds([(4, 8), (0, 4), (2, 1), (0, 63)])
-    [(4, 8), (0, 68)]
-
-    >>> remove_ds([(0, 15), (2, 1), (0, 15), (2, 2), (0, 29), (2, 2), (0, 16)])
-    [(0, 80)]
-
-    >>> remove_ds([(0, 21), (2, 1), (0, 41), (3, 177), (0, 13)])
-    [(0, 63), (3, 177), (0, 13)]
-
-    >>> remove_ds([(0, 41), (3, 354), (0, 20), (2, 1), (0, 14)])
-    [(0, 41), (3, 354), (0, 35)]
-
-    >>> remove_ds([(4, 4), (0, 26), (2, 1), (0, 45)])
-    [(4, 4), (0, 72)]
-
-    """
-
-    d_to_m = lambda (op, bases): (CigarOp.M, bases) if op == CigarOp.D else (op, bases)
-    converted = map(d_to_m, cigar)
-    res = []
-
-    res = [converted[0]]
-
-    for (op, bases) in converted[1:]:
-        (last_op, last_bases) = res[-1]
-        
-        if op == last_op:
-            res[-1] = (op, bases + last_bases)
-        else:
-            res.append((op, bases))
-
-    return res
-
 
 def main():
 
@@ -401,60 +295,12 @@ from a RUM index.""")
     parser.add_argument('alignments')
 
     args = parser.parse_args()
-
-    level = logging.DEBUG if args.debug else logging.INFO 
-
-    logging.basicConfig(level=level,
-                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S',
-                        filename=args.log,
-                        filemode='w')
-
-    console = logging.StreamHandler()
-    formatter = logging.Formatter('%(levelname)-8s %(message)s')
-    console.setFormatter(formatter)
-
-    output = args.output if args.output is not None else sys.stdout
+    setup_logging(args)
+    output = get_output_fh(args)
 
     logging.info("Checking alignment file")
 
-    ordering = input_file_ordering(args.alignments)
-    has_tags = has_hi_and_ih_tags(args.alignments)
-
-    # Check the alignments file to make sure it's ordered properly and
-    # that it has IH and HI tags.
-    if ordering is None and not has_tags:
-        raise UsageException("""
-The alignments must be either an indexed BAM file, or a BAM or SAM
-file where all alignments for a single fragment are on consecutive
-lines (e.g. sorted by read name). {alignments} does not seem to meet
-either of thoseformats. Also, the HI and IH tags must be set for all
-aligned reads,and that does not seem to be the case either. You will
-probably need to preprocess the input file to add those tags.
-""".format(args))
-
-    elif ordering is None:
-        raise UsageException("""
-
-The alignments must be either an indexed BAM file, or a BAM or SAM
-file where all alignments for a single fragment are on consecutive
-lines (e.g. ordered by read name). {alignments} does not seem to meet
-either of those formats. You should be able to sort it by read name by
-doing:
-        
-  sort -n {alignments} OUTPUT_FILE
-        """.format(**(args.__dict__)))
-
-    elif not has_tags:
-        raise UsageException("""
-The HI and IH tags must be set for all aligned reads, and that does
-not seem to be the case in {filename}. You will probably need to
-preprocess the input file to add those tags.""")
-
-    if ordering == AlignmentFileType.INDEXED:
-        logging.info("The alignment file is an indexed BAM file")
-    elif ordering == AlignmentFileType.ORDERED_BY_READ_NAME:
-        logging.info("The alignment file appears to be ordered by read name")
+    ordering = require_sam_ordering_and_hi_tags(args.alignments)
 
     if args.rum_gene_info:
         with open(args.exons) as infile:
