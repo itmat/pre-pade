@@ -1,6 +1,10 @@
 import unittest
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from prepade.quantifyexons import cigar_to_spans, spans_are_consistent
+from itertools import starmap
+
+def spans_to_locations(spans):
+    return [ FeatureLocation(*x) for x in spans ]
 
 class QuantifyExonsTest(unittest.TestCase):
 
@@ -42,16 +46,11 @@ class QuantifyExonsTest(unittest.TestCase):
 
 
     def test_spans_are_consistent1(self):
-        exon = SeqFeature(ref='chr1',
-                          location=FeatureLocation(4351909, 4352081))
+        exon = FeatureLocation(4351909, 4352081)
 
-        spans = [ 
-            SeqFeature(
-                ref='chr1',
-                location=FeatureLocation(4352004, 4352081)),
-            SeqFeature(
-                ref='chr1',
-                location=FeatureLocation(4352201, 4352224))]
+        spans = spans_to_locations([
+            (4352004, 4352081),
+            (4352201, 4352224)])
 
         res = list(spans_are_consistent(exon, spans))
             
@@ -61,27 +60,18 @@ class QuantifyExonsTest(unittest.TestCase):
         
         # rev: 
 
-        exon = SeqFeature(ref='chr1',
-                          location=FeatureLocation(121327520, 121327678))
+        exon = FeatureLocation(121327520, 121327678)
 
-        spans_f = [ 
-            SeqFeature(
-                ref='chr1',
-                location=FeatureLocation(121319862, 121319905)),
-            SeqFeature(
-                ref='chr1',
-                location=FeatureLocation(121327520, 121327577))]
+        spans_f = spans_to_locations([
+            (121319862, 121319905),
+            (121327520, 121327577)])
 
-        spans_r = [ 
-            SeqFeature(
-                ref='chr1',
-                location=FeatureLocation(121327576, 121327622)),
-            SeqFeature(
-                ref='chr1',
-                location=FeatureLocation(121327624, 121327678))]
+        spans_r = spans_to_locations([
+            (121327576, 121327622),
+            (121327624, 121327678)])
 
         self.assertEquals([True, True], list(spans_are_consistent(exon, spans_f)))
-        self.assertEquals([True, True], list(spans_are_consistent(exon, spans_r)))
+        self.assertEquals([False, False], list(spans_are_consistent(exon, spans_r)))
 
 
 #2013-04-25 16:48:12 root         INFO         exon is   93463292-93463472
