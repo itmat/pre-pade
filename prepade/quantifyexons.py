@@ -190,15 +190,20 @@ def spans_to_gaps(spans):
 
 
 def compare_aln_to_transcript(transcript, spans):
+
+    if isinstance(transcript, SeqFeature):
+        exons = np.zeros((len(transcript.sub_features), 2), int)
+        exons[:, 0] = [e.location.start for e in transcript.sub_features]
+        exons[:, 1]  = [e.location.end   for e in transcript.sub_features]        
+
+        return compare_aln_to_transcript(exons, spans)
     
+    exons = transcript
+
     tmp = spans
     spans = np.zeros((len(tmp), 2), int)
     spans[:, 0] = [s.start for s in tmp]
     spans[:, 1] = [s.end   for s in tmp]
-
-    exons = np.zeros((len(transcript.sub_features), 2), int)
-    exons[:, 0] = [e.location.start for e in transcript.sub_features]
-    exons[:, 1]  = [e.location.end   for e in transcript.sub_features]
 
     introns = spans_to_gaps(exons)
     gaps    = spans_to_gaps(spans)
