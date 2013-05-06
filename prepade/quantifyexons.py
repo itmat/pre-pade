@@ -11,7 +11,7 @@ import sys
 
 from Bio.SeqFeature import FeatureLocation, SeqFeature
 from Bio.Seq import Seq
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from itertools import groupby, ifilter, chain
 from prepade.clutils import (
     UsageException, setup_logging, get_output_fh, 
@@ -163,63 +163,74 @@ def format_spans(spans):
 def introns_for_exons(exon_starts, exon_ends):
     return (exon_starts[1:], exon_ends[:-1])
 
-def spans_intersect(start, end,
-                    span_starts, span_ends):
-
-    ends_before = span_ends <= start
-    starts_after = span_starts >= end
+def spans_intersect(target, spans):
+    start = target[0]
+    end   = target[1]
+    ends_before  = spans[:, 1] <= start
+    starts_after = spans[:, 0] >= end
 
     return np.logical_not(
-        np.logical_or(starts_before, ends_after))
+        np.logical_or(ends_before, starts_after))
+
+TranscriptMatch = namedtuple(
+    'TranscriptMatch',
+    ['decision',
+     'first_exon_hit', 'last_exon_hit',
+     'spans',
+     'gaps',
+     'exons', 
+     'introns'])
+
+def spans_to_gaps(spans):
+    res = np.zeros((len(spans) - 1, 2))
+    res[:, 0] = spans[:-1, 1]
+    res[:, 1] = spans[1:, 0]
+    return res
 
 
-def compare_aln_to_transcript(transcript, aln):
 
-    spans = cigar_to_spans(aln.cigar, aln.pos)
+def compare_aln_to_transcript(transcript, spans):
+    
+    tmp = spans
+    spans = np.zeros((len(tmp), 2), int)
+    spans[:, 0] = [s.start for s in tmp]
+    spans[:, 1] = [s.end   for s in tmp]
 
-    exons = transcript.sub_features
+    exons = np.zeros((len(transcript.sub_features), 2), int)
+    exons[:, 0] = [e.location.start for e in transcript.sub_features]
+    exons[:, 1]  = [e.location.end   for e in transcript.sub_features]
 
-    n = len(exons)
+    introns = spans_to_gaps(exons)
+    gaps    = spans_to_gaps(spans)
 
-    overlap    = np.zeros(len(exons), bool)
-    consistent = np.ones(len(exons), bool)
+    # Find the first and last exon that any of my spans intersect. If
+    # none of them intersect an exon, then we can't call this a hit.
+    first_exon_hit = None
+    last_exon_hit  = None
+    for i, exon in enumerate(exons):
 
-    span_starts = np.array([s.start for s in spans], int)
-    span_ends   = np.array([s.end for s in spans], int)
-
-    exon_starts = np.array([e.location.start for e in transcript.sub_features], int)
-    exon_ends   = np.array([e.location.end   for e in transcript.sub_features], int)
-
-    intron_starts = exon_ends[:-1]
-    intron_ends   = exon_starts[1:]
-
-    gap_starts = span_ends[:-1]
-    gap_ends   = span_starts[1:]
-
-    # Find the first exon that any of my spans intersect. If none of
-    # them intersect the exon, then we can't call this a hit.
-    first_transcribed_exon = None
-    for i in range(n):
-
-        hit = np.any(spans_intersect(exon_starts[i], exon_ends[i], span_starts, span_ends))
+        hit = np.any(spans_intersect(exon, spans))
         
-        exon_hits[i] = hit
         if hit:
-            last_transcribed_exon = i
-            if first_transcribed_exon is None:
-                first_transcribed_exon = i
+            last_exon_hit = i
+            if first_exon_hit is None:
+                first_exon_hit = i
 
     # Starting at the first exon we hit, any gaps in the read must align exactly
     # with the introns.
 
-    spanned_intron_starts = intron_starts[first_transcribed_exon : last_transcribed_exon]
-    spanned_intron_ends = intron_ends[first_transcribed_exon : last_transcribed_exon]
+    covered_introns = introns[first_exon_hit : last_exon_hit]
 
-    return (first_transcribed_exon is not None and 
-            gap_starts == spanned_intron_starts and
-            gap_ends   == spanned_intron_ends)
+    if first_exon_hit is None:
+        decision = False
 
-
+    else:
+        decision = np.all(gaps == introns[first_exon_hit : last_exon_hit])
+        
+    return TranscriptMatch(decision=decision, first_exon_hit=first_exon_hit, 
+                           last_exon_hit=last_exon_hit,
+                           spans=spans, gaps=gaps, exons=exons, introns=introns)
+ 
 def matches_exon(exon, alns):
     """Returns True if the given alignments match the given exon.
 

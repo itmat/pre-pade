@@ -1,6 +1,7 @@
 import unittest
+import numpy as np
 from Bio.SeqFeature import SeqFeature, FeatureLocation
-from prepade.quantifyexons import cigar_to_spans, spans_are_consistent
+from prepade.quantifyexons import cigar_to_spans, spans_are_consistent, compare_aln_to_transcript
 from itertools import starmap
 
 def spans_to_locations(spans):
@@ -83,9 +84,15 @@ class TranscriptQuantTest(unittest.TestCase):
     def test_one_exon_one_segment(self):
 
         t = transcript_feature('chr1', [(10, 20)])
-        a = [ (12, 18) ]
-        self.assertTrue(matches_transcript(t, a))
-        
+        a = spans_to_locations([ (12, 18) ])
+        m = compare_aln_to_transcript(t, a)
+        self.assertTrue(m.decision)
+        np.testing.assert_equal([[12, 18]], m.spans)
+        np.testing.assert_equal(np.zeros((0, 2)), m.gaps)
+        np.testing.assert_equal([[10, 20]], m.exons)
+        np.testing.assert_equal(np.zeros((0, 2)), m.introns)
+        np.testing.assert_equal(0, m.first_exon_hit)
+        np.testing.assert_equal(0, m.last_exon_hit)
         
 
 #2013-04-25 16:48:12 root         INFO         exon is   93463292-93463472
