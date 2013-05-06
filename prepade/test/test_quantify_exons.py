@@ -82,42 +82,100 @@ def transcript_feature(ref, exons):
 class TranscriptQuantTest(unittest.TestCase):
 
     def test_one_exon_one_segment_inside(self):
-
-        m = compare_aln_to_transcript([[10, 20]], 
-                                      [[12, 18]])
-        self.assertTrue(m.decision)
-        np.testing.assert_equal([[12, 18]], m.spans)
-        np.testing.assert_equal(np.zeros((0, 2)), m.gaps)
-        np.testing.assert_equal([[10, 20]], m.exons)
-        np.testing.assert_equal(np.zeros((0, 2)), m.introns)
-        np.testing.assert_equal(0, m.first_exon_hit)
-        np.testing.assert_equal(0, m.last_exon_hit)
+        self.check([[10, 20]], 
+                   [[12, 18]], True, 0, 0)
 
     def test_one_exon_one_segment_outside(self):
-
-        m = compare_aln_to_transcript([[10, 20]],
-                                      [[8, 22]])
-        self.assertTrue(m.decision)
-        np.testing.assert_equal(0, m.first_exon_hit)
-        np.testing.assert_equal(0, m.last_exon_hit)
-
+        self.check([[10, 20]],
+                   [[8, 22]], True, 0, 0)
 
     def test_one_exon_one_segment_overlap_left(self):
-
-        m = compare_aln_to_transcript([[10, 20]],
-                                      [[8,  18]])
-        self.assertTrue(m.decision)
-        np.testing.assert_equal(0, m.first_exon_hit)
-        np.testing.assert_equal(0, m.last_exon_hit)
+        self.check([[10, 20]],
+                   [[8,  18]], True, 0, 0)
 
     def test_one_exon_one_segment_overlap_right(self):
+        self.check([[10, 20]],
+                   [[12, 22]], True, 0, 0)
 
-        m = compare_aln_to_transcript([[10, 20]],
-                                      [[12, 22]])
-        self.assertTrue(m.decision)
-        np.testing.assert_equal(0, m.first_exon_hit)
-        np.testing.assert_equal(0, m.last_exon_hit)
+    def test_one_exon_one_segment_miss_right(self):
+        self.check([[10, 20]], [[22, 30]], False)
+
+    def test_one_exon_one_segment_miss_left(self):
+        self.check([[10, 20]],
+                   [[22, 30]],
+                   False)
+
+    def test_two_exons_two_segments_hit_exact(self):
+        self.check([[10, 20], [30, 40]],
+                   [[10, 20], [30, 40]],
+                   True, 0, 1)
+
+    def test_two_exons_two_segments_hit_overlap_left(self):
+        self.check([[10, 20], [30, 40]],
+                   [[5, 20], [30, 40]],
+                   True, 0, 1)
         
+    def test_two_exons_two_segments_hit_overlap_right(self):
+        self.check([[10, 20], [30, 40]],
+                   [[10, 20], [30, 45]],
+                   True, 0, 1)
+
+    def test_two_exons_one_segment_hit_first_exon(self):
+        self.check([[10, 20], [30, 40]],
+                   [[10, 20]],
+                   True, 0, 0)
+
+    def test_two_exons_one_segment_hit_first_exon_cross_edge(self):
+        self.check([[10, 20], [30, 40]],
+                   [[5, 20]],
+                   True, 0, 0)
+
+    def test_two_exons_one_segment_hit_last_exon(self):
+        self.check([[10, 20], [30, 40]],
+                   [[30, 40]], True,
+                   1, 1)
+
+    def test_two_exons_one_segment_hit_last_exon_cross_edge(self):
+        self.check([[10, 20], [30, 40]],
+                   [[30, 45]],
+                   True, first_exon_hit=1,
+                   last_exon_hit=1)
+
+    def test_two_exons_one_segment_miss_left(self):
+        self.check([[10, 20], [30, 40]],
+                   [[5, 10]],
+                   False)
+
+    def test_two_exons_one_segment_miss_right(self):
+        self.check([[10, 20], [30, 40]],
+                   [[5, 10]],
+                   False,
+                   first_exon_hit=None,
+                   last_exon_hit=None)
+
+    def check(self, transcript_in, spans_in, decision,
+              first_exon_hit=None,
+              last_exon_hit=None,
+              exons=None,
+              spans=None,
+              gaps=None,
+              introns=None):
+        m = compare_aln_to_transcript(transcript_in, spans_in)
+        self.assertEqual(decision, m.decision)
+        if first_exon_hit is not None:
+            self.assertEqual(first_exon_hit, m.first_exon_hit)
+        if last_exon_hit is not None:
+            self.assertEqual(last_exon_hit, m.last_exon_hit)
+        if exons is not None:
+            np.testing.assert_equal(exons, m.exons)
+        if spans is not None:
+            np.testing.assert_equal(spans, m.spans)
+        if introns is not None:
+            np.testing.assert_equal(introns, m.introns)
+
+        if gaps is not None:
+            np.testing.assert_equal(gaps, m.gaps)
+
 
 #2013-04-25 16:48:12 root         INFO         exon is   93463292-93463472
 #2013-04-25 16:48:12 root         DEBUG        spans are 93463398-93463473, 93474313-93474338
