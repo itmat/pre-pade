@@ -155,8 +155,23 @@ class TranscriptQuantTest(unittest.TestCase):
         self.check([[10, 20], [30, 40]], [[22, 28]], False, exon_hits=[False, False],
                    intron_hits=[True])
 
-    def test_two_exons_one_segment_miss_cross_junction(self):
+    def test_two_exons_one_segment_miss_cross_junction_left(self):
         self.check([[10, 20], [30, 40]], [[15, 25]], False, exon_hits=[True, False], intron_hits=[True])
+
+    def test_two_exons_one_segment_miss_cross_junction_right(self):
+        self.check([[10, 20], [30, 40]], [[25, 35]], False, exon_hits=[False, True], intron_hits=[True])
+
+    def test_two_exons_one_segment_miss_cross_junction_both(self):
+        self.check([[10, 20], [30, 40]], [[15, 35]], False, exon_hits=[True, True], intron_hits=[True])
+
+    def test_two_exons_one_segment_overlaps_whole_gene(self):
+        self.check([[10, 20], [30, 40]], [[5, 45]], False, exon_hits=[True, True], intron_hits=[True])
+
+    def test_one_exon_two_segments(self):
+        self.check([[10, 30]], [[12, 18], [22, 27]], False, exon_hits=[True], intron_hits=[],
+                   introns=np.zeros((0, 2), int),
+                   gaps=np.array([[18, 22]], int))
+
 
     def check(self, transcript_in, spans_in, decision,
               exon_hits=None,
@@ -166,7 +181,6 @@ class TranscriptQuantTest(unittest.TestCase):
               gaps=None,
               introns=None):
         m = compare_aln_to_transcript(transcript_in, spans_in)
-        self.assertEqual(decision, m.decision)
         if exon_hits is not None:
             np.testing.assert_equal(exon_hits, m.exon_hits)
         if intron_hits is not None:
@@ -177,10 +191,10 @@ class TranscriptQuantTest(unittest.TestCase):
             np.testing.assert_equal(spans, m.spans)
         if introns is not None:
             np.testing.assert_equal(introns, m.introns)
-
         if gaps is not None:
             np.testing.assert_equal(gaps, m.gaps)
 
+        self.assertEqual(decision, m.decision)
 
 #2013-04-25 16:48:12 root         INFO         exon is   93463292-93463472
 #2013-04-25 16:48:12 root         DEBUG        spans are 93463398-93463473, 93474313-93474338

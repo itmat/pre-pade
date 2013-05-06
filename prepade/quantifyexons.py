@@ -238,7 +238,10 @@ def compare_aln_to_transcript(transcript, spans):
     if first_exon_hit is None:
         decision = False
     else:
-        decision = np.all(gaps == introns[first_exon_hit : last_exon_hit]) and not np.any(intron_hits)
+        covered_introns = introns[first_exon_hit : last_exon_hit]
+        decision = (gaps.shape == covered_introns.shape and 
+                    np.all(gaps == covered_introns) 
+                    and not np.any(intron_hits))
         
     return TranscriptMatch(decision=decision, 
                            exon_hits=exon_hits,
