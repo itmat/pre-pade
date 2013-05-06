@@ -98,12 +98,12 @@ class TranscriptQuantTest(unittest.TestCase):
                    [[12, 22]], True, exon_hits=[True])
 
     def test_one_exon_one_segment_miss_right(self):
-        self.check([[10, 20]], [[22, 30]], False, exon_hits=[False])
+        self.check([[10, 20]], [[22, 30]], None, exon_hits=[False])
 
     def test_one_exon_one_segment_miss_left(self):
         self.check([[10, 20]],
                    [[22, 30]],
-                   False, 
+                   None, 
                    exon_hits=[False])
 
     def test_two_exons_two_segments_hit_exact(self):
@@ -143,12 +143,12 @@ class TranscriptQuantTest(unittest.TestCase):
     def test_two_exons_one_segment_miss_left(self):
         self.check([[10, 20], [30, 40]],
                    [[5, 10]],
-                   False, exon_hits=[False, False])
+                   None, exon_hits=[False, False])
 
     def test_two_exons_one_segment_miss_right(self):
         self.check([[10, 20], [30, 40]],
                    [[40, 50]],
-                   False,
+                   None,
                    exon_hits=[False, False])
 
     def test_two_exons_one_segment_miss_internal(self):
