@@ -197,6 +197,9 @@ def compare_aln_to_transcript(transcript, spans):
         exons[:, 1]  = [e.location.end   for e in transcript.sub_features]        
 
         return compare_aln_to_transcript(exons, spans)
+
+    elif not isinstance(transcript, np.ndarray):
+        return compare_aln_to_transcript(np.array(transcript, int), spans)
     
     if isinstance(spans[0], FeatureLocation):
         tmp = spans
@@ -204,6 +207,9 @@ def compare_aln_to_transcript(transcript, spans):
         spans[:, 0] = [s.start for s in tmp]
         spans[:, 1] = [s.end   for s in tmp]        
         return compare_aln_to_transcript(transcript, spans)
+
+    elif not isinstance(spans, np.ndarray):
+        return compare_aln_to_transcript(transcript, np.array(spans, int))
 
     exons = transcript
 
