@@ -188,6 +188,14 @@ def spans_to_gaps(spans):
     res[:, 1] = spans[1:, 0]
     return res
 
+def compare_alns_to_transcript(transcript, alns):
+    matches = [compare_aln_to_transcript(transcript, aln)
+               for aln in alns]
+
+    decisions = [ m.decision for m in matches ]
+    decision = any(decisions) and not any(d == False for d in decisions)
+    return (decision, matches)
+
 def compare_aln_to_transcript(transcript, spans):
 
     if isinstance(transcript, SeqFeature):

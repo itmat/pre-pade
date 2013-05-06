@@ -1,7 +1,9 @@
 import unittest
 import numpy as np
 from Bio.SeqFeature import SeqFeature, FeatureLocation
-from prepade.quantifyexons import cigar_to_spans, spans_are_consistent, compare_aln_to_transcript
+from prepade.quantifyexons import (
+    cigar_to_spans, spans_are_consistent, compare_aln_to_transcript,
+    compare_alns_to_transcript)
 from itertools import starmap
 
 def spans_to_locations(spans):
@@ -185,7 +187,34 @@ class TranscriptQuantTest(unittest.TestCase):
     def test_two_exons_two_segments_miss_junction_left(self):
         self.check([[10, 20], [30, 40]], [[10, 18], [30, 40]], False,
                    exon_hits=[True, True], intron_hits=[False])
-                   
+
+    def test_two_reads_both_confirm(self):
+        (decision, details) = compare_alns_to_transcript([[10, 20], [30, 40]], 
+                                   [[[10, 18]],
+                                    [[32, 38]]])
+        
+        self.assertTrue(decision)
+
+    def test_two_reads_one_confirm(self):
+        (decision, details) = compare_alns_to_transcript([[10, 20], [30, 40]], 
+                                   [[[10, 18]],
+                                    [[40, 50]]])
+        
+        self.assertTrue(decision)
+
+    def test_two_reads_one_reject(self):
+        (decision, details) = compare_alns_to_transcript([[10, 20], [30, 40]], 
+                                                         [[[10, 18]],
+                                                          [[25, 50]]])
+        
+        self.assertFalse(decision)
+
+    def test_two_reads_both_reject(self):
+        (decision, details) = compare_alns_to_transcript([[10, 20], [30, 40]], 
+                                                         [[[10, 22]],
+                                                          [[25, 50]]])
+        
+        self.assertFalse(decision)
 
     def check(self, transcript_in, spans_in, decision,
               exon_hits=None,
