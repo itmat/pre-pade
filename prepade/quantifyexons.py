@@ -175,7 +175,6 @@ def spans_intersect(target, spans):
 TranscriptMatch = namedtuple(
     'TranscriptMatch',
     ['decision',
-     'first_exon_hit', 'last_exon_hit',
      'exon_hits',
      'spans',
      'gaps',
@@ -238,13 +237,11 @@ def compare_aln_to_transcript(transcript, spans):
 
     if first_exon_hit is None:
         decision = False
-
     else:
-        
         decision = np.all(gaps == introns[first_exon_hit : last_exon_hit]) and not np.any(intron_hits)
         
-    return TranscriptMatch(decision=decision, first_exon_hit=first_exon_hit, 
-                           last_exon_hit=last_exon_hit, exon_hits=exon_hits,
+    return TranscriptMatch(decision=decision, 
+                           exon_hits=exon_hits,
                            spans=spans, gaps=gaps, exons=exons, introns=introns, intron_hits=intron_hits)
  
 def matches_exon(exon, alns):

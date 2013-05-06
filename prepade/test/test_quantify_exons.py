@@ -83,19 +83,19 @@ class TranscriptQuantTest(unittest.TestCase):
 
     def test_one_exon_one_segment_inside(self):
         self.check([[10, 20]], 
-                   [[12, 18]], True, 0, 0, [True])
+                   [[12, 18]], True, exon_hits=[True])
 
     def test_one_exon_one_segment_outside(self):
         self.check([[10, 20]],
-                   [[8, 22]], True, 0, 0, [True])
+                   [[8, 22]], True, exon_hits=[True])
 
     def test_one_exon_one_segment_overlap_left(self):
         self.check([[10, 20]],
-                   [[8,  18]], True, 0, 0, [True])
+                   [[8,  18]], True, exon_hits=[True])
 
     def test_one_exon_one_segment_overlap_right(self):
         self.check([[10, 20]],
-                   [[12, 22]], True, 0, 0, [True])
+                   [[12, 22]], True, exon_hits=[True])
 
     def test_one_exon_one_segment_miss_right(self):
         self.check([[10, 20]], [[22, 30]], False, exon_hits=[False])
@@ -109,38 +109,36 @@ class TranscriptQuantTest(unittest.TestCase):
     def test_two_exons_two_segments_hit_exact(self):
         self.check([[10, 20], [30, 40]],
                    [[10, 20], [30, 40]],
-                   True, 0, 1, exon_hits=[True, True])
+                   True, exon_hits=[True, True])
 
     def test_two_exons_two_segments_hit_overlap_left(self):
         self.check([[10, 20], [30, 40]],
                    [[5, 20], [30, 40]],
-                   True, 0, 1, exon_hits=[True, True])
+                   True, exon_hits=[True, True])
         
     def test_two_exons_two_segments_hit_overlap_right(self):
         self.check([[10, 20], [30, 40]],
                    [[10, 20], [30, 45]],
-                   True, 0, 1, exon_hits=[True, True])
+                   True, exon_hits=[True, True])
 
     def test_two_exons_one_segment_hit_first_exon(self):
         self.check([[10, 20], [30, 40]],
                    [[10, 20]],
-                   True, 0, 0, exon_hits=[True, False])
+                   True, exon_hits=[True, False])
 
     def test_two_exons_one_segment_hit_first_exon_cross_edge(self):
         self.check([[10, 20], [30, 40]],
                    [[5, 20]],
-                   True, 0, 0, exon_hits=[True, False])
+                   True, exon_hits=[True, False])
 
     def test_two_exons_one_segment_hit_last_exon(self):
         self.check([[10, 20], [30, 40]],
-                   [[30, 40]], True,
-                   1, 1)
+                   [[30, 40]], True, [False, True])
 
     def test_two_exons_one_segment_hit_last_exon_cross_edge(self):
         self.check([[10, 20], [30, 40]],
                    [[30, 45]],
-                   True, first_exon_hit=1,
-                   last_exon_hit=1, exon_hits=[False, True])
+                   True, exon_hits=[False, True])
 
     def test_two_exons_one_segment_miss_left(self):
         self.check([[10, 20], [30, 40]],
@@ -151,8 +149,6 @@ class TranscriptQuantTest(unittest.TestCase):
         self.check([[10, 20], [30, 40]],
                    [[40, 50]],
                    False,
-                   first_exon_hit=None,
-                   last_exon_hit=None,
                    exon_hits=[False, False])
 
     def test_two_exons_one_segment_miss_internal(self):
@@ -163,8 +159,6 @@ class TranscriptQuantTest(unittest.TestCase):
         self.check([[10, 20], [30, 40]], [[15, 25]], False, exon_hits=[True, False], intron_hits=[True])
 
     def check(self, transcript_in, spans_in, decision,
-              first_exon_hit=None,
-              last_exon_hit=None,
               exon_hits=None,
               intron_hits=None,
               exons=None,
@@ -173,10 +167,6 @@ class TranscriptQuantTest(unittest.TestCase):
               introns=None):
         m = compare_aln_to_transcript(transcript_in, spans_in)
         self.assertEqual(decision, m.decision)
-        if first_exon_hit is not None:
-            self.assertEqual(first_exon_hit, m.first_exon_hit)
-        if last_exon_hit is not None:
-            self.assertEqual(last_exon_hit, m.last_exon_hit)
         if exon_hits is not None:
             np.testing.assert_equal(exon_hits, m.exon_hits)
         if intron_hits is not None:
