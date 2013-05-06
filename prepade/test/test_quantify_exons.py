@@ -167,11 +167,25 @@ class TranscriptQuantTest(unittest.TestCase):
     def test_two_exons_one_segment_overlaps_whole_gene(self):
         self.check([[10, 20], [30, 40]], [[5, 45]], False, exon_hits=[True, True], intron_hits=[True])
 
-    def test_one_exon_two_segments(self):
+    def test_one_exon_two_segments_both_overlap(self):
         self.check([[10, 30]], [[12, 18], [22, 27]], False, exon_hits=[True], intron_hits=[],
                    introns=np.zeros((0, 2), int),
                    gaps=np.array([[18, 22]], int))
 
+    def test_one_exon_two_segments_one_overlaps(self):
+        self.check([[10, 30]], [[12, 18], [122, 127]], False, exon_hits=[True], intron_hits=[],
+                   introns=np.zeros((0, 2), int),
+                   gaps=np.array([[18, 122]], int))
+
+    def test_one_exon_two_segments_both_cross_junction(self):
+        self.check([[10, 30]], [[8, 18], [22, 32]], False, exon_hits=[True], intron_hits=[],
+                   introns=np.zeros((0, 2), int),
+                   gaps=np.array([[18, 22]], int))
+
+    def test_two_exons_two_segments_miss_junction_left(self):
+        self.check([[10, 20], [30, 40]], [[10, 18], [30, 40]], False,
+                   exon_hits=[True, True], intron_hits=[False])
+                   
 
     def check(self, transcript_in, spans_in, decision,
               exon_hits=None,

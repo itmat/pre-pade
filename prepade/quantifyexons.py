@@ -235,10 +235,16 @@ def compare_aln_to_transcript(transcript, spans):
     for i, intron in enumerate(introns):
         intron_hits[i] = np.any(spans_intersect(intron, spans))
 
+    
+
     if first_exon_hit is None:
         decision = False
     else:
+        introns_confirmed    = np.zeros(introns.shape, bool)
+        introns_contradicted = np.zeros(introns.shape, bool)
+        
         covered_introns = introns[first_exon_hit : last_exon_hit]
+
         decision = (gaps.shape == covered_introns.shape and 
                     np.all(gaps == covered_introns) 
                     and not np.any(intron_hits))
