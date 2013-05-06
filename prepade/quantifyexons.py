@@ -180,7 +180,8 @@ TranscriptMatch = namedtuple(
      'spans',
      'gaps',
      'exons', 
-     'introns'])
+     'introns',
+     'intron_hits'])
 
 def spans_to_gaps(spans):
     res = np.zeros((len(spans) - 1, 2))
@@ -231,20 +232,20 @@ def compare_aln_to_transcript(transcript, spans):
             if first_exon_hit is None:
                 first_exon_hit = i
 
-    # Starting at the first exon we hit, any gaps in the read must align exactly
-    # with the introns.
-
-    covered_introns = introns[first_exon_hit : last_exon_hit]
+    intron_hits = np.zeros((len(introns),), bool)
+    for i, intron in enumerate(introns):
+        intron_hits[i] = np.any(spans_intersect(intron, spans))
 
     if first_exon_hit is None:
         decision = False
 
     else:
-        decision = np.all(gaps == introns[first_exon_hit : last_exon_hit])
+        
+        decision = np.all(gaps == introns[first_exon_hit : last_exon_hit]) and not np.any(intron_hits)
         
     return TranscriptMatch(decision=decision, first_exon_hit=first_exon_hit, 
                            last_exon_hit=last_exon_hit, exon_hits=exon_hits,
-                           spans=spans, gaps=gaps, exons=exons, introns=introns)
+                           spans=spans, gaps=gaps, exons=exons, introns=introns, intron_hits=intron_hits)
  
 def matches_exon(exon, alns):
     """Returns True if the given alignments match the given exon.

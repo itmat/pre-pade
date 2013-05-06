@@ -156,15 +156,17 @@ class TranscriptQuantTest(unittest.TestCase):
                    exon_hits=[False, False])
 
     def test_two_exons_one_segment_miss_internal(self):
-        self.check([[10, 20], [30, 40]], [[22, 28]], False, exon_hits=[False, False])
+        self.check([[10, 20], [30, 40]], [[22, 28]], False, exon_hits=[False, False],
+                   intron_hits=[True])
 
     def test_two_exons_one_segment_miss_cross_junction(self):
-        self.check([[10, 20], [30, 40]], [[15, 25]], False, exon_hits=[True, False])
+        self.check([[10, 20], [30, 40]], [[15, 25]], False, exon_hits=[True, False], intron_hits=[True])
 
     def check(self, transcript_in, spans_in, decision,
               first_exon_hit=None,
               last_exon_hit=None,
               exon_hits=None,
+              intron_hits=None,
               exons=None,
               spans=None,
               gaps=None,
@@ -177,6 +179,8 @@ class TranscriptQuantTest(unittest.TestCase):
             self.assertEqual(last_exon_hit, m.last_exon_hit)
         if exon_hits is not None:
             np.testing.assert_equal(exon_hits, m.exon_hits)
+        if intron_hits is not None:
+            np.testing.assert_equal(intron_hits, m.intron_hits)
         if exons is not None:
             np.testing.assert_equal(exons, m.exons)
         if spans is not None:
