@@ -81,7 +81,7 @@ def transcript_feature(ref, exons):
 
 class TranscriptQuantTest(unittest.TestCase):
 
-    def test_one_exon_one_segment(self):
+    def test_one_exon_one_segment_inside(self):
 
         t = transcript_feature('chr1', [(10, 20)])
         a = spans_to_locations([ (12, 18) ])
@@ -91,6 +91,34 @@ class TranscriptQuantTest(unittest.TestCase):
         np.testing.assert_equal(np.zeros((0, 2)), m.gaps)
         np.testing.assert_equal([[10, 20]], m.exons)
         np.testing.assert_equal(np.zeros((0, 2)), m.introns)
+        np.testing.assert_equal(0, m.first_exon_hit)
+        np.testing.assert_equal(0, m.last_exon_hit)
+
+    def test_one_exon_one_segment_outside(self):
+
+        t = transcript_feature('chr1', [(10, 20)])
+        a = spans_to_locations([ (8, 22) ])
+        m = compare_aln_to_transcript(t, a)
+        self.assertTrue(m.decision)
+        np.testing.assert_equal(0, m.first_exon_hit)
+        np.testing.assert_equal(0, m.last_exon_hit)
+
+
+    def test_one_exon_one_segment_overlap_left(self):
+
+        t = transcript_feature('chr1', [(10, 20)])
+        a = spans_to_locations([ (8, 18) ])
+        m = compare_aln_to_transcript(t, a)
+        self.assertTrue(m.decision)
+        np.testing.assert_equal(0, m.first_exon_hit)
+        np.testing.assert_equal(0, m.last_exon_hit)
+
+    def test_one_exon_one_segment_overlap_right(self):
+
+        t = transcript_feature('chr1', [(10, 20)])
+        a = spans_to_locations([ (12, 22) ])
+        m = compare_aln_to_transcript(t, a)
+        self.assertTrue(m.decision)
         np.testing.assert_equal(0, m.first_exon_hit)
         np.testing.assert_equal(0, m.last_exon_hit)
         
