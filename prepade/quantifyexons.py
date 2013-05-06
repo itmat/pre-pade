@@ -176,6 +176,7 @@ TranscriptMatch = namedtuple(
     'TranscriptMatch',
     ['decision',
      'first_exon_hit', 'last_exon_hit',
+     'exon_hits',
      'spans',
      'gaps',
      'exons', 
@@ -220,10 +221,11 @@ def compare_aln_to_transcript(transcript, spans):
     # none of them intersect an exon, then we can't call this a hit.
     first_exon_hit = None
     last_exon_hit  = None
+    exon_hits = np.zeros((len(exons),), bool) 
     for i, exon in enumerate(exons):
 
         hit = np.any(spans_intersect(exon, spans))
-        
+        exon_hits[i] = hit
         if hit:
             last_exon_hit = i
             if first_exon_hit is None:
@@ -241,7 +243,7 @@ def compare_aln_to_transcript(transcript, spans):
         decision = np.all(gaps == introns[first_exon_hit : last_exon_hit])
         
     return TranscriptMatch(decision=decision, first_exon_hit=first_exon_hit, 
-                           last_exon_hit=last_exon_hit,
+                           last_exon_hit=last_exon_hit, exon_hits=exon_hits,
                            spans=spans, gaps=gaps, exons=exons, introns=introns)
  
 def matches_exon(exon, alns):
