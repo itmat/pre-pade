@@ -159,7 +159,66 @@ def iterate_over_exons(exons, bam_filename):
 def format_spans(spans):
     """Format a list of FeatureLocations representing spans as a string."""
     return ', '.join([ '%s-%s' % (s.start, s.end) for s in spans ])
-    
+
+def introns_for_exons(exon_starts, exon_ends):
+    return (exon_starts[1:], exon_ends[:-1])
+
+def spans_intersect(start, end,
+                    span_starts, span_ends):
+
+    ends_before = span_ends <= start
+    starts_after = span_starts >= end
+
+    return np.logical_not(
+        np.logical_or(starts_before, ends_after))
+
+
+def compare_aln_to_transcript(transcript, aln):
+
+    spans = cigar_to_spans(aln.cigar, aln.pos)
+
+    exons = transcript.sub_features
+
+    n = len(exons)
+
+    overlap    = np.zeros(len(exons), bool)
+    consistent = np.ones(len(exons), bool)
+
+    span_starts = np.array([s.start for s in spans], int)
+    span_ends   = np.array([s.end for s in spans], int)
+
+    exon_starts = np.array([e.location.start for e in transcript.sub_features], int)
+    exon_ends   = np.array([e.location.end   for e in transcript.sub_features], int)
+
+    intron_starts = exon_ends[:-1]
+    intron_ends   = exon_starts[1:]
+
+    gap_starts = span_ends[:-1]
+    gap_ends   = span_starts[1:]
+
+    # Find the first exon that any of my spans intersect. If none of
+    # them intersect the exon, then we can't call this a hit.
+    first_transcribed_exon = None
+    for i in range(n):
+
+        hit = np.any(spans_intersect(exon_starts[i], exon_ends[i], span_starts, span_ends))
+        
+        exon_hits[i] = hit
+        if hit:
+            last_transcribed_exon = i
+            if first_transcribed_exon is None:
+                first_transcribed_exon = i
+
+    # Starting at the first exon we hit, any gaps in the read must align exactly
+    # with the introns.
+
+    spanned_intron_starts = intron_starts[first_transcribed_exon : last_transcribed_exon]
+    spanned_intron_ends = intron_ends[first_transcribed_exon : last_transcribed_exon]
+
+    return (first_transcribed_exon is not None and 
+            gap_starts == spanned_intron_starts and
+            gap_ends   == spanned_intron_ends)
+
 
 def matches_exon(exon, alns):
     """Returns True if the given alignments match the given exon.

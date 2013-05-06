@@ -70,6 +70,23 @@ class QuantifyExonsTest(unittest.TestCase):
         self.assertEquals([True, True], list(spans_are_consistent(exon, spans_f)))
         self.assertEquals([False, False], list(spans_are_consistent(exon, spans_r)))
 
+def transcript_feature(ref, exons):
+    exon_locs = spans_to_locations(exons)
+    exons = [ SeqFeature(ref=ref, location=FeatureLocation(*x))
+              for x in exons ]
+
+    return SeqFeature(sub_features=exons)
+        
+
+class TranscriptQuantTest(unittest.TestCase):
+
+    def test_one_exon_one_segment(self):
+
+        t = transcript_feature('chr1', [(10, 20)])
+        a = [ (12, 18) ]
+        self.assertTrue(matches_transcript(t, a))
+        
+        
 
 #2013-04-25 16:48:12 root         INFO         exon is   93463292-93463472
 #2013-04-25 16:48:12 root         DEBUG        spans are 93463398-93463473, 93474313-93474338
