@@ -198,12 +198,14 @@ def compare_aln_to_transcript(transcript, spans):
 
         return compare_aln_to_transcript(exons, spans)
     
-    exons = transcript
+    if isinstance(spans[0], FeatureLocation):
+        tmp = spans
+        spans = np.zeros((len(tmp), 2), int)
+        spans[:, 0] = [s.start for s in tmp]
+        spans[:, 1] = [s.end   for s in tmp]        
+        return compare_aln_to_transcript(transcript, spans)
 
-    tmp = spans
-    spans = np.zeros((len(tmp), 2), int)
-    spans[:, 0] = [s.start for s in tmp]
-    spans[:, 1] = [s.end   for s in tmp]
+    exons = transcript
 
     introns = spans_to_gaps(exons)
     gaps    = spans_to_gaps(spans)
