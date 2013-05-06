@@ -432,19 +432,35 @@ from a RUM index.""")
     else:
         counts = iterate_over_exons(exons, args.alignments)
 
-    print('feature', 'min', 'max', sep='\t', file=output)
+    print('name', 'chromStart', 'chromEnd', 'name', 'min_count', 'max_count',
+          'strand', 'thickStart', 'thickEnd', 'itemRgb', 'blockCount',
+          'blockSizes', 'blockStarts', sep='\t', file=output)
     for (exon, count_u, count_m) in counts:
-        exon_str = '{chr_}:{start}-{end}'.format(
+        chrom = exon.ref
+        chromStart = exon.location.start
+        chromEnd   = exon.location.end
+        name = '{chr_}:{start}-{end}'.format(
             chr_=exon.ref,
             start=exon.location.start+1,
             end=exon.location.end)
+
         min_count = count_u
         if count_u > 0:
             max_count = count_u + count_m
         else:
             max_count = 0
-        print(exon_str, min_count, max_count, sep='\t', file=output)
 
+        strand = exon.strand if exon.strand is not None else ''
+        thickStart = ''
+        thickEnd = ''
+        itemRgb = '0,0,0'
+        blockCount= 0
+        blockSizes = ''
+        blockStarts = ''
+
+        print(chrom, chromStart, chromEnd, name, min_count, max_count, strand, 
+              thickStart, thickEnd, itemRgb, blockCount, blockSizes, 
+              blockStarts, sep='\t', file=output)
 
 
 if __name__ == '__main__':

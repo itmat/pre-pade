@@ -37,6 +37,34 @@ def read_exons(fh):
         yield SeqFeature(ref=chr_, 
                          location=FeatureLocation(int(start) -1, int(end)))
 
+class TranscriptIndex(object):
+    
+
+    def __init__(self, transcripts):
+
+        self.exon_to_transcripts = defaultdict(list)
+
+        for t in transcripts:
+            for e in transcript.sub_features:
+                key = (e.ref, e.location.start, e.location.end)
+                exon_to_transcripts[key] = t
+                exons.append(e)
+
+        self.exon_index = ExonIndex(exons)
+
+    def get_transcripts(self, ref, start, end):
+        
+        seen = set()
+
+        exons = self.exon_index.get_exons(ref, start, end)
+        for e in exons:
+            key = (e.ref, e.location.start, e.location.end)
+            for t in self.exon_to_transcripts[key]:
+                if not seen[t.id]:
+                    seen.add(t.id)
+                    yield(t)
+            
+
 class ExonIndex(object):
 
     def __init__(self, exons):
@@ -122,6 +150,7 @@ class ExonIndex(object):
                     seen.add(key)
                     yield(SeqFeature(ref=exon_ref, location=FeatureLocation(exon_start, exon_end)))
             r += 1
+
 def genes_to_exons(genes):
     """Given an iterator over genes, returns an iterator over exons.
 
