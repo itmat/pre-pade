@@ -432,7 +432,7 @@ from a RUM index.""")
     else:
         counts = iterate_over_exons(exons, args.alignments)
 
-    print('name', 'chromStart', 'chromEnd', 'name', 'min_count', 'max_count',
+    print('chrom', 'chromStart', 'chromEnd', 'name', 'min_count', 'max_count',
           'strand', 'thickStart', 'thickEnd', 'itemRgb', 'blockCount',
           'blockSizes', 'blockStarts', sep='\t', file=output)
     for (exon, count_u, count_m) in counts:
