@@ -49,7 +49,7 @@ class TranscriptIndex(object):
         for t in transcripts:
             for e in t.sub_features:
                 key = (e.ref, e.location.start, e.location.end)
-                self.exon_to_transcripts[key] = t
+                self.exon_to_transcripts[key].append(t)
                 exons.append(e)
 
         self.exon_index = ExonIndex(exons)
@@ -62,9 +62,10 @@ class TranscriptIndex(object):
         for e in exons:
             key = (e.ref, e.location.start, e.location.end)
             for t in self.exon_to_transcripts[key]:
-                if not seen[t.id]:
+                if t.id not in seen:
                     seen.add(t.id)
                     yield(t)
+
     def get_exons(self, ref, start, end):
         return self.exon_index.get_exons(ref, start, end)
 

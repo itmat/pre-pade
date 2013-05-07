@@ -20,7 +20,7 @@ from prepade.geneio import (
     parse_rum_index_genes, read_exons, ExonIndex, TranscriptIndex, genes_to_exons)
 from prepade.samutils import (
     AlignmentFileType, input_file_ordering, has_hi_and_ih_tags, qname_and_hi, 
-    sam_iter, alns_by_qname_and_hi, cigar_to_spans, spans_for_aln)
+    sam_iter, alns_by_qname_and_hi, cigar_to_spans, spans_for_aln, aln_to_span_ndarray)
 
 
 class ExonReadCounter(object):
@@ -58,13 +58,49 @@ class ExonReadCounter(object):
                         seen.add(key)
         
 
-    def all_counts(self):
+    def __iter__(self):
         for key in self.unique_counts:
             (exon_id, ref, start, end) = key
             exon = SeqFeature(id=exon_id, ref=ref, location=FeatureLocation(start, end))
             yield(exon, self.unique_counts[key], self.multi_counts[key])        
 
-def iterate_over_sam(idx, sam_filename):
+class TranscriptReadCounter(object):
+
+    def __init__(self, index):
+        self.index = index
+        self.unique_counts = defaultdict(lambda: 0)
+        self.multi_counts = defaultdict(lambda: 0)        
+        self.key_to_transcript = {}
+        
+    def add(self, ref, alns):
+        pair = alns
+        num_alns = pair[0].opt('IH')
+        span_groups = [ aln_to_span_ndarray(aln) for aln in alns ]
+
+        seen = set()
+
+        for spans in span_groups:
+
+            for span in spans:
+                (start, end) = span
+                for t in self.index.get_transcripts(ref, start, end):
+                    key = t.id
+                    self.key_to_transcript[key] = t
+                    if key not in seen:
+                        (hit, details) = compare_alns_to_transcript(t, span_groups)
+
+                        if hit:
+                            if num_alns > 1:
+                                self.multi_counts[key] += 1
+                            else:
+                                self.unique_counts[key] += 1                        
+                            seen.add(key)
+        
+    def __iter__(self):
+        for key in self.unique_counts:
+            yield(self.key_to_transcript[key], self.unique_counts[key], self.multi_counts[key])
+
+def iterate_over_sam(sam_filename, counters):
 
     """Return exon quantifications by iterating over SAM file.
 
@@ -90,18 +126,15 @@ def iterate_over_sam(idx, sam_filename):
     """
 
     samfile = pysam.Samfile(sam_filename)
-    unique_counts = defaultdict(lambda: 0)
-    multi_counts = defaultdict(lambda: 0)
 
     logging.info("Iterating over alignments to accumulate counts")
-    counter = ExonReadCounter(idx)
+
     for pair in alns_by_qname_and_hi(sam_iter(samfile)):
         pair = list(pair)
         ref = samfile.getrname(pair[0].tid)
-        counter.add(ref, pair)
+        for counter in counters:
+            counter.add(ref, pair)
     logging.info("Done accumulating counts")
-
-    return counter.all_counts()
 
 def iterate_over_exons(exons, bam_filename):
     """Return exon quantifications by iterating over the exons file.
@@ -260,12 +293,9 @@ def compare_aln_to_transcript(transcript, spans):
     # present in this transcript) and if the read does not fall in an
     # intron region.
     if first_exon_hit is None:
-        print("No exon hit, gaps are", gaps, "intron hits are", intron_hits)
         if len(gaps) > 0 or np.any(intron_hits):
-            print("Setting to false")
             decision = False
         else:
-            print("Decision is None")
             decision = None
     else:
         covered_introns = introns[first_exon_hit : last_exon_hit]
@@ -389,6 +419,39 @@ def spans_are_consistent(exon, spans):
 
             yield l_ok and r_ok
 
+class BedFileWriter(object):
+
+    def __init__(self, fh):
+
+        self.fh = fh
+        print('chrom', 'chromStart', 'chromEnd', 'name', 'min_count', 'max_count',
+              'strand', 'thickStart', 'thickEnd', 'itemRgb', 'blockCount',
+              'blockSizes', 'blockStarts', sep='\t', file=self.fh)
+
+    def write_exon(self, exon, count_u, count_m):
+        chrom = exon.ref
+        chromStart = exon.location.start
+        chromEnd   = exon.location.end
+        name = exon.id
+
+        min_count = count_u
+        if count_u > 0:
+            max_count = count_u + count_m
+        else:
+            max_count = 0
+
+        strand = exon.strand if exon.strand is not None else ''
+        thickStart = ''
+        thickEnd = ''
+        itemRgb = '0,0,0'
+        blockCount= 0
+        blockSizes = ''
+        blockStarts = ''
+
+        print(chrom, chromStart, chromEnd, name, min_count, max_count, strand, 
+              thickStart, thickEnd, itemRgb, blockCount, blockSizes, 
+              blockStarts, sep='\t', file=self.fh)
+
 
 def main():
 
@@ -452,37 +515,25 @@ from a RUM index.""")
         else:
             logging.info('Building transcript index')
             idx = TranscriptIndex(genes)
-        counts = iterate_over_sam(idx, args.alignments)
+
+
+        exon_counter = ExonReadCounter(idx)
+        transcript_counter = None
+        counters = [ exon_counter ]
+        if genes is not None:
+            transcript_counter = TranscriptReadCounter(idx)
+            counters.append(transcript_counter)
+
+        iterate_over_sam(args.alignments, counters)
+
     else:
-        counts = iterate_over_exons(exons, args.alignments)
+        exon_counter = iterate_over_exons(exons, args.alignments)
+        transcript_counter = None
 
-    print('chrom', 'chromStart', 'chromEnd', 'name', 'min_count', 'max_count',
-          'strand', 'thickStart', 'thickEnd', 'itemRgb', 'blockCount',
-          'blockSizes', 'blockStarts', sep='\t', file=output)
-    for (exon, count_u, count_m) in counts:
-        chrom = exon.ref
-        chromStart = exon.location.start
-        chromEnd   = exon.location.end
-        name = exon.id
-
-        min_count = count_u
-        if count_u > 0:
-            max_count = count_u + count_m
-        else:
-            max_count = 0
-
-        strand = exon.strand if exon.strand is not None else ''
-        thickStart = ''
-        thickEnd = ''
-        itemRgb = '0,0,0'
-        blockCount= 0
-        blockSizes = ''
-        blockStarts = ''
-
-        print(chrom, chromStart, chromEnd, name, min_count, max_count, strand, 
-              thickStart, thickEnd, itemRgb, blockCount, blockSizes, 
-              blockStarts, sep='\t', file=output)
-
+    writer = BedFileWriter(output)
+    
+    for (exon, count_u, count_m) in exon_counter:
+        writer.write_exon(exon, count_u, count_m)
 
 if __name__ == '__main__':
     try:

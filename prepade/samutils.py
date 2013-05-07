@@ -1,6 +1,7 @@
 import pysam
 from Bio.SeqFeature import FeatureLocation, SeqFeature
 from itertools import groupby, ifilter, islice
+import numpy as np
 
 class AlignmentFileType:
     INDEXED               = 0
@@ -208,6 +209,13 @@ def cigar_to_spans(cigar, start):
 
     return res
 
+def aln_to_span_ndarray(aln):
+    locs = cigar_to_spans(aln.cigar, aln.pos)
+    res = np.zeros((len(locs), 2), int)
+    for i, loc in enumerate(locs):
+        res[i, 0] = loc.start
+        res[i, 1] = loc.end
+    return res
 
 def remove_ds(cigar):
     """Removes D operations from CigarOp string, replacing with Ms.
