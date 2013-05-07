@@ -452,6 +452,34 @@ class BedFileWriter(object):
               thickStart, thickEnd, itemRgb, blockCount, blockSizes, 
               blockStarts, sep='\t', file=self.fh)
 
+    def write_transcript(self, transcript, count_u, count_m):
+        chrom = transcript.ref
+        chromStart = transcript.location.start
+        chromEnd   = transcript.location.end
+        name = transcript.id
+
+        min_count = count_u
+        if count_u > 0:
+            max_count = count_u + count_m
+        else:
+            max_count = 0
+
+        strand = transcript.strand if transcript.strand is not None else ''
+        thickStart = ''
+        thickEnd = ''
+        itemRgb = '0,0,0'
+        exon_locs = [ sf.location for sf in transcript.sub_features ]
+        blockCount = len(exon_locs)
+        blockSizes  = [ el.end - el.start for el in exon_locs ]
+        blockStarts = [ el.start for el in exon_locs ]
+
+        blockSizes = ','.join(map(str, blockSizes))
+        blockStarts = ','.join(map(str, blockStarts))
+
+        print(chrom, chromStart, chromEnd, name, min_count, max_count, strand, 
+              thickStart, thickEnd, itemRgb, blockCount, blockSizes, 
+              blockStarts, sep='\t', file=self.fh)
+
 
 def main():
 
@@ -534,6 +562,10 @@ from a RUM index.""")
     
     for (exon, count_u, count_m) in exon_counter:
         writer.write_exon(exon, count_u, count_m)
+
+    if transcript_counter is not None:
+        for (transcript, count_u, count_m) in transcript_counter:
+            writer.write_transcript(transcript, count_u, count_m)        
 
 if __name__ == '__main__':
     try:

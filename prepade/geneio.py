@@ -23,7 +23,8 @@ def parse_rum_index_genes(fh):
                              ref=chr_, location=loc, strand=strand, type='exon')
                   for loc in exon_locs ]
         gene_loc = FeatureLocation(int(start), int(end), strand=strand)
-        gene = SeqFeature(ref=chr_, location=gene_loc, strand=strand, type='gene', sub_features=exons)
+        gene = SeqFeature(id=gene_name,
+                          ref=chr_, location=gene_loc, strand=strand, type='gene', sub_features=exons)
 
         yield gene
 
