@@ -17,13 +17,14 @@ from prepade.clutils import (
     UsageException, setup_logging, get_output_fh, 
     require_sam_ordering_and_hi_tags)
 from prepade.geneio import (
-    parse_rum_index_genes, read_exons, ExonIndex, genes_to_exons)
+    parse_rum_index_genes, read_exons, ExonIndex, TranscriptIndex, genes_to_exons)
 from prepade.samutils import (
     AlignmentFileType, input_file_ordering, has_hi_and_ih_tags, qname_and_hi, 
     sam_iter, alns_by_qname_and_hi, cigar_to_spans, spans_for_aln)
 
 
-def iterate_over_sam(exons, sam_filename):
+
+def iterate_over_sam(idx, sam_filename):
 
     """Return exon quantifications by iterating over SAM file.
 
@@ -47,8 +48,7 @@ def iterate_over_sam(exons, sam_filename):
       overlap it consistently
     
     """
-    logging.info('Building exon index')
-    idx = ExonIndex(exons)
+
     samfile = pysam.Samfile(sam_filename)
     unique_counts = defaultdict(lambda: 0)
     multi_counts = defaultdict(lambda: 0)
@@ -295,7 +295,7 @@ def matches_exon(exon, alns):
         
     # Make sure at least one of the spans overlaps the exon
     for spans in span_groups:
-        overlap.extend(spans_overlap(exon.location, spans))
+         overlap.extend(spans_overlap(exon.location, spans))
     if not any(overlap):
         return False
 
@@ -419,16 +419,27 @@ from a RUM index.""")
     ordering = require_sam_ordering_and_hi_tags(args.alignments)
 
     if args.rum_gene_info:
+        logging.info("Loading transcript model from " + args.exons)
+
         with open(args.exons) as infile:
-            genes = parse_rum_index_genes(infile)
+            genes = list(parse_rum_index_genes(infile))
             exons = list(genes_to_exons(genes))
 
     else:
+        logging.info("Loading exons from " + args.exons)
+        genes = None
         with open(args.exons) as infile:
             exons = list(read_exons(infile))
 
     if ordering == AlignmentFileType.ORDERED_BY_READ_NAME:
-        counts = iterate_over_sam(exons, args.alignments)
+
+        if genes is None:
+            logging.info('Building exon index')
+            idx = ExonIndex(exons)
+        else:
+            logging.info('Building transcript index')
+            idx = TranscriptIndex(genes)
+        counts = iterate_over_sam(idx, args.alignments)
     else:
         counts = iterate_over_exons(exons, args.alignments)
 

@@ -45,11 +45,11 @@ class TranscriptIndex(object):
     def __init__(self, transcripts):
 
         self.exon_to_transcripts = defaultdict(list)
-
+        exons = []
         for t in transcripts:
-            for e in transcript.sub_features:
+            for e in t.sub_features:
                 key = (e.ref, e.location.start, e.location.end)
-                exon_to_transcripts[key] = t
+                self.exon_to_transcripts[key] = t
                 exons.append(e)
 
         self.exon_index = ExonIndex(exons)
@@ -65,7 +65,8 @@ class TranscriptIndex(object):
                 if not seen[t.id]:
                     seen.add(t.id)
                     yield(t)
-            
+    def get_exons(self, ref, start, end):
+        return self.exon_index.get_exons(ref, start, end)
 
 class ExonIndex(object):
 
