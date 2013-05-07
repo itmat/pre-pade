@@ -73,7 +73,7 @@ def iterate_over_sam(exons, sam_filename):
         # once, keep a set of 'seen' exons so we don't double-count.
         for span in spans:
             for exon in idx.get_exons(ref, span.start, span.end):
-                key = (exon.ref, exon.location.start, exon.location.end)
+                key = (exon.id, exon.ref, exon.location.start, exon.location.end)
 
                 if key not in seen:
                     if matches_exon(exon, pair):
@@ -86,8 +86,8 @@ def iterate_over_sam(exons, sam_filename):
     logging.info("Done accumulating counts")
 
     for key in unique_counts:
-        (ref, start, end) = key
-        exon = SeqFeature(ref=ref, location=FeatureLocation(start, end))
+        (exon_id, ref, start, end) = key
+        exon = SeqFeature(id=exon_id, ref=ref, location=FeatureLocation(start, end))
         yield(exon, unique_counts[key], multi_counts[key])
 
 def iterate_over_exons(exons, bam_filename):
@@ -439,10 +439,7 @@ from a RUM index.""")
         chrom = exon.ref
         chromStart = exon.location.start
         chromEnd   = exon.location.end
-        name = '{chr_}:{start}-{end}'.format(
-            chr_=exon.ref,
-            start=exon.location.start+1,
-            end=exon.location.end)
+        name = exon.id
 
         min_count = count_u
         if count_u > 0:

@@ -29,16 +29,17 @@ def parse_rum_index_genes(fh):
 def read_exons(fh):
     pat = re.compile('(.*):(\d+)-(\d+)')
     for line in fh:
+        line = line.rstrip()
         m = pat.match(line)
         if m is None:
             raise Exception("Can't parse exon from '{line}'".format(line=line))
         (chr_, start, end) = m.groups()
 
         yield SeqFeature(ref=chr_, 
+                         id=line,
                          location=FeatureLocation(int(start) -1, int(end)))
 
 class TranscriptIndex(object):
-    
 
     def __init__(self, transcripts):
 
@@ -107,7 +108,7 @@ class ExonIndex(object):
             for event in values:
                 start = event.exon.location.start
                 end   = event.exon.location.end
-                key = (ref, start, end)
+                key = (event.exon.id, ref, start, end)
 
                 if event.etype == 'start':
                     overlap[ref].add(key)
@@ -144,11 +145,11 @@ class ExonIndex(object):
         seen = set()
 
         while r < n and self.start[ref][r] < end:
-            for key in self.keys[ref][r]:
+            for key in self. keys[ref][r]:
                 if key not in seen:
-                    (exon_ref, exon_start, exon_end) = key
+                    (exon_id, exon_ref, exon_start, exon_end) = key
                     seen.add(key)
-                    yield(SeqFeature(ref=exon_ref, location=FeatureLocation(exon_start, exon_end)))
+                    yield(SeqFeature(id=exon_id, ref=exon_ref, location=FeatureLocation(exon_start, exon_end)))
             r += 1
 
 def genes_to_exons(genes):

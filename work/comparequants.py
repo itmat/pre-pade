@@ -16,17 +16,19 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     df_a = pd.read_table(args.old_quants, index_col='feature')
-    df_b = pd.read_table(args.new_quants, index_col='feature')
+    df_b = pd.read_table(args.new_quants, index_col='name')
 
     joined = pd.merge(df_a, df_b, how='outer', suffixes=['_old', '_new'], left_index=True, right_index=True)
     output = args.output if args.output is not None else sys.stdout
 
-    for key in ['min_old', 'min_new', 'max_old', 'max_new']:
+    print(joined)
+
+    for key in ['min', 'min_count', 'max', 'max_count']:
         joined[key][joined[key].isnull()] = 0
     
     for metric in ['min', 'max']:
 
-        joined[metric + '_diff'] = joined[metric + '_new'] - joined[metric + '_old']
+        joined[metric + '_diff'] = joined[metric + '_count'] - joined[metric]
         joined[metric+ '_diff_squared'] = joined[metric + '_diff'] ** 2
         var = joined[metric + '_diff_squared'].sum()
 
