@@ -23,6 +23,46 @@ from prepade.samutils import (
     sam_iter, alns_by_qname_and_hi, cigar_to_spans, spans_for_aln)
 
 
+class ExonReadCounter(object):
+
+    def __init__(self, exon_index):
+        self.exon_index = exon_index
+        self.unique_counts = defaultdict(lambda: 0)
+        self.multi_counts = defaultdict(lambda: 0)
+
+    def add(self, ref, alns):
+        pair = alns
+        num_alns = pair[0].opt('IH')
+        spans = []
+        for aln in pair:
+            spans.extend(cigar_to_spans(aln.cigar, aln.pos))
+
+        seen = set()
+
+        # Go through all the spans and find all the exons overlapped
+        # by any span. For each of those exons, check to see if it
+        # 'matches'. If it does, increment one of the counts (unique
+        # or multi depending on how many alignments there are for this
+        # read). Since we might come across the same exon more than
+        # once, keep a set of 'seen' exons so we don't double-count.
+        for span in spans:
+            for exon in self.exon_index.get_exons(ref, span.start, span.end):
+                key = (exon.id, exon.ref, exon.location.start, exon.location.end)
+
+                if key not in seen:
+                    if matches_exon(exon, pair):
+                        if num_alns > 1:
+                            self.multi_counts[key] += 1
+                        else:
+                            self.unique_counts[key] += 1                        
+                        seen.add(key)
+        
+
+    def all_counts(self):
+        for key in self.unique_counts:
+            (exon_id, ref, start, end) = key
+            exon = SeqFeature(id=exon_id, ref=ref, location=FeatureLocation(start, end))
+            yield(exon, self.unique_counts[key], self.multi_counts[key])        
 
 def iterate_over_sam(idx, sam_filename):
 
@@ -54,41 +94,14 @@ def iterate_over_sam(idx, sam_filename):
     multi_counts = defaultdict(lambda: 0)
 
     logging.info("Iterating over alignments to accumulate counts")
+    counter = ExonReadCounter(idx)
     for pair in alns_by_qname_and_hi(sam_iter(samfile)):
-
         pair = list(pair)
         ref = samfile.getrname(pair[0].tid)
-        num_alns = pair[0].opt('IH')
-        spans = []
-        for aln in pair:
-            spans.extend(cigar_to_spans(aln.cigar, aln.pos))
-
-        seen = set()
-
-        # Go through all the spans and find all the exons overlapped
-        # by any span. For each of those exons, check to see if it
-        # 'matches'. If it does, increment one of the counts (unique
-        # or multi depending on how many alignments there are for this
-        # read). Since we might come across the same exon more than
-        # once, keep a set of 'seen' exons so we don't double-count.
-        for span in spans:
-            for exon in idx.get_exons(ref, span.start, span.end):
-                key = (exon.id, exon.ref, exon.location.start, exon.location.end)
-
-                if key not in seen:
-                    if matches_exon(exon, pair):
-                        if num_alns > 1:
-                            multi_counts[key] += 1
-                        else:
-                            unique_counts[key] += 1                        
-                        seen.add(key)
-
+        counter.add(ref, pair)
     logging.info("Done accumulating counts")
 
-    for key in unique_counts:
-        (exon_id, ref, start, end) = key
-        exon = SeqFeature(id=exon_id, ref=ref, location=FeatureLocation(start, end))
-        yield(exon, unique_counts[key], multi_counts[key])
+    return counter.all_counts()
 
 def iterate_over_exons(exons, bam_filename):
     """Return exon quantifications by iterating over the exons file.
