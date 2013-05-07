@@ -424,9 +424,14 @@ class BedFileWriter(object):
     def __init__(self, fh):
 
         self.fh = fh
-        print('chrom', 'chromStart', 'chromEnd', 'name', 'min_count', 'max_count',
+        print('featureType', 'chrom', 'chromStart', 'chromEnd', 'name', 'min_count', 'max_count',
               'strand', 'thickStart', 'thickEnd', 'itemRgb', 'blockCount',
               'blockSizes', 'blockStarts', sep='\t', file=self.fh)
+
+    def write(self, feature_type, chrom, chromStart, chromEnd, name, min_count, max_count, strand, thickStart, thickEnd, itemRgb, blockCount, blockSizes, blockStarts):
+        print(feature_type, chrom, chromStart, chromEnd, name, min_count, max_count, strand, 
+              thickStart, thickEnd, itemRgb, blockCount, blockSizes, 
+              blockStarts, sep='\t', file=self.fh)        
 
     def write_exon(self, exon, count_u, count_m):
         chrom = exon.ref
@@ -448,9 +453,9 @@ class BedFileWriter(object):
         blockSizes = ''
         blockStarts = ''
 
-        print(chrom, chromStart, chromEnd, name, min_count, max_count, strand, 
+        self.write('exon', chrom, chromStart, chromEnd, name, min_count, max_count, strand, 
               thickStart, thickEnd, itemRgb, blockCount, blockSizes, 
-              blockStarts, sep='\t', file=self.fh)
+              blockStarts)
 
     def write_transcript(self, transcript, count_u, count_m):
         chrom = transcript.ref
@@ -476,9 +481,9 @@ class BedFileWriter(object):
         blockSizes = ','.join(map(str, blockSizes))
         blockStarts = ','.join(map(str, blockStarts))
 
-        print(chrom, chromStart, chromEnd, name, min_count, max_count, strand, 
+        self.write('transcript', chrom, chromStart, chromEnd, name, min_count, max_count, strand, 
               thickStart, thickEnd, itemRgb, blockCount, blockSizes, 
-              blockStarts, sep='\t', file=self.fh)
+              blockStarts)
 
 
 def main():
@@ -506,7 +511,7 @@ from a RUM index.""")
 
     parser.add_argument('-o', '--output',
                         type=argparse.FileType('w'),
-                        help="Location of output file")
+                        help="Location of the output file")
 
     parser.add_argument('-l', '--log',
                         help="Write log messages here; defaults so sys.stderr")
@@ -516,7 +521,6 @@ from a RUM index.""")
 
     args = parser.parse_args()
     setup_logging(args)
-    output = get_output_fh(args)
 
     logging.info("Checking alignment file")
 
@@ -544,7 +548,6 @@ from a RUM index.""")
             logging.info('Building transcript index')
             idx = TranscriptIndex(genes)
 
-
         exon_counter = ExonReadCounter(idx)
         transcript_counter = None
         counters = [ exon_counter ]
@@ -557,6 +560,9 @@ from a RUM index.""")
     else:
         exon_counter = iterate_over_exons(exons, args.alignments)
         transcript_counter = None
+
+
+    output = get_output_fh(args)
 
     writer = BedFileWriter(output)
     
@@ -572,3 +578,4 @@ if __name__ == '__main__':
         main()
     except UsageException as e:
         print(e, file=sys.stderr)
+
