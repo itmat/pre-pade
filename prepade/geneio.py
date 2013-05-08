@@ -3,8 +3,103 @@ from collections import namedtuple, defaultdict
 from itertools import groupby
 
 import logging
-import re
 import numpy as np
+import pandas as pd
+import re
+
+def parse_gtf_attributes(attr_string):
+    attrs = {}
+    attr_pat = re.compile('(gene_id|transcript_id|exon_number)[= ]+(.*)')
+
+    attrs = {}
+
+    for field in attr_string.split(';'):
+        field = field.strip()
+        m = attr_pat.match(field)
+        if m is not None:
+            (name, value) = m.groups()
+            if value[0] == '"' and value[-1] == '"':
+                value = value[1:-1]
+            attrs[name] = value
+    return attrs
+                
+def parse_gtf_to_genes(filename):
+
+    fh = open(filename)
+
+    names=['seqname', 'source', 'feature', 'start', 
+           'end', 'score', 'strand', 'frame', 'attribute']
+
+    seqnames       = []
+    starts         = []
+    ends           = []
+    strands        = []
+    gene_ids       = []
+    transcript_ids = []
+    exon_numbers   = []
+
+    for line in fh:
+        line = line.rstrip()
+
+        fields = line.split('\t', 9)
+
+        (seqname, source, feature, start, 
+         end, score, strand, frame, attr_string) = fields
+
+        attrs = parse_gtf_attributes(attr_string)
+
+        seqnames.append(seqname)
+        starts.append(int(start) - 1)
+        ends.append(int(end))
+        strands.append(strand)
+        gene_ids.append(attrs['gene_id'])
+        transcript_ids.append(attrs['transcript_id'])
+        exon_numbers.append(attrs['exon_number'])
+
+    df = pd.DataFrame(
+        { 'seqname' : seqnames,
+          'start'   : starts,
+          'end'     : ends,
+          'strand'  : strands,
+          'gene_id' : gene_ids,
+          'transcript_id' : transcript_ids,
+          'exon_number' : exon_numbers })
+
+    df = df.sort(['gene_id', 'transcript_id', 'exon_number'])
+
+    for (gene_id, transcript_id), grp in df.groupby(['gene_id', 'transcript_id']):
+        print grp.seqname
+        exons = []
+        ref = None
+        for i in grp.index:
+            ref = grp.seqname[i]
+            exons.append(SeqFeature(
+                ref=ref,
+                location=FeatureLocation(grp.start[i], grp.end[i])))
+        yield SeqFeature(
+            ref=ref,
+            id=transcript_id,
+            location=FeatureLocation(min(grp.start), max(grp.end)),
+            sub_features=exons)
+        
+
+    # for line in fh:
+    #     line = line.rstrip()
+    #     (seqname, source, feature, start, end, score, strand, frame, attribute) = line.split('\t')
+
+    #     seqname = intern(seqname)
+    #     source  = intern(seqname)
+    #     feature = intern(feature)
+    #     start   = int(start) - 1
+    #     end     = int(end)
+    #     score = float(score)
+    #     frame = int(frame)
+    #     attributes = attribute.split(';\s*')
+        
+    #     data[seqname][gene_id][transcript_id][exon_number] = start, end
+        
+    #     if feature != 'exon':
+    #         raise Exception("I only recognize files that have only exon features")
 
 def parse_rum_index_genes(fh):
     for line in fh:
