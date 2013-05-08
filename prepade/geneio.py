@@ -46,13 +46,13 @@ def parse_gtf_to_genes(fh):
 
         attrs = parse_gtf_attributes(attr_string)
 
-        seqnames.append(seqname)
+        seqnames.append(intern(seqname))
         starts.append(int(start) - 1)
         ends.append(int(end))
         strands.append(strand)
-        gene_ids.append(attrs['gene_id'])
-        transcript_ids.append(attrs['transcript_id'])
-        exon_numbers.append(attrs['exon_number'])
+        gene_ids.append(intern(attrs['gene_id']))
+        transcript_ids.append(intern(attrs['transcript_id']))
+        exon_numbers.append(intern(attrs['exon_number']))
 
     df = pd.DataFrame(
         { 'seqname' : seqnames,
