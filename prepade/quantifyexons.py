@@ -140,11 +140,16 @@ def iterate_over_sam(sam_filename, counters):
 
     logging.info("Iterating over alignments to accumulate counts")
 
-    for pair in alns_by_qname_and_hi(sam_iter(samfile)):
+
+    for i, pair in enumerate(alns_by_qname_and_hi(sam_iter(samfile))):
+
         pair = list(pair)
         ref = samfile.getrname(pair[0].tid)
         for counter in counters:
             counter.add(ref, pair)
+        if ((i + 1) % 10000) == 0):
+            logging.info("Done " + str(i + 1) + " alignments")
+
     logging.info("Done accumulating counts")
 
 def iterate_over_exons(exons, bam_filename):
