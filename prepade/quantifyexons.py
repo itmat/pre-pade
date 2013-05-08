@@ -17,11 +17,22 @@ from prepade.clutils import (
     UsageException, setup_logging, get_output_fh, 
     require_sam_ordering_and_hi_tags)
 from prepade.geneio import (
-    parse_rum_index_genes, read_exons, ExonIndex, TranscriptIndex, genes_to_exons)
+    parse_rum_index_genes, read_exons, ExonIndex, TranscriptIndex, 
+    genes_to_exons, parse_gtf_to_genes)
 from prepade.samutils import (
     AlignmentFileType, input_file_ordering, has_hi_and_ih_tags, qname_and_hi, 
     sam_iter, alns_by_qname_and_hi, cigar_to_spans, spans_for_aln, aln_to_span_ndarray)
 
+def guess_input_file_type(args):
+    
+    if args.model.endswith('.gtf') or args.model.endswith('.GTF'):
+        return 'gtf'
+
+    elif args.rum_gene_info:
+        return 'rum_gene_info'
+    
+    else:
+        return 'exon_list'
 
 class ExonReadCounter(object):
 
@@ -516,7 +527,7 @@ from a RUM index.""")
     parser.add_argument('-l', '--log',
                         help="Write log messages here; defaults so sys.stderr")
 
-    parser.add_argument('exons')
+    parser.add_argument('model')
     parser.add_argument('alignments')
 
     args = parser.parse_args()
@@ -526,17 +537,23 @@ from a RUM index.""")
 
     ordering = require_sam_ordering_and_hi_tags(args.alignments)
 
-    if args.rum_gene_info:
-        logging.info("Loading transcript model from " + args.exons)
+    input_file_type = guess_input_file_type(args)
 
-        with open(args.exons) as infile:
+    with open(args.model) as infile:
+
+        if input_file_type == 'rum_gene_info':
+            logging.info("Loading transcript model from RUM index at " + args.model)
             genes = list(parse_rum_index_genes(infile))
             exons = list(genes_to_exons(genes))
-
-    else:
-        logging.info("Loading exons from " + args.exons)
-        genes = None
-        with open(args.exons) as infile:
+    
+        elif input_file_type == 'gtf':
+            logging.info("Loading transcript model from GTF file at " + args.model)
+            genes = list(parse_gtf_to_genes(infile))
+            exons = list(genes_to_exons(genes))
+        
+        else:
+            logging.info("Loading exons from " + args.model)
+            genes = None
             exons = list(read_exons(infile))
 
     if ordering == AlignmentFileType.ORDERED_BY_READ_NAME:
@@ -561,9 +578,7 @@ from a RUM index.""")
         exon_counter = iterate_over_exons(exons, args.alignments)
         transcript_counter = None
 
-
     output = get_output_fh(args)
-
     writer = BedFileWriter(output)
     
     for (exon, count_u, count_m) in exon_counter:

@@ -26,8 +26,9 @@ exon_quant_old_halfopen : exon_quant_old
 	python halfopen.py < $< >$@
 
 exon_quant_new_sam : exons $(SAM)
-	python -m prepade.quantifyexons --rum-gene-info arabidopsis_genes.txt $(SAM) -o $@
+#	python -m prepade.quantifyexons --rum-gene-info arabidopsis_genes.txt $(SAM) -o $@
 #	python -m prepade.quantifyexons exons $(SAM) -o $@
+	python -m prepade.quantifyexons Arabidopsis_thaliana.TAIR10.18.gtf $(SAM) -o $@
 
 exon_quant_new_bam : exons rum.bam
 	python -m prepade.quantifyexons exons rum.bam -o $@

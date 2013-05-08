@@ -23,9 +23,7 @@ def parse_gtf_attributes(attr_string):
             attrs[name] = value
     return attrs
                 
-def parse_gtf_to_genes(filename):
-
-    fh = open(filename)
+def parse_gtf_to_genes(fh):
 
     names=['seqname', 'source', 'feature', 'start', 
            'end', 'score', 'strand', 'frame', 'attribute']
@@ -73,6 +71,7 @@ def parse_gtf_to_genes(filename):
         for i in grp.index:
             ref = grp.seqname[i]
             exons.append(SeqFeature(
+                id='{0}:{1}-{2}'.format(ref, grp.start[i] + 1, grp.end[i]),
                 ref=ref,
                 location=FeatureLocation(grp.start[i], grp.end[i])))
         yield SeqFeature(
