@@ -68,7 +68,6 @@ def parse_gtf_to_genes(filename):
     df = df.sort(['gene_id', 'transcript_id', 'exon_number'])
 
     for (gene_id, transcript_id), grp in df.groupby(['gene_id', 'transcript_id']):
-        print grp.seqname
         exons = []
         ref = None
         for i in grp.index:

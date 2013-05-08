@@ -136,4 +136,3 @@ class GtfParserTest(unittest.TestCase):
             ]),
             got_ends)
 
-
