@@ -34,7 +34,17 @@ def guess_input_file_type(args):
     else:
         return 'exon_list'
 
-class ExonReadCounter(object):
+class FeatureReadCounter(object):
+    def count_towards_min(self, aln):
+        try:
+            num_alns = aln.opt('IH')
+        except KeyError:
+            num_alns = aln.opt('NH')
+            
+        return num_alns == 1
+
+
+class ExonReadCounter(FeatureReadCounter):
 
     def __init__(self, exon_index):
         self.exon_index = exon_index
@@ -43,7 +53,7 @@ class ExonReadCounter(object):
 
     def add(self, ref, alns):
         pair = alns
-        num_alns = pair[0].opt('IH')
+
         spans = []
         for aln in pair:
             spans.extend(cigar_to_spans(aln.cigar, aln.pos))
@@ -62,10 +72,11 @@ class ExonReadCounter(object):
 
                 if key not in seen:
                     if matches_exon(exon, pair):
-                        if num_alns > 1:
-                            self.multi_counts[key] += 1
-                        else:
+                        if self.count_towards_min(alns[0]):
                             self.unique_counts[key] += 1                        
+                        else:
+                            self.multi_counts[key] += 1
+
                         seen.add(key)
         
 
@@ -75,7 +86,8 @@ class ExonReadCounter(object):
             exon = SeqFeature(id=exon_id, ref=ref, location=FeatureLocation(start, end))
             yield(exon, self.unique_counts[key], self.multi_counts[key])        
 
-class TranscriptReadCounter(object):
+class TranscriptReadCounter(FeatureReadCounter):
+
 
     def __init__(self, index):
         self.index = index
@@ -85,7 +97,7 @@ class TranscriptReadCounter(object):
         
     def add(self, ref, alns):
         pair = alns
-        num_alns = pair[0].opt('IH')
+        
         span_groups = [ aln_to_span_ndarray(aln) for aln in alns ]
 
         seen = set()
@@ -101,10 +113,10 @@ class TranscriptReadCounter(object):
                         (hit, details) = compare_alns_to_transcript(t, span_groups)
 
                         if hit:
-                            if num_alns > 1:
-                                self.multi_counts[key] += 1
-                            else:
+                            if self.count_towards_min(alns[0]):
                                 self.unique_counts[key] += 1                        
+                            else:
+                                self.multi_counts[key] += 1
                             seen.add(key)
         
     def __iter__(self):
@@ -147,7 +159,7 @@ def iterate_over_sam(sam_filename, counters):
         ref = samfile.getrname(pair[0].tid)
         for counter in counters:
             counter.add(ref, pair)
-        if ((i + 1) % 10000) == 0):
+        if ((i + 1) % 10000) == 0:
             logging.info("Done " + str(i + 1) + " alignments")
 
     logging.info("Done accumulating counts")
@@ -206,7 +218,10 @@ def iterate_over_exons(exons, bam_filename):
 
             pair = list(pair)
             if matches_exon(exon, pair):
-                num_alns = pair[0].opt('IH')
+                try:
+                    num_alns = pair[0].opt('IH')
+                except KeyError:
+                    num_alns = pair[0].opt('NH')
                 if num_alns > 1:
                     multi_read_ids.add((qname, hi))
                 else:

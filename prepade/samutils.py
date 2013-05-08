@@ -45,7 +45,15 @@ def has_hi_and_ih_tags(filename):
 
         for aln in islice(mapped, 1000):
             aln.opt('HI')
-            aln.opt('IH')
+            try:
+                aln.opt('IH')
+            except KeyError:
+                try:
+                    aln.opt('NH')
+                except KeyError:
+                    raise Exception("Input " + filename + " does not seem to have IH or NH tags")
+                
+                    
 
         return True
     finally:
@@ -132,7 +140,10 @@ def input_file_is_ordered_by_read_name(filename):
         # 1 through IH.
         for (qname, grp) in groups:
             grp = list(grp)
-            num_alns = grp[0].opt('IH')
+            try:
+                num_alns = grp[0].opt('IH')
+            except KeyError:
+                num_alns = grp[0].opt('NH')
             his = set([ a.opt('HI') for a in grp ])
             if len(his) != num_alns:
                 return False
