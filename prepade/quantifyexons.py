@@ -302,27 +302,28 @@ def compare_aln_to_transcript(transcript, spans):
     introns = spans_to_gaps(exons)
     gaps    = spans_to_gaps(spans)
 
-
-    # Find the first and last exon that any of my spans intersect. If
-    # none of them intersect an exon, then we can't call this a hit.
-    first_exon_hit = None
-    last_exon_hit  = None
-    exon_hits = np.zeros((len(exons),), bool) 
-    for i, exon in enumerate(exons):
-
-        hit = spans_intersect(exon, spans)
-        exon_hits[i] = hit
-        if hit:
-            last_exon_hit = i
-            if first_exon_hit is None:
-                first_exon_hit = i
-
     # If we hit any introns we have to call it a miss
     any_intron_hit = False
     for i, intron in enumerate(introns):
         any_intron_hit = spans_intersect(intron, spans)
         if any_intron_hit:
             break
+
+    # Find the first and last exon that any of my spans intersect. If
+    # none of them intersect an exon, then we can't call this a hit.
+    first_exon_hit = None
+    last_exon_hit  = None
+    exon_hits = np.zeros((len(exons),), bool) 
+
+    if not any_intron_hit:
+        for i, exon in enumerate(exons):
+
+            hit = spans_intersect(exon, spans)
+            exon_hits[i] = hit
+            if hit:
+                last_exon_hit = i
+                if first_exon_hit is None:
+                    first_exon_hit = i
 
     # If the read doesn't overlap any exons, we can't call it a
     # confirmation. However we won't call it a rejection either if
