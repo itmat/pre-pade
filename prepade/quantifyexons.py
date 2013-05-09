@@ -111,6 +111,7 @@ class TranscriptReadCounter(FeatureReadCounter):
                     key = t.id
                     self.key_to_transcript[key] = t
                     if key not in seen:
+                        seen.add(key)
                         (hit, details) = compare_alns_to_transcript(t, span_groups)
 
                         if hit:
@@ -118,7 +119,7 @@ class TranscriptReadCounter(FeatureReadCounter):
                                 self.unique_counts[key] += 1                        
                             else:
                                 self.multi_counts[key] += 1
-                            seen.add(key)
+
         
     def __iter__(self):
         for key in self.unique_counts:
