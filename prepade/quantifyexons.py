@@ -2,7 +2,6 @@
 
 from __future__ import print_function, division
 
-import cProfile
 import argparse
 import logging
 import numpy as np
@@ -36,6 +35,7 @@ def guess_input_file_type(args):
         return 'exon_list'
 
 class FeatureReadCounter(object):
+
     def count_towards_min(self, aln):
         try:
             num_alns = aln.opt('IH')
@@ -602,11 +602,8 @@ from a RUM index.""")
         if genes is not None:
             transcript_counter = TranscriptReadCounter(idx)
             counters.append(transcript_counter)
-
             
-        cProfile.runctx(
-            'iterate_over_sam(args.alignments, counters)', globals(), locals(),
-            filename='prof')
+        iterate_over_sam(args.alignments, counters)
 
     else:
         exon_counter = iterate_over_exons(exons, args.alignments)
