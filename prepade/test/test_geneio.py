@@ -70,7 +70,8 @@ class ExonIndexTest(unittest.TestCase):
 class GtfParserTest(unittest.TestCase):
 
     def setUp(self):
-        self.parsed = list(parse_gtf_to_genes('prepade/test/mm9.gtf'))
+        with open('prepade/test/mm9.gtf') as fh:
+            self.parsed = list(parse_gtf_to_genes(fh))
 
     def test_parsed_transcript_ids(self):
         transcripts = self.parsed
