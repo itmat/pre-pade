@@ -314,9 +314,10 @@ def compare_aln_to_transcript(transcript, spans):
     # none of them intersect an exon, then we can't call this a hit.
     first_exon_hit = None
     last_exon_hit  = None
-    exon_hits = np.zeros((len(exons),), bool) 
+    exon_hits = None
 
     if not any_intron_hit:
+        exon_hits = np.zeros((len(exons),), bool) 
         for i, exon in enumerate(exons):
 
             hit = spans_intersect(exon, spans)
