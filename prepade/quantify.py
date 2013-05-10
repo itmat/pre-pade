@@ -625,10 +625,7 @@ commands.""")
             transcript_counter = TranscriptReadCounter(idx)
             counters.append(transcript_counter)
             
-        cProfile.runctx('iterate_over_sam(args.alignments, counters)',
-                     globals(),
-                        locals(),
-                        filename='prof')
+        cProfile.runctx('iterate_over_sam(args.alignments, counters)', globals(), locals(), filename='prof')
 
     else:
         exon_counter = iterate_over_exons(exons, args.alignments)

@@ -165,12 +165,8 @@ def alns_by_qname_and_hi(alns):
       value of the HI tags.
 
     """
-    for qname, grp in groupby(alns, key=lambda x: x.qname):
-
-        grp = sorted(list(grp), key=lambda x: x.opt('HI'))
-
-        for hi, subgrp in groupby(grp, key=lambda x: x.opt('HI')):
-            yield subgrp
+    for (qname, hi), grp in groupby(alns, key=lambda x: (x.qname, x.opt('HI'))):
+        yield grp
 
 def spans_for_aln(aln):
     return cigar_to_spans(aln.cigar, aln.pos)
