@@ -226,7 +226,7 @@ class ExonIndex(object):
         n = len(self.start[ref])
         p = 0
         q = len(self.start[ref])
-        
+        r = 0
         while (p < q):
             r = p + (q - p) // 2
 
