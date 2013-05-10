@@ -535,15 +535,21 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description="""
 
-Generates quantifications, given a list of exons and a set of
-alignments. The alignments can either be given as (1) a SAM or BAM
-file where all alignments for the same read are on consecutive lines,
-or as (2) an indexed BAM file (which would have to be sorted by
-chromosomal position in order to be indexed). The HI and IH tags must
-be set properly in the file, regardless of the input format. You can
-give the list of exons in one of two ways: (1) a file with one exon on
-each line, in the format CHR:START-END, or (2) the 'gene info' file
-from a RUM index.""")
+Generates quantifications, given a set of alignments and either a
+transcript model or a list of exons. The alignments can either be
+given as (1) a SAM or BAM file where all alignments for the same read
+are on consecutive lines, or as (2) an indexed BAM file (which would
+have to be sorted by chromosomal position in order to be indexed). The
+HI and either IH or NH tags must be set properly in the file,
+regardless of the input format. You can supply a transcript model in
+GTF format, or a "gene info" file from a RUM index. If you want exons
+and not transcripts, you can just give a file that has one exon on
+each line, in the format CHR:START-END.
+
+The output is given in a format similar to BED, but with a couple
+extra columns that contain some additional information. It should be
+easy to transform the output into BED format with a few simple UNIX
+commands.""")
 
     parser.add_argument('--rum-gene-info', 
                        action='store_true',
@@ -554,13 +560,15 @@ from a RUM index.""")
 
     parser.add_argument('-o', '--output',
                         type=argparse.FileType('w'),
-                        help="Location of the output file")
+                        help="Location of the output file; defaults to sys.stdout")
 
     parser.add_argument('-l', '--log',
                         help="Write log messages here; defaults so sys.stderr")
 
-    parser.add_argument('model')
-    parser.add_argument('alignments')
+    parser.add_argument('model',
+                        help="The transcript model or list of exons")
+    parser.add_argument('alignments',
+                        help="SAM or BAM file containing alignments")
 
     args = parser.parse_args()
     setup_logging(args)
@@ -571,6 +579,7 @@ from a RUM index.""")
 
     input_file_type = guess_input_file_type(args)
 
+    # Parse the exons and optionally transcripts from the model file.
     with open(args.model) as infile:
 
         if input_file_type == 'rum_gene_info':
@@ -608,6 +617,11 @@ from a RUM index.""")
 
     else:
         exon_counter = iterate_over_exons(exons, args.alignments)
+        if genes is not None:
+            logging.warn(
+                "I currently can't do transcript quantification for indexed " +
+                "BAM files; only for SAM or BAM files sorted by read name. " +
+                "I will just output exon quantifications for this input file.")
         transcript_counter = None
 
     output = get_output_fh(args)
