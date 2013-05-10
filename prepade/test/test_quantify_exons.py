@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from Bio.SeqFeature import SeqFeature, FeatureLocation
-from prepade.quantifyexons import (
+from prepade.quantify import (
     cigar_to_spans, spans_are_consistent, compare_aln_to_transcript,
     compare_alns_to_transcript)
 from itertools import starmap
@@ -80,113 +80,112 @@ def transcript_feature(ref, exons):
 
     return SeqFeature(sub_features=exons)
         
-
 class TranscriptQuantTest(unittest.TestCase):
 
     def test_one_exon_one_segment_inside(self):
         self.check([[10, 20]], 
-                   [[12, 18]], True, exon_hits=[True])
+                   [[12, 18]], True, first_exon_hit=0)
 
     def test_one_exon_one_segment_outside(self):
         self.check([[10, 20]],
-                   [[8, 22]], True, exon_hits=[True])
+                   [[8, 22]], True, first_exon_hit=0)
 
     def test_one_exon_one_segment_overlap_left(self):
         self.check([[10, 20]],
-                   [[8,  18]], True, exon_hits=[True])
+                   [[8,  18]], True, first_exon_hit=0)
 
     def test_one_exon_one_segment_overlap_right(self):
         self.check([[10, 20]],
-                   [[12, 22]], True, exon_hits=[True])
+                   [[12, 22]], True, first_exon_hit=0)
 
     def test_one_exon_one_segment_miss_right(self):
-        self.check([[10, 20]], [[22, 30]], None, exon_hits=[False])
+        self.check([[10, 20]], [[22, 30]], None, first_exon_hit=None)
 
     def test_one_exon_one_segment_miss_left(self):
         self.check([[10, 20]],
                    [[22, 30]],
                    None, 
-                   exon_hits=[False])
+                   first_exon_hit=None)
 
     def test_two_exons_two_segments_hit_exact(self):
         self.check([[10, 20], [30, 40]],
                    [[10, 20], [30, 40]],
-                   True, exon_hits=[True, True])
+                   True, first_exon_hit=0)
 
     def test_two_exons_two_segments_hit_overlap_left(self):
         self.check([[10, 20], [30, 40]],
                    [[5, 20], [30, 40]],
-                   True, exon_hits=[True, True])
+                   True, first_exon_hit=0)
         
     def test_two_exons_two_segments_hit_overlap_right(self):
         self.check([[10, 20], [30, 40]],
                    [[10, 20], [30, 45]],
-                   True, exon_hits=[True, True])
+                   True, first_exon_hit=0)
 
     def test_two_exons_one_segment_hit_first_exon(self):
         self.check([[10, 20], [30, 40]],
                    [[10, 20]],
-                   True, exon_hits=[True, False])
+                   True, first_exon_hit=0)
 
     def test_two_exons_one_segment_hit_first_exon_cross_edge(self):
         self.check([[10, 20], [30, 40]],
                    [[5, 20]],
-                   True, exon_hits=[True, False])
+                   True, first_exon_hit=0)
 
     def test_two_exons_one_segment_hit_last_exon(self):
         self.check([[10, 20], [30, 40]],
-                   [[30, 40]], True, [False, True])
+                   [[30, 40]], True, first_exon_hit=1)
 
     def test_two_exons_one_segment_hit_last_exon_cross_edge(self):
         self.check([[10, 20], [30, 40]],
                    [[30, 45]],
-                   True, exon_hits=[False, True])
+                   True, first_exon_hit=1)
 
     def test_two_exons_one_segment_miss_left(self):
         self.check([[10, 20], [30, 40]],
                    [[5, 10]],
-                   None, exon_hits=[False, False])
+                   None, first_exon_hit=None)
 
     def test_two_exons_one_segment_miss_right(self):
         self.check([[10, 20], [30, 40]],
                    [[40, 50]],
                    None,
-                   exon_hits=[False, False])
+                   first_exon_hit=None)
 
     def test_two_exons_one_segment_miss_internal(self):
-        self.check([[10, 20], [30, 40]], [[22, 28]], False, exon_hits=None,
+        self.check([[10, 20], [30, 40]], [[22, 28]], False, first_exon_hit=None,
                    intron_hits=True)
 
     def test_two_exons_one_segment_miss_cross_junction_left(self):
-        self.check([[10, 20], [30, 40]], [[15, 25]], False, exon_hits=None, intron_hits=True)
+        self.check([[10, 20], [30, 40]], [[15, 25]], False, first_exon_hit=None, intron_hits=True)
 
     def test_two_exons_one_segment_miss_cross_junction_right(self):
-        self.check([[10, 20], [30, 40]], [[25, 35]], False, exon_hits=None, intron_hits=True)
+        self.check([[10, 20], [30, 40]], [[25, 35]], False, first_exon_hit=None, intron_hits=True)
 
     def test_two_exons_one_segment_miss_cross_junction_both(self):
-        self.check([[10, 20], [30, 40]], [[15, 35]], False, exon_hits=None, intron_hits=True)
+        self.check([[10, 20], [30, 40]], [[15, 35]], False, first_exon_hit=None, intron_hits=True)
 
     def test_two_exons_one_segment_overlaps_whole_gene(self):
-        self.check([[10, 20], [30, 40]], [[5, 45]], False, exon_hits=None, intron_hits=True)
+        self.check([[10, 20], [30, 40]], [[5, 45]], False, first_exon_hit=None, intron_hits=True)
 
     def test_one_exon_two_segments_both_overlap(self):
-        self.check([[10, 30]], [[12, 18], [22, 27]], False, exon_hits=[True], intron_hits=False,
+        self.check([[10, 30]], [[12, 18], [22, 27]], False, first_exon_hit=0, intron_hits=False,
                    introns=np.zeros((0, 2), int),
                    gaps=np.array([[18, 22]], int))
 
     def test_one_exon_two_segments_one_overlaps(self):
-        self.check([[10, 30]], [[12, 18], [122, 127]], False, exon_hits=[True], intron_hits=False,
+        self.check([[10, 30]], [[12, 18], [122, 127]], False, first_exon_hit=0, intron_hits=False,
                    introns=np.zeros((0, 2), int),
                    gaps=np.array([[18, 122]], int))
 
     def test_one_exon_two_segments_both_cross_junction(self):
-        self.check([[10, 30]], [[8, 18], [22, 32]], False, exon_hits=[True], intron_hits=False,
+        self.check([[10, 30]], [[8, 18], [22, 32]], False, first_exon_hit=0, intron_hits=False,
                    introns=np.zeros((0, 2), int),
                    gaps=np.array([[18, 22]], int))
 
     def test_two_exons_two_segments_miss_junction_left(self):
         self.check([[10, 20], [30, 40]], [[10, 18], [30, 40]], False,
-                   exon_hits=[True, True], intron_hits=False)
+                   first_exon_hit=0, intron_hits=False)
 
     def test_two_reads_both_confirm(self):
         (decision, details) = compare_alns_to_transcript([[10, 20], [30, 40]], 
@@ -217,15 +216,15 @@ class TranscriptQuantTest(unittest.TestCase):
         self.assertFalse(decision)
 
     def check(self, transcript_in, spans_in, decision,
-              exon_hits=None,
+              first_exon_hit=None,
               intron_hits=None,
               exons=None,
               spans=None,
               gaps=None,
               introns=None):
         m = compare_aln_to_transcript(transcript_in, spans_in)
-        if exon_hits is not None:
-            np.testing.assert_equal(exon_hits, m.exon_hits)
+        if first_exon_hit is not None:
+            np.testing.assert_equal(m.first_exon_hit, first_exon_hit)
         if intron_hits is not None:
             np.testing.assert_equal(intron_hits, m.intron_hits)
         if exons is not None:

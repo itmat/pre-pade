@@ -2,6 +2,7 @@
 
 from __future__ import print_function, division
 
+import cProfile
 import argparse
 import logging
 import numpy as np
@@ -242,7 +243,7 @@ def format_spans(spans):
 def introns_for_exons(exon_starts, exon_ends):
     return (exon_starts[1:], exon_ends[:-1])
 
-def spans_intersect(target, spans):
+def introns_intersect(target, spans):
     start = target[0]
     end   = target[1]
 
@@ -252,10 +253,22 @@ def spans_intersect(target, spans):
 
     return False
 
+
+def exons_intersect(target, spans):
+    start = target[0]
+    end   = target[1]
+
+    for s, e in spans:
+        if not (e <= start or s >= end):
+            return True
+
+    return False
+
+
 TranscriptMatch = namedtuple(
     'TranscriptMatch',
     ['decision',
-     'exon_hits',
+     'first_exon_hit',
      'spans',
      'gaps',
      'exons', 
@@ -306,26 +319,19 @@ def compare_aln_to_transcript(transcript, spans):
     # If we hit any introns we have to call it a miss
     any_intron_hit = False
     for i, intron in enumerate(introns):
-        any_intron_hit = spans_intersect(intron, spans)
+        any_intron_hit = introns_intersect(intron, spans)
         if any_intron_hit:
             break
 
     # Find the first and last exon that any of my spans intersect. If
     # none of them intersect an exon, then we can't call this a hit.
     first_exon_hit = None
-    last_exon_hit  = None
-    exon_hits = None
 
     if not any_intron_hit:
-        exon_hits = np.zeros((len(exons),), bool) 
         for i, exon in enumerate(exons):
-
-            hit = spans_intersect(exon, spans)
-            exon_hits[i] = hit
-            if hit:
-                last_exon_hit = i
-                if first_exon_hit is None:
-                    first_exon_hit = i
+            if exons_intersect(exon, spans):
+                first_exon_hit = i
+                break
 
     # If the read doesn't overlap any exons, we can't call it a
     # confirmation. However we won't call it a rejection either if
@@ -342,12 +348,13 @@ def compare_aln_to_transcript(transcript, spans):
         else:
             decision = None
     else:
-        covered_introns = introns[first_exon_hit : last_exon_hit]
-        decision = (gaps.shape == covered_introns.shape and 
-                    np.all(gaps == covered_introns))
+        num_gaps = len(gaps)
+
+        decision = (first_exon_hit + num_gaps <= len(introns) and 
+                    np.all(gaps == introns[first_exon_hit : first_exon_hit + len(gaps)]))
         
     return TranscriptMatch(decision=decision, 
-                           exon_hits=exon_hits,
+                           first_exon_hit=first_exon_hit,
                            spans=spans, gaps=gaps, exons=exons, introns=introns, intron_hits=any_intron_hit)
  
 def matches_exon(exon, alns):
@@ -613,7 +620,10 @@ commands.""")
             transcript_counter = TranscriptReadCounter(idx)
             counters.append(transcript_counter)
             
-        iterate_over_sam(args.alignments, counters)
+        cProfile.runctx('iterate_over_sam(args.alignments, counters)',
+                     globals(),
+                        locals(),
+                        filename='prof')
 
     else:
         exon_counter = iterate_over_exons(exons, args.alignments)
