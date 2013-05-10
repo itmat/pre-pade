@@ -243,15 +243,31 @@ def format_spans(spans):
 def introns_for_exons(exon_starts, exon_ends):
     return (exon_starts[1:], exon_ends[:-1])
 
-def introns_intersect(target, spans):
-    start = target[0]
-    end   = target[1]
+def first_intersection(introns, spans):
+    m = len(introns)
+    n = len(spans)
+    i = 0
+    j = 0
+    while i < m and j < n:
+        intron_start = introns[i, 0]
+        intron_end   = introns[i, 1]
+        span_start   = spans[j, 0]
+        span_end     = spans[j, 1]
 
-    for s, e in spans:
-        if not (e <= start or s >= end):
-            return True
+        # If the span ends before the intron starts, advance to next
+        # span
+        if spans[j, 1] <= introns[i, 0]:
+            j += 1
+            
+        # If the intron ends before the span starts, advance to next
+        # intron
+        elif introns[i, 1] <= spans[j, 0]:
+            i += 1
 
-    return False
+        else:
+            return i
+
+    return None
 
 
 def exons_intersect(target, spans):
@@ -317,21 +333,7 @@ def compare_aln_to_transcript(transcript, spans):
     gaps    = spans_to_gaps(spans)
 
     # If we hit any introns we have to call it a miss
-    any_intron_hit = False
-    for i, intron in enumerate(introns):
-        any_intron_hit = introns_intersect(intron, spans)
-        if any_intron_hit:
-            break
-
-    # Find the first and last exon that any of my spans intersect. If
-    # none of them intersect an exon, then we can't call this a hit.
-    first_exon_hit = None
-
-    if not any_intron_hit:
-        for i, exon in enumerate(exons):
-            if exons_intersect(exon, spans):
-                first_exon_hit = i
-                break
+    first_intron_hit = first_intersection(introns, spans)
 
     # If the read doesn't overlap any exons, we can't call it a
     # confirmation. However we won't call it a rejection either if
@@ -339,23 +341,26 @@ def compare_aln_to_transcript(transcript, spans):
     # present in this transcript) and if the read does not fall in an
     # intron region.
 
-    if any_intron_hit:
+    if first_intron_hit is not None:
         decision = False
+        first_exon_hit = None
 
-    elif first_exon_hit is None:
-        if len(gaps) > 0:
-            decision = False
-        else:
-            decision = None
     else:
-        num_gaps = len(gaps)
+        first_exon_hit = first_intersection(exons, spans)
 
-        decision = (first_exon_hit + num_gaps <= len(introns) and 
-                    np.all(gaps == introns[first_exon_hit : first_exon_hit + len(gaps)]))
+        if first_exon_hit is None:
+            if len(gaps) > 0:
+                decision = False
+            else:
+                decision = None
+        else:
+            num_gaps = len(gaps)
+            decision = (first_exon_hit + num_gaps <= len(introns) and 
+                        np.all(gaps == introns[first_exon_hit : first_exon_hit + len(gaps)]))
         
     return TranscriptMatch(decision=decision, 
                            first_exon_hit=first_exon_hit,
-                           spans=spans, gaps=gaps, exons=exons, introns=introns, intron_hits=any_intron_hit)
+                           spans=spans, gaps=gaps, exons=exons, introns=introns, intron_hits=(first_intron_hit is not None))
  
 def matches_exon(exon, alns):
     """Returns True if the given alignments match the given exon.
