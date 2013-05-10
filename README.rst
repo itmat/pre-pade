@@ -24,4 +24,4 @@ at some point.
 
 Please run:
 
-  python -m prepade.quantifyexons
+  python -m prepade.quantify
