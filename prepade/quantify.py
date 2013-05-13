@@ -47,10 +47,11 @@ class FeatureReadCounter(object):
 
 class ExonReadCounter(FeatureReadCounter):
 
-    def __init__(self, exon_index):
+    def __init__(self, exon_index, min_overlap):
         self.exon_index = exon_index
         self.unique_counts = defaultdict(lambda: 0)
         self.multi_counts = defaultdict(lambda: 0)
+        self.min_overlap = min_overlap
 
     def add(self, ref, alns):
         pair = alns
@@ -67,12 +68,13 @@ class ExonReadCounter(FeatureReadCounter):
         # or multi depending on how many alignments there are for this
         # read). Since we might come across the same exon more than
         # once, keep a set of 'seen' exons so we don't double-count.
+
         for span in spans:
             for exon in self.exon_index.get_exons(ref, span.start, span.end):
                 key = (exon.id, exon.ref, exon.location.start, exon.location.end)
 
                 if key not in seen:
-                    if matches_exon(exon, pair):
+                    if matches_exon(exon, pair, self.min_overlap):
                         if self.count_towards_min(alns[0]):
                             self.unique_counts[key] += 1                        
                         else:
@@ -361,7 +363,7 @@ def compare_aln_to_transcript(transcript, spans):
                            first_exon_hit=first_exon_hit,
                            spans=spans, gaps=gaps, exons=exons, introns=introns, intron_hits=(first_intron_hit is not None))
  
-def matches_exon(exon, alns):
+def matches_exon(exon, alns, min_overlap=1):
     """Returns True if the given alignments match the given exon.
 
     At least one segment from the alignments must overlap the exon,
@@ -392,7 +394,7 @@ def matches_exon(exon, alns):
         
     # Make sure at least one of the spans overlaps the exon
     for spans in span_groups:
-         overlap.extend(spans_overlap(exon.location, spans))
+        overlap.extend(spans_overlap(exon.location, spans, min_overlap))
     if not any(overlap):
         return False
 
@@ -407,7 +409,7 @@ def matches_exon(exon, alns):
     return all(consistent)
 
         
-def spans_overlap(exon, spans):
+def spans_overlap(exon, spans, min_overlap=1):
     """Return bools indicating which spans overlap the exon.
 
     :param exon:
@@ -423,7 +425,7 @@ def spans_overlap(exon, spans):
 
     """
     for span in spans:
-        yield not (span.end <= exon.start or span.start >= exon.end) 
+        yield not (span.end < exon.start + min_overlap or span.start > exon.end - min_overlap) 
 
 
 def spans_are_consistent(exon, spans):
@@ -585,6 +587,10 @@ commands.""")
                         action='store_true',
                         help="Don't do transcripts, just exons")
 
+    parser.add_argument('--min-overlap',
+                        type=int,
+                        help="Minimum overlap required to count an exon")
+
     args = parser.parse_args()
     setup_logging(args)
 
@@ -621,7 +627,9 @@ commands.""")
             logging.info('Building transcript index')
             idx = TranscriptIndex(genes)
 
-        exon_counter = ExonReadCounter(idx)
+        logging.info("For exon quantification, only counting reads that overlap the exon by " + str(args.min_overlap) + " bases or more")
+
+        exon_counter = ExonReadCounter(idx, args.min_overlap)
         transcript_counter = None
         counters = [ exon_counter ]
         if genes is not None:
