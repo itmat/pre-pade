@@ -588,6 +588,7 @@ commands.""")
                         help="Don't do transcripts, just exons")
 
     parser.add_argument('--min-overlap',
+                        default=1,
                         type=int,
                         help="Minimum overlap required to count an exon")
 
