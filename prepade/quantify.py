@@ -530,7 +530,7 @@ class BedFileWriter(object):
         exon_locs = [ sf.location for sf in transcript.sub_features ]
         blockCount = len(exon_locs)
         blockSizes  = [ el.end - el.start for el in exon_locs ]
-        blockStarts = [ el.start for el in exon_locs ]
+        blockStarts = [ el.start - chromStart for el in exon_locs ]
 
         blockSizes = ','.join(map(str, blockSizes))
         blockStarts = ','.join(map(str, blockStarts))
