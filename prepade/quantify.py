@@ -60,6 +60,7 @@ class ExonReadCounter(FeatureReadCounter):
         for aln in pair:
             spans.extend(cigar_to_spans(aln.cigar, aln.pos))
 
+        strand = -1 if pair[0].is_reverse else 1
         seen = set()
 
         # Go through all the spans and find all the exons overlapped
@@ -70,8 +71,8 @@ class ExonReadCounter(FeatureReadCounter):
         # once, keep a set of 'seen' exons so we don't double-count.
 
         for span in spans:
-            for exon in self.exon_index.get_exons(ref, span.start, span.end):
-                key = (exon.id, exon.ref, exon.location.start, exon.location.end)
+            for exon in self.exon_index.get_exons(ref, strand, span.start, span.end):
+                key = (exon.id, exon.ref, strand, exon.location.start, exon.location.end)
 
                 if key not in seen:
                     if matches_exon(exon, pair, self.min_overlap):
@@ -85,8 +86,8 @@ class ExonReadCounter(FeatureReadCounter):
 
     def __iter__(self):
         for key in self.unique_counts:
-            (exon_id, ref, start, end) = key
-            exon = SeqFeature(id=exon_id, ref=ref, location=FeatureLocation(start, end))
+            (exon_id, ref, strand, start, end) = key
+            exon = SeqFeature(id=exon_id, ref=ref, strand=strand, location=FeatureLocation(start, end))
             yield(exon, self.unique_counts[key], self.multi_counts[key])        
 
 class TranscriptReadCounter(FeatureReadCounter):
@@ -621,7 +622,7 @@ commands.""")
 
     if ordering == AlignmentFileType.ORDERED_BY_READ_NAME:
 
-        if genes is None:
+        if genes is None or args.no_transcripts:
             logging.info('Building exon index')
             idx = ExonIndex(exons)
         else:

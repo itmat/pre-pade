@@ -192,7 +192,7 @@ class ExonIndex(object):
         # associate with each span the list of exons that are present in
         # all bases of that span.
 
-        key_fn = lambda x: (x.exon.ref, x.location)
+        key_fn = lambda x: (x.exon.ref, x.exon.strand, x.location)
 
         logging.debug('Sorting events')
         events = sorted(events, key=key_fn)
@@ -206,12 +206,12 @@ class ExonIndex(object):
         old = set()
 
         logging.debug("Overlap list based on sorted events")
-        for (ref, location), values in groupby(events, key_fn):
+        for (ref, strand, location), values in groupby(events, key_fn):
 
             for event in values:
                 start = event.exon.location.start
                 end   = event.exon.location.end
-                key = (event.exon.id, ref, start, end)
+                key = (event.exon.id, ref, strand, start, end)
 
                 if event.etype == 'start':
                     overlap[ref].add(key)
@@ -227,7 +227,7 @@ class ExonIndex(object):
         self.start = starts
         self.keys  = keys
         
-    def get_exons(self, ref, start, end):
+    def get_exons(self, ref, strand, start, end):
 
         n = len(self.start[ref])
         p = 0
@@ -250,9 +250,9 @@ class ExonIndex(object):
         while r < n and self.start[ref][r] < end:
             for key in self. keys[ref][r]:
                 if key not in seen:
-                    (exon_id, exon_ref, exon_start, exon_end) = key
+                    (exon_id, exon_ref, exon_strand, exon_start, exon_end) = key
                     seen.add(key)
-                    yield(SeqFeature(id=exon_id, ref=exon_ref, location=FeatureLocation(exon_start, exon_end)))
+                    yield(SeqFeature(id=exon_id, ref=exon_ref, strand=exon_strand, location=FeatureLocation(exon_start, exon_end)))
             r += 1
 
 def genes_to_exons(genes):
