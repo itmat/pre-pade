@@ -106,11 +106,13 @@ class TranscriptReadCounter(FeatureReadCounter):
 
         seen = set()
 
+        strand = -1 if pair[0].is_reverse else 1
+
         for spans in span_groups:
 
             for span in spans:
                 (start, end) = span
-                for t in self.index.get_transcripts(ref, start, end):
+                for t in self.index.get_transcripts(ref, strand, start, end):
                     key = t.id
                     self.key_to_transcript[key] = t
                     if key not in seen:

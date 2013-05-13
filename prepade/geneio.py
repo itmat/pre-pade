@@ -73,14 +73,19 @@ def parse_gtf_to_genes(fh):
     for (gene_id, transcript_id), grp in df.groupby(['gene_id', 'transcript_id']):
         exons = []
         ref = None
+
+        strand = grp.strand[grp.index[0]]
+
         for i in grp.index:
             ref = grp.seqname[i]
             exons.append(SeqFeature(
                 id='{0}:{1}-{2}'.format(ref, grp.start[i] + 1, grp.end[i]),
                 ref=ref,
+                strand=strand,
                 location=FeatureLocation(grp.start[i], grp.end[i])))
         yield SeqFeature(
             ref=ref,
+            strand=strand,
             id=transcript_id,
             location=FeatureLocation(min(grp.start), max(grp.end)),
             sub_features=exons)
@@ -148,26 +153,26 @@ class TranscriptIndex(object):
         exons = []
         for t in transcripts:
             for e in t.sub_features:
-                key = (e.ref, e.location.start, e.location.end)
+                key = (e.ref, e.strand, e.location.start, e.location.end)
                 self.exon_to_transcripts[key].append(t)
                 exons.append(e)
 
         self.exon_index = ExonIndex(exons)
 
-    def get_transcripts(self, ref, start, end):
+    def get_transcripts(self, ref, strand, start, end):
         
         seen = set()
 
-        exons = self.exon_index.get_exons(ref, start, end)
+        exons = self.exon_index.get_exons(ref, strand, start, end)
         for e in exons:
-            key = (e.ref, e.location.start, e.location.end)
+            key = (e.ref, e.strand, e.location.start, e.location.end)
             for t in self.exon_to_transcripts[key]:
                 if t.id not in seen:
                     seen.add(t.id)
                     yield(t)
 
-    def get_exons(self, ref, start, end):
-        return self.exon_index.get_exons(ref, start, end)
+    def get_exons(self, ref, strand, start, end):
+        return self.exon_index.get_exons(ref, strand, start, end)
 
 class ExonIndex(object):
 
