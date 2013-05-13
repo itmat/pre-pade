@@ -45,14 +45,19 @@ def parse_gtf_to_genes(fh):
          end, score, strand, frame, attr_string) = fields
 
         attrs = parse_gtf_attributes(attr_string)
+        if strand == '+':
+            strand = 1
+        else:
+            strand = -1
 
-        seqnames.append(intern(seqname))
-        starts.append(int(start) - 1)
-        ends.append(int(end))
-        strands.append(strand)
-        gene_ids.append(intern(attrs['gene_id']))
-        transcript_ids.append(intern(attrs['transcript_id']))
-        exon_numbers.append(intern(attrs['exon_number']))
+        if 'exon' in feature:
+            seqnames.append(intern(seqname))
+            starts.append(int(start) - 1)
+            ends.append(int(end))
+            strands.append(strand)
+            gene_ids.append(intern(attrs['gene_id']))
+            transcript_ids.append(intern(attrs['transcript_id']))
+            exon_numbers.append(intern(attrs['exon_number']))
 
     df = pd.DataFrame(
         { 'seqname' : seqnames,
@@ -101,7 +106,8 @@ def parse_gtf_to_genes(fh):
 
 def parse_rum_index_genes(fh):
     for line in fh:
-        (chr_, strand, start, end, num_exons, exon_starts, exon_ends, gene_name) = line.split("\t")
+
+        (chr_, strand, start, end, num_exons, exon_starts, exon_ends, gene_name) = line.rstrip().split("\t")
 
         strand = 1 if strand == '+' else -1 if strand == '-' else None
 
@@ -115,7 +121,7 @@ def parse_rum_index_genes(fh):
         exons = [ SeqFeature(id="{0}:{1}-{2}".format(chr_, loc.start, loc.end), 
                              ref=chr_, location=loc, strand=strand, type='exon')
                   for loc in exon_locs ]
-        gene_loc = FeatureLocation(int(start), int(end), strand=strand)
+        gene_loc = FeatureLocation(int(start) - 1, int(end), strand=strand)
         gene = SeqFeature(id=gene_name,
                           ref=chr_, location=gene_loc, strand=strand, type='gene', sub_features=exons)
 
