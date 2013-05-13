@@ -581,6 +581,10 @@ commands.""")
     parser.add_argument('alignments',
                         help="SAM or BAM file containing alignments")
 
+    parser.add_argument('--no-transcripts',
+                        action='store_true',
+                        help="Don't do transcripts, just exons")
+
     args = parser.parse_args()
     setup_logging(args)
 
@@ -621,8 +625,11 @@ commands.""")
         transcript_counter = None
         counters = [ exon_counter ]
         if genes is not None:
-            transcript_counter = TranscriptReadCounter(idx)
-            counters.append(transcript_counter)
+            if args.no_transcripts:
+                logging.info("Ignoring transcripts, just doing exons")
+            else:
+                transcript_counter = TranscriptReadCounter(idx)
+                counters.append(transcript_counter)
             
         iterate_over_sam(args.alignments, counters)
 
