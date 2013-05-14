@@ -53,7 +53,7 @@ class ExonReadCounter(FeatureReadCounter):
         self.multi_counts = defaultdict(lambda: 0)
         self.min_overlap = min_overlap
 
-    def add(self, ref, alns):
+    def add(self, ref, alns, candidates=None):
         pair = alns
 
         spans = []
@@ -61,7 +61,6 @@ class ExonReadCounter(FeatureReadCounter):
             spans.extend(cigar_to_spans(aln.cigar, aln.pos))
 
         strand = -1 if pair[0].is_reverse else 1
-        seen = set()
 
         # Go through all the spans and find all the exons overlapped
         # by any span. For each of those exons, check to see if it
@@ -70,18 +69,20 @@ class ExonReadCounter(FeatureReadCounter):
         # read). Since we might come across the same exon more than
         # once, keep a set of 'seen' exons so we don't double-count.
 
-        for span in spans:
-            for (exon_id, start, end) in self.exon_index.get_exons(ref, strand, span.start, span.end):
-                
-                if (exon_id, start, end) not in seen:
-                    if matches_exon(start, end, pair, self.min_overlap):
-                        key = (exon_id, ref, strand, start, end)
-                        if self.count_towards_min(alns[0]):
-                            self.unique_counts[key] += 1                        
-                        else:
-                            self.multi_counts[key] += 1
+        if candidates is None:
+            candidates = set()
+            for span in spans:
+                candidates.update(self.exon_index.get_exons(ref, strand, span.start, span.end))
 
-                        seen.add((exon_id, start, end))
+        for (exon_id, start, end) in candidates:
+
+            if matches_exon(start, end, pair, self.min_overlap):
+                key = (exon_id, ref, strand, start, end)
+                if self.count_towards_min(alns[0]):
+                    self.unique_counts[key] += 1                        
+                else:
+                    self.multi_counts[key] += 1
+
 
     def __iter__(self):
         for key in self.unique_counts:
