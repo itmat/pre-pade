@@ -207,7 +207,6 @@ class ExonIndex(object):
         starts = defaultdict(list)
         keys   = defaultdict(list)
 
-
         old = set()
 
         logging.debug("Overlap list based on sorted events")
@@ -225,35 +224,30 @@ class ExonIndex(object):
                         overlap[ref].remove(key)
                     except KeyError as e:
                         pass
+            starts[(ref, strand)].append(int(location))
+            keys[(ref, strand)].append(set(overlap[ref]))
 
-            starts[ref].append(location)
-            keys[ref].append(set(overlap[ref]))
+        for k in starts:
+            starts[k] = np.array(starts[k], int)
 
         self.start = starts
         self.keys  = keys
         
     def get_exons(self, ref, strand, start, end):
 
-        n = len(self.start[ref])
-        p = 0
-        q = len(self.start[ref])
-        r = 0
-        while (p < q):
-            r = p + (q - p) // 2
+        key = (ref, strand)
+        starts = self.start[(ref, strand)]
+        exon_keys = self.keys[(ref, strand)]
 
-            if r + 1 < n and self.start[ref][r + 1] <= start:
-                p = r
-
-            elif self.start[ref][r] > start:
-                q = r
-
-            else:
-                break
+        n = len(starts)
+        
+        rs = np.searchsorted(starts, [start], side='right')
+        r = max(rs[0] - 1, 0)
 
         seen = set()
 
-        while r < n and self.start[ref][r] < end:
-            for key in self. keys[ref][r]:
+        while r < n and starts[r] < end:
+            for key in exon_keys[r]:
                 if key not in seen:
                     (exon_id, exon_ref, exon_strand, exon_start, exon_end) = key
                     seen.add(key)
