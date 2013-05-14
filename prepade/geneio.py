@@ -206,7 +206,7 @@ class ExonIndex(object):
 
         starts = defaultdict(list)
         keys   = defaultdict(list)
-
+        new_keys = defaultdict(list)
         old = set()
 
         logging.debug("Overlap list based on sorted events")
@@ -225,34 +225,50 @@ class ExonIndex(object):
                     except KeyError as e:
                         pass
             starts[(ref, strand)].append(int(location))
-            keys[(ref, strand)].append(set(overlap[ref]))
+
+
+            these_keys = set(overlap[ref])
+            last_keys = new_keys[(ref, strand)][-1] if len(new_keys[(ref, strand)]) > 0 else set()
+            keys[(ref, strand)].append(these_keys)
+
+            new_keys[(ref, strand)].append(these_keys.difference(last_keys))
 
         for k in starts:
             starts[k] = np.array(starts[k], int)
 
         self.start = starts
         self.keys  = keys
+        self.new_keys = new_keys
         
     def get_exons(self, ref, strand, start, end):
 
         key = (ref, strand)
-        starts = self.start[(ref, strand)]
-        exon_keys = self.keys[(ref, strand)]
+        starts    = self.start[key]
+        exon_keys = self.keys[key]
+        new_keys  = self.new_keys[key]
 
         n = len(starts)
         
         rs = np.searchsorted(starts, [start], side='right')
         r = max(rs[0] - 1, 0)
 
-        seen = set()
-
+        first = True
         while r < n and starts[r] < end:
-            for key in exon_keys[r]:
-                if key not in seen:
-                    (exon_id, exon_ref, exon_strand, exon_start, exon_end) = key
-                    seen.add(key)
-                    yield(SeqFeature(id=exon_id, ref=exon_ref, strand=exon_strand, location=FeatureLocation(exon_start, exon_end)))
+            if first:
+                keys = exon_keys[r]
+                first = False
+            else:
+                keys = new_keys[r]
             r += 1
+
+            for key in keys:
+                (exon_id, exon_ref, exon_strand, exon_start, exon_end) = key
+                yield SeqFeature(id=exon_id, ref=exon_ref, strand=exon_strand, location=FeatureLocation(exon_start, exon_end))
+
+
+
+            
+
 
 def genes_to_exons(genes):
     """Given an iterator over genes, returns an iterator over exons.
