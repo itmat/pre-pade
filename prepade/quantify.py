@@ -595,6 +595,9 @@ commands.""")
                         type=int,
                         help="Minimum overlap required to count an exon")
 
+    parser.add_argument('--profile',
+                        action='store_true')
+
     args = parser.parse_args()
     setup_logging(args)
 
@@ -643,8 +646,12 @@ commands.""")
                 transcript_counter = TranscriptReadCounter(idx)
                 counters.append(transcript_counter)
             
-        iterate_over_sam(args.alignments, counters)
-
+        if args.profile:
+            import cProfile
+            cProfile.runctx('iterate_over_sam(args.alignments, counters)', 
+                            globals(), locals(), filename='prof')
+        else:
+            iterate_over_sam(args.alignments, counters)
     else:
         exon_counter = iterate_over_exons(exons, args.alignments)
         if genes is not None:
