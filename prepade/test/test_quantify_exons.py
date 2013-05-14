@@ -52,7 +52,7 @@ class QuantifyExonsTest(unittest.TestCase):
             (4352004, 4352081),
             (4352201, 4352224)])
 
-        res = list(spans_are_consistent(exon, spans))
+        res = list(spans_are_consistent(exon.start, exon.end, spans))
             
         self.assertEquals([True, True], res)
 
@@ -70,8 +70,8 @@ class QuantifyExonsTest(unittest.TestCase):
             (121327576, 121327622),
             (121327624, 121327678)])
 
-        self.assertEquals([True, True], list(spans_are_consistent(exon, spans_f)))
-        self.assertEquals([False, False], list(spans_are_consistent(exon, spans_r)))
+        self.assertEquals([True, True], list(spans_are_consistent(exon.start, exon.end, spans_f)))
+        self.assertEquals([False, False], list(spans_are_consistent(exon.start, exon.end, spans_r)))
 
 def transcript_feature(ref, exons):
     exon_locs = spans_to_locations(exons)

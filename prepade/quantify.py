@@ -71,18 +71,17 @@ class ExonReadCounter(FeatureReadCounter):
         # once, keep a set of 'seen' exons so we don't double-count.
 
         for span in spans:
-            for exon in self.exon_index.get_exons(ref, strand, span.start, span.end):
-                key = (exon.id, exon.ref, strand, exon.location.start, exon.location.end)
-
-                if key not in seen:
-                    if matches_exon(exon, pair, self.min_overlap):
+            for (exon_id, start, end) in self.exon_index.get_exons(ref, strand, span.start, span.end):
+                
+                if (exon_id, start, end) not in seen:
+                    if matches_exon(start, end, pair, self.min_overlap):
+                        key = (exon_id, ref, strand, start, end)
                         if self.count_towards_min(alns[0]):
                             self.unique_counts[key] += 1                        
                         else:
                             self.multi_counts[key] += 1
 
-                        seen.add(key)
-        
+                        seen.add((exon_id, start, end))
 
     def __iter__(self):
         for key in self.unique_counts:
@@ -366,7 +365,7 @@ def compare_aln_to_transcript(transcript, spans):
                            first_exon_hit=first_exon_hit,
                            spans=spans, gaps=gaps, exons=exons, introns=introns, intron_hits=(first_intron_hit is not None))
  
-def matches_exon(exon, alns, min_overlap=1):
+def matches_exon(start, end, alns, min_overlap=1):
     """Returns True if the given alignments match the given exon.
 
     At least one segment from the alignments must overlap the exon,
@@ -397,7 +396,7 @@ def matches_exon(exon, alns, min_overlap=1):
         
     # Make sure at least one of the spans overlaps the exon
     for spans in span_groups:
-        overlap.extend(spans_overlap(exon.location, spans, min_overlap))
+        overlap.extend(spans_overlap(start, end, spans, min_overlap))
     if not any(overlap):
         return False
 
@@ -407,12 +406,12 @@ def matches_exon(exon, alns, min_overlap=1):
     # segments of each read.
 
     for spans in span_groups:
-        consistent.extend(spans_are_consistent(exon.location, spans))
+        consistent.extend(spans_are_consistent(start, end, spans))
 
     return all(consistent)
 
         
-def spans_overlap(exon, spans, min_overlap=1):
+def spans_overlap(start, end, spans, min_overlap=1):
     """Return bools indicating which spans overlap the exon.
 
     :param exon:
@@ -428,10 +427,10 @@ def spans_overlap(exon, spans, min_overlap=1):
 
     """
     for span in spans:
-        yield not (span.end < exon.start + min_overlap or span.start > exon.end - min_overlap) 
+        yield not (span.end < start + min_overlap or span.start > end - min_overlap) 
 
 
-def spans_are_consistent(exon, spans):
+def spans_are_consistent(start, end, spans):
 
     """Return bools indicating which read segments are consistent with exon.
 
@@ -457,7 +456,7 @@ def spans_are_consistent(exon, spans):
 
         # If the span doesn't overlap the exon at all, it certainly
         # isn't inconsistent with it.
-        if span.end <= exon.start or span.start >= exon.end:
+        if span.end <= start or span.start >= end:
             yield True
 
         else:
@@ -466,15 +465,15 @@ def spans_are_consistent(exon, spans):
             # then it must start at the exon start, indicating that an
             # intron was skipped.
             if i == 0:
-                l_ok = span.start >= exon.start
+                l_ok = span.start >= start
             else:
-                l_ok = span.start == exon.start
+                l_ok = span.start == start
 
             # And the opposite is true for right edge of the span
             if i == last_span:
-                r_ok = span.end <= exon.end
+                r_ok = span.end <= end
             else:
-                r_ok = span.end == exon.end
+                r_ok = span.end == end
 
             yield l_ok and r_ok
 

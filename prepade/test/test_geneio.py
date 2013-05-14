@@ -19,14 +19,14 @@ class ExonIndexTest(unittest.TestCase):
             [4, 10, 14, 17, 20, 25, 30, 34, 40])
             
         self.assertEquals(
-            [set([('chr1:5-10', 'chr1', None,  4, 10)]),
-             set([('chr1:11-20', 'chr1', None, 10, 20)]),
-             set([('chr1:11-20', 'chr1', None, 10, 20), ('chr1:15-30', 'chr1', None, 14, 30)]),
-             set([('chr1:11-20', 'chr1', None, 10, 20), ('chr1:15-30', 'chr1', None, 14, 30), ('chr1:18-25', 'chr1', None, 17, 25)]),
-             set([('chr1:15-30', 'chr1', None, 14, 30), ('chr1:18-25', 'chr1', None, 17, 25)]),
-             set([('chr1:15-30', 'chr1', None, 14, 30)]),
+            [set([('chr1:5-10',  4, 10)]),
+             set([('chr1:11-20', 10, 20)]),
+             set([('chr1:11-20', 10, 20), ('chr1:15-30', 14, 30)]),
+             set([('chr1:11-20', 10, 20), ('chr1:15-30', 14, 30), ('chr1:18-25', 17, 25)]),
+             set([('chr1:15-30', 14, 30), ('chr1:18-25', 17, 25)]),
+             set([('chr1:15-30', 14, 30)]),
              set(),
-             set([('chr1:35-40', 'chr1', None, 34, 40)]),
+             set([('chr1:35-40', 34, 40)]),
              set()],            
             idx.keys[('chr1', None)])
 

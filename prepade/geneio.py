@@ -164,8 +164,8 @@ class TranscriptIndex(object):
         seen = set()
 
         exons = self.exon_index.get_exons(ref, strand, start, end)
-        for e in exons:
-            key = (e.ref, e.strand, e.location.start, e.location.end)
+        for (exon_id, exon_start, exon_end) in exons:
+            key = (ref, strand, exon_start, exon_end)
             for t in self.exon_to_transcripts[key]:
                 if t.id not in seen:
                     seen.add(t.id)
@@ -215,7 +215,7 @@ class ExonIndex(object):
             for event in values:
                 start = event.exon.location.start
                 end   = event.exon.location.end
-                key = (event.exon.id, ref, strand, start, end)
+                key = (event.exon.id, start, end)
 
                 if event.etype == 'start':
                     overlap[ref].add(key)
@@ -225,7 +225,6 @@ class ExonIndex(object):
                     except KeyError as e:
                         pass
             starts[(ref, strand)].append(int(location))
-
 
             these_keys = set(overlap[ref])
             last_keys = new_keys[(ref, strand)][-1] if len(new_keys[(ref, strand)]) > 0 else set()
@@ -242,7 +241,7 @@ class ExonIndex(object):
         
     def get_exons(self, ref, strand, start, end):
 
-        key = (ref, strand)
+        key       = (ref, strand)
         starts    = self.start[key]
         exon_keys = self.keys[key]
         new_keys  = self.new_keys[key]
@@ -262,11 +261,7 @@ class ExonIndex(object):
             r += 1
 
             for key in keys:
-                (exon_id, exon_ref, exon_strand, exon_start, exon_end) = key
-                yield SeqFeature(id=exon_id, ref=exon_ref, strand=exon_strand, location=FeatureLocation(exon_start, exon_end))
-
-
-
+                yield key
             
 
 
