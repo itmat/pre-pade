@@ -1,6 +1,6 @@
 from Bio.SeqFeature import FeatureLocation, SeqFeature
 from collections import namedtuple, defaultdict
-from itertools import groupby
+from itertools import groupby, chain
 
 import logging
 import numpy as np
@@ -167,8 +167,16 @@ class TranscriptIndex(object):
 
 class ExonIndex(object):
 
-    valid_strands = set(['+', '-', None])
+    valid_strands = set([-1, 0, 1, None])
 
+    def check_strand(self, strand):
+        if strand not in self.valid_strands:
+            raise Exception(
+                ("Unknown strand {strand}, should be one of "+
+                 "{valid_strands}").format(
+                     strand=strand,
+                     valid_strands=", ".join(map(str, self.valid_strands))))
+            
     def __init__(self, exons):
 
         # From the list of n exons, build a list of 2n 'events'. Each
@@ -213,13 +221,7 @@ class ExonIndex(object):
 
         logging.debug("Overlap list based on sorted events")
         for (ref, strand, location), values in groupby(events, key_fn):
-
-            if strand not in self.valid_strands:
-                logging.warn(("Unknown strand {strand}, should be one of "+
-                              "{valid_strands}").format(
-                                  strand=strand,
-                                  valid_strands=", ".join(valid_strands)))
-                             
+            self.check_strand(strand)
             for event in values:
                 start = event.exon.location.start
                 end   = event.exon.location.end
@@ -249,7 +251,15 @@ class ExonIndex(object):
         self.new_keys = new_keys
         
     def get_exons(self, ref, strand, start, end):
+        self.check_strand(strand)
 
+        if strand is None or strand == 0:
+            for exon in chain(
+                self.get_exons(ref,  1, start, end),
+                self.get_exons(ref, -1, start, end)):
+                yield exon
+
+                
         key       = (ref, strand)
         starts    = self.start[key]
         exon_keys = self.keys[key]
@@ -271,7 +281,6 @@ class ExonIndex(object):
 
             for key in keys:
                 yield key
-            
 
 
 def genes_to_exons(genes):

@@ -1,10 +1,11 @@
 import unittest
 import numpy as np
 from prepade.geneio import read_exons, ExonIndex, parse_gtf_to_genes
+from Bio.SeqFeature import SeqFeature, FeatureLocation
 
 class ExonIndexTest(unittest.TestCase):
     
-    def test_exon_index(self):
+    def test_exon_index_structure(self):
 
         exons = ['chr1:5-10',
                  'chr1:11-20',
@@ -43,6 +44,28 @@ class ExonIndexTest(unittest.TestCase):
         self.assertEquals(1, len(list(idx.get_exons('chr1', None, 35, 45))))
         self.assertEquals(0, len(list(idx.get_exons('chr1', None, 45, 100))))
 
+
+    def test_get_with_and_without_strand(self):
+        plus_exon = SeqFeature(
+            ref='chr1',
+            strand=1,
+            location=FeatureLocation(1, 20))
+        minus_exon = SeqFeature(
+            ref='chr1',
+            strand=-1,
+            location=FeatureLocation(10, 30))
+            
+        idx = ExonIndex([plus_exon, minus_exon])
+
+        exons_for_strand = lambda strand: idx.get_exons(ref='chr1', 
+                                                        strand=strand,
+                                                        start=12, end=18)
+
+        locs_for_strand = lambda strand: [ (e[1], e[2]) for e in exons_for_strand(strand) ]
+
+        self.assertEquals([(1, 20)], locs_for_strand(1))
+        self.assertEquals([(10, 30)], locs_for_strand(-1))
+        self.assertEquals([(1, 20), (10, 30)], locs_for_strand(0))
 
     def test_multiple_refs(self):
 
