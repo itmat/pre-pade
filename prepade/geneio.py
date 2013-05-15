@@ -115,6 +115,10 @@ def parse_rum_index_genes(fh):
         yield gene
 
 def read_exons(fh):
+    """Parse an exon-only input file, returning the exons as an iterator
+    of SeqFeature objects.
+
+    """
     pat = re.compile('(.*):(\d+)-(\d+)')
     for line in fh:
         line = line.rstrip()
@@ -154,10 +158,16 @@ class TranscriptIndex(object):
                     yield(t)
 
     def get_exons(self, ref, strand, start, end):
+        
+        """Get a list of exons on the given strand if the given chromosome
+        that overlap the range specified by start and end."""
+
         return self.exon_index.get_exons(ref, strand, start, end)
 
 
 class ExonIndex(object):
+
+    valid_strands = set(['+', '-', None])
 
     def __init__(self, exons):
 
@@ -204,6 +214,12 @@ class ExonIndex(object):
         logging.debug("Overlap list based on sorted events")
         for (ref, strand, location), values in groupby(events, key_fn):
 
+            if strand not in self.valid_strands:
+                logging.warn(("Unknown strand {strand}, should be one of "+
+                              "{valid_strands}").format(
+                                  strand=strand,
+                                  valid_strands=", ".join(valid_strands)))
+                             
             for event in values:
                 start = event.exon.location.start
                 end   = event.exon.location.end
