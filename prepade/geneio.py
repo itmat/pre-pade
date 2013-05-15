@@ -91,24 +91,6 @@ def parse_gtf_to_genes(fh):
             sub_features=exons)
         
 
-    # for line in fh:
-    #     line = line.rstrip()
-    #     (seqname, source, feature, start, end, score, strand, frame, attribute) = line.split('\t')
-
-    #     seqname = intern(seqname)
-    #     source  = intern(seqname)
-    #     feature = intern(feature)
-    #     start   = int(start) - 1
-    #     end     = int(end)
-    #     score = float(score)
-    #     frame = int(frame)
-    #     attributes = attribute.split(';\s*')
-        
-    #     data[seqname][gene_id][transcript_id][exon_number] = start, end
-        
-    #     if feature != 'exon':
-    #         raise Exception("I only recognize files that have only exon features")
-
 def parse_rum_index_genes(fh):
     for line in fh:
 
@@ -174,6 +156,7 @@ class TranscriptIndex(object):
     def get_exons(self, ref, strand, start, end):
         return self.exon_index.get_exons(ref, strand, start, end)
 
+
 class ExonIndex(object):
 
     def __init__(self, exons):
@@ -202,12 +185,21 @@ class ExonIndex(object):
         logging.debug('Sorting events')
         events = sorted(events, key=key_fn)
 
+        # Map from (ref, strand) to running set of exons that overlap
+        # our current position.
         overlap = defaultdict(set)
 
+        # Map from (ref, strand) to list of span start positions.
         starts = defaultdict(list)
+
+        # Map from (ref, strand) to list of exon keys that overlap the
+        # corresponding position
         keys   = defaultdict(list)
+
+        # Map from (ref strand) to list of exon keys that overlap the
+        # corresponding position and don't overlap the previous
+        # position
         new_keys = defaultdict(list)
-        old = set()
 
         logging.debug("Overlap list based on sorted events")
         for (ref, strand, location), values in groupby(events, key_fn):
@@ -224,6 +216,7 @@ class ExonIndex(object):
                         overlap[ref].remove(key)
                     except KeyError as e:
                         pass
+
             starts[(ref, strand)].append(int(location))
 
             these_keys = set(overlap[ref])

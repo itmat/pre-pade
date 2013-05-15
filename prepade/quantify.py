@@ -92,7 +92,6 @@ class ExonReadCounter(FeatureReadCounter):
 
 class TranscriptReadCounter(FeatureReadCounter):
 
-
     def __init__(self, index):
         self.index = index
         self.unique_counts = defaultdict(lambda: 0)
@@ -125,7 +124,6 @@ class TranscriptReadCounter(FeatureReadCounter):
                             else:
                                 self.multi_counts[key] += 1
 
-        
     def __iter__(self):
         for key in self.unique_counts:
             yield(self.key_to_transcript[key], self.unique_counts[key], self.multi_counts[key])
