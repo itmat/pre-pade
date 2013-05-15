@@ -47,11 +47,12 @@ class FeatureReadCounter(object):
 
 class ExonReadCounter(FeatureReadCounter):
 
-    def __init__(self, exon_index, min_overlap):
+    def __init__(self, exon_index, min_overlap, strand_specific):
         self.exon_index = exon_index
         self.unique_counts = defaultdict(lambda: 0)
         self.multi_counts = defaultdict(lambda: 0)
         self.min_overlap = min_overlap
+        self.strand_specific = strand_specific
 
     def add(self, ref, alns, candidates=None):
         pair = alns
@@ -60,7 +61,8 @@ class ExonReadCounter(FeatureReadCounter):
         for aln in pair:
             spans.extend(cigar_to_spans(aln.cigar, aln.pos))
 
-        strand = -1 if pair[0].is_reverse else 1
+        aln_strand = -1 if pair[0].is_reverse else 1
+        lookup_strand = aln_strand if self.strand_specific else 0
 
         # Go through all the spans and find all the exons overlapped
         # by any span. For each of those exons, check to see if it
@@ -72,16 +74,15 @@ class ExonReadCounter(FeatureReadCounter):
         if candidates is None:
             candidates = set()
             for span in spans:
-                candidates.update(self.exon_index.get_exons(ref, strand, span.start, span.end))
+                candidates.update(self.exon_index.get_exons(ref, lookup_strand, span.start, span.end))
 
-        for (exon_id, start, end) in candidates:
+        for exon in candidates:
 
-            if matches_exon(start, end, pair, self.min_overlap):
-                key = (exon_id, ref, strand, start, end)
+            if matches_exon(exon.start, exon.end, pair, self.min_overlap):
                 if self.count_towards_min(alns[0]):
-                    self.unique_counts[key] += 1                        
+                    self.unique_counts[exon] += 1                        
                 else:
-                    self.multi_counts[key] += 1
+                    self.multi_counts[exon] += 1
 
 
     def __iter__(self):
@@ -596,6 +597,10 @@ commands.""")
     parser.add_argument('--profile',
                         action='store_true')
 
+    parser.add_argument('--strand-specific',
+                        action='store_true',
+                        help="Require that the strand on the read matches the strand on the feature, or that one side is unknown.")
+
     args = parser.parse_args()
     setup_logging(args)
 
@@ -634,7 +639,7 @@ commands.""")
 
         logging.info("For exon quantification, only counting reads that overlap the exon by " + str(args.min_overlap) + " bases or more")
 
-        exon_counter = ExonReadCounter(idx, args.min_overlap)
+        exon_counter = ExonReadCounter(idx, args.min_overlap, args.strand_specific)
         transcript_counter = None
         counters = [ exon_counter ]
         if genes is not None:

@@ -101,6 +101,8 @@ def parse_rum_index_genes(fh):
         exon_starts = map(int, exon_starts.rstrip(",").split(","))
         exon_ends   = map(int, exon_ends.rstrip(",").split(","))
 
+        # RUM index represents exons with 1-based indexing, but we use
+        # 0-based internally.
         exon_starts = [ x - 1 for x in exon_starts ]
 
         exon_locs = [FeatureLocation(*x, strand=strand) for x in zip(exon_starts, exon_ends)]
@@ -129,6 +131,7 @@ def read_exons(fh):
 
         yield SeqFeature(ref=chr_, 
                          id=line,
+                         strand=0,
                          location=FeatureLocation(int(start) -1, int(end)))
 
 class TranscriptIndex(object):
@@ -139,7 +142,8 @@ class TranscriptIndex(object):
         exons = []
         for t in transcripts:
             for e in t.sub_features:
-                key = (e.ref, e.strand, e.location.start, e.location.end)
+                
+                key = Exon(id=e.id, ref=e.ref, strand=e.strand, start=e.location.start, end=e.location.end)
                 self.exon_to_transcripts[key].append(t)
                 exons.append(e)
 
@@ -149,21 +153,22 @@ class TranscriptIndex(object):
         
         seen = set()
 
-        exons = self.exon_index.get_exons(ref, strand, start, end)
-        for (exon_id, exon_start, exon_end) in exons:
-            key = (ref, strand, exon_start, exon_end)
-            for t in self.exon_to_transcripts[key]:
+        for exon in self.exon_index.get_exons(ref, strand, start, end):
+            
+            for t in self.exon_to_transcripts[exon]:
                 if t.id not in seen:
                     seen.add(t.id)
                     yield(t)
 
     def get_exons(self, ref, strand, start, end):
-        
         """Get a list of exons on the given strand if the given chromosome
-        that overlap the range specified by start and end."""
+        that overlap the range specified by start and end.
 
+        """
         return self.exon_index.get_exons(ref, strand, start, end)
 
+
+Exon = namedtuple('Exon', ['id', 'ref', 'strand', 'start', 'end'])
 
 class ExonIndex(object):
 
@@ -225,7 +230,7 @@ class ExonIndex(object):
             for event in values:
                 start = event.exon.location.start
                 end   = event.exon.location.end
-                key = (event.exon.id, start, end)
+                key = Exon(id=event.exon.id, start=int(start), end=int(end), strand=strand, ref=ref)
 
                 if event.etype == 'start':
                     overlap[ref].add(key)
@@ -258,7 +263,6 @@ class ExonIndex(object):
                 self.get_exons(ref,  1, start, end),
                 self.get_exons(ref, -1, start, end)):
                 yield exon
-
                 
         key       = (ref, strand)
         starts    = self.start[key]

@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from prepade.geneio import read_exons, ExonIndex, parse_gtf_to_genes
+from prepade.geneio import read_exons, ExonIndex, parse_gtf_to_genes, Exon
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 
 class ExonIndexTest(unittest.TestCase):
@@ -13,23 +13,27 @@ class ExonIndexTest(unittest.TestCase):
                  'chr1:18-25',
                  'chr1:35-40']
 
-        idx = ExonIndex(read_exons(exons))
-        
+        exons = list(read_exons(exons))
+        for e in exons:
+            e.strand = 1
+
+        idx = ExonIndex(exons)
+
         np.testing.assert_almost_equal(
-            idx.start[('chr1', None)],
+            idx.start[('chr1', 1)],
             [4, 10, 14, 17, 20, 25, 30, 34, 40])
             
         self.assertEquals(
-            [set([('chr1:5-10',  4, 10)]),
-             set([('chr1:11-20', 10, 20)]),
-             set([('chr1:11-20', 10, 20), ('chr1:15-30', 14, 30)]),
-             set([('chr1:11-20', 10, 20), ('chr1:15-30', 14, 30), ('chr1:18-25', 17, 25)]),
-             set([('chr1:15-30', 14, 30), ('chr1:18-25', 17, 25)]),
-             set([('chr1:15-30', 14, 30)]),
+            [set([Exon('chr1:5-10', 'chr1', 1, 4, 10)]),
+             set([Exon('chr1:11-20','chr1', 1, 10, 20)]),
+             set([Exon('chr1:11-20', 'chr1', 1, 10, 20), Exon('chr1:15-30', 'chr1', 1, 14, 30)]),
+             set([Exon('chr1:11-20', 'chr1', 1, 10, 20), Exon('chr1:15-30', 'chr1', 1, 14, 30), Exon('chr1:18-25', 'chr1', 1, 17, 25)]),
+             set([Exon('chr1:15-30', 'chr1', 1, 14, 30), Exon('chr1:18-25', 'chr1', 1, 17, 25)]),
+             set([Exon('chr1:15-30', 'chr1', 1, 14, 30)]),
              set(),
-             set([('chr1:35-40', 34, 40)]),
+             set([Exon('chr1:35-40', 'chr1', 1, 34, 40)]),
              set()],            
-            idx.keys[('chr1', None)])
+            idx.keys[('chr1', 1)])
 
         self.assertEquals(0, len(list(idx.get_exons('chr1', None, 0, 3))))
         self.assertEquals(0, len(list(idx.get_exons('chr1', None, 0, 4))))
@@ -61,7 +65,7 @@ class ExonIndexTest(unittest.TestCase):
                                                         strand=strand,
                                                         start=12, end=18)
 
-        locs_for_strand = lambda strand: [ (e[1], e[2]) for e in exons_for_strand(strand) ]
+        locs_for_strand = lambda strand: [ (e.start, e.end) for e in exons_for_strand(strand) ]
 
         self.assertEquals([(1, 20)], locs_for_strand(1))
         self.assertEquals([(10, 30)], locs_for_strand(-1))
