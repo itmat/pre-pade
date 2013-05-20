@@ -616,11 +616,13 @@ commands.""")
         if input_file_type == 'rum_gene_info':
             logging.info("Loading transcript model from RUM index at " + args.model)
             genes = list(parse_rum_index_genes(infile))
+            logging.info("Extracting exons from genes")
             exons = list(genes_to_exons(genes))
     
         elif input_file_type == 'gtf':
             logging.info("Loading transcript model from GTF file at " + args.model)
             genes = list(parse_gtf_to_genes(infile))
+            logging.info("Extracting exons from genes")
             exons = list(genes_to_exons(genes))
         
         else:
