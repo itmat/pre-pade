@@ -4,7 +4,6 @@ from itertools import groupby, chain
 
 import logging
 import numpy as np
-import pandas as pd
 import re
 
 def parse_gtf_attributes(attr_string):
@@ -36,6 +35,8 @@ def parse_gtf_to_genes(fh):
     transcript_ids = []
     exon_numbers   = []
 
+    data = {}
+
     for line in fh:
         line = line.rstrip()
 
@@ -51,43 +52,38 @@ def parse_gtf_to_genes(fh):
             strand = -1
 
         if 'exon' in feature:
-            seqnames.append(intern(seqname))
-            starts.append(int(start) - 1)
-            ends.append(int(end))
-            strands.append(strand)
-            gene_ids.append(intern(attrs['gene_id']))
-            transcript_ids.append(intern(attrs['transcript_id']))
-            exon_numbers.append(intern(attrs['exon_number']))
+            gene_id       = attrs['gene_id']
+            transcript_id = attrs['transcript_id']
+            exon_number   = int(attrs['exon_number'])
 
-    df = pd.DataFrame(
-        { 'seqname' : seqnames,
-          'start'   : starts,
-          'end'     : ends,
-          'strand'  : strands,
-          'gene_id' : gene_ids,
-          'transcript_id' : transcript_ids,
-          'exon_number' : exon_numbers })
+            key = (gene_id, transcript_id, seqname, strand)
+            if key not in data:
+                data[key] = {}
+            data[key][int(exon_number)] = [int(start) - 1, int(end)]
 
-    df = df.sort(['gene_id', 'transcript_id', 'exon_number'])
-
-    for (gene_id, transcript_id), grp in df.groupby(['gene_id', 'transcript_id']):
+    for key in sorted(data):
+        gene_id, transcript_id, chrom, strand = key
         exons = []
         ref = None
 
-        strand = grp.strand[grp.index[0]]
+        gene_start = np.inf
+        gene_end   = - np.inf
 
-        for i in grp.index:
-            ref = grp.seqname[i]
+        for exon_number in sorted(data[key]):
+            start, end = data[key][exon_number]
+            gene_start = min(gene_start, start)
+            gene_end   = max(gene_end, end)
             exons.append(SeqFeature(
-                id='{0}:{1}-{2}'.format(ref, grp.start[i] + 1, grp.end[i]),
-                ref=ref,
+                id='{0}:{1}-{2}'.format(chrom, start + 1, end),
+                ref=chrom,
                 strand=strand,
-                location=FeatureLocation(grp.start[i], grp.end[i])))
+                location=FeatureLocation(start, end)))
+
         yield SeqFeature(
-            ref=ref,
+            ref=chrom,
             strand=strand,
             id=transcript_id,
-            location=FeatureLocation(min(grp.start), max(grp.end)),
+            location=FeatureLocation(gene_start, gene_end),
             sub_features=exons)
         
 
