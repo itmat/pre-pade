@@ -19,13 +19,22 @@ struct Exon {
   enum Strand strand;
   int start;
   int end;
+
+  // Extra, not part of GTF file, used for indexing
+  int min_start;
+};
+
+struct ExonDB {
+  struct Exon *exons;
+  int exons_len;
+  int exons_cap;
 };
 
 int print_exon(struct Exon *exon) {
   printf("%s:%d-%d\n", exon->chrom, exon->start, exon->end);
 }
 
-int parse_gtf_file(char *filename) {
+int parse_gtf_file(struct ExonDB *exondb, char *filename) {
 
   printf("Loading GTF file %s\n", filename);
 
@@ -42,11 +51,9 @@ int parse_gtf_file(char *filename) {
     char *line = NULL;
     size_t linecap = 0;
     // TODO: Free line
-    size_t linelen = getline(&line, &linecap, file);
-    printf("Len is %d\n", linelen);
+    int linelen = getline(&line, &linecap, file);
     if (linelen < 0) {
-      printf("Done\n");
-      return 0;
+      break;
     }
 
     if (exons_len == exons_cap) {
@@ -84,7 +91,50 @@ int parse_gtf_file(char *filename) {
     exon->end     = atoi(fields[4]);
     
     exons_len++;
-    print_exon(exon);
+  }
+
+  exondb->exons_len = exons_len;
+  exondb->exons_cap = exons_cap;
+  exondb->exons = exons;
+
+}
+
+struct ExonEvent {
+  int pos;
+  struct Exon *exon;
+};
+
+int cmp_exons_by_end(struct Exon *a, struct Exon *b) {
+  int str = strcmp(a->chrom, b->chrom);
+  if (str) {
+    return str;
+  }
+  return a->end - b->end;
+}
+
+int index_exons(struct ExonDB *exondb) {
+  printf("Indexing %d exons\n", exondb->exons_len);
+  int n = exondb->exons_len;
+  int i;
+
+  printf("Sorting exons by start pos\n");
+  struct Exon *exons = exondb->exons;
+  qsort(exons, n, sizeof(struct Exon), cmp_exons_by_end);
+
+  int min_start = 0;
+  char *chrom = NULL;
+
+  for (i = n - 1; i >= 0; i--) {
+
+    if (!chrom || strcmp(chrom, exons[i].chrom)) {
+      chrom = exons[i].chrom;
+      min_start = exons[i].start;
+    }
+
+    else if (exons[i].start < min_start) {
+      min_start = exons[i].start;
+    }
+    exons[i].min_start = min_start;
   }
 
 }
@@ -96,7 +146,10 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  parse_gtf_file(argv[1]);
+  struct ExonDB exondb;
+
+  parse_gtf_file(&exondb, argv[1]);
+  index_exons(&exondb);
   return 0;
 
 }
