@@ -1,5 +1,8 @@
 PERF_MAX_LOG_N=8
 
+bin/geneindex : src/geneindex.c
+	gcc -o $@ $<
+
 cover : 
 	nosetests --with-coverage --cover-html --cover-package pade
 
