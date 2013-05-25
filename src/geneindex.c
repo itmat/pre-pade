@@ -139,6 +139,23 @@ int index_exons(struct ExonDB *exondb) {
 
 }
 
+/* int search_exons(struct ExonCursor *c, Struct ExonDB *exondb, char *chrom, int start, int end) { */
+  
+/*   int p = 0; */
+/*   int q = exondb->exons_len; */
+
+/*   while (p < q) { */
+/*     int r = (q - p) / 2; */
+    
+/*   } */
+
+/*   struct Exon search; */
+/*   search.chrom = chrom; */
+/*   search.start = start; */
+/*   search.end = end; */
+
+/* } */
+
 int main(int argc, char **argv) {
 
   if (argc != 2) {
