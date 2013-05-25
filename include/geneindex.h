@@ -25,3 +25,7 @@ struct ExonDB {
   int exons_len;
   int exons_cap;
 };
+
+struct ExonCursor {
+
+};

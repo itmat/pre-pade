@@ -108,20 +108,36 @@ int index_exons(struct ExonDB *exondb) {
 
 }
 
-/* int search_exons(struct ExonCursor *c, Struct ExonDB *exondb, char *chrom, int start, int end) { */
-  
-/*   int p = 0; */
-/*   int q = exondb->exons_len; */
+/*
+ * Returns a pointer to the first exon whose end is greater than my
+ * start.
+ */
+struct Exon * search_exons(struct ExonDB *exondb, char *chrom, int start, int end) {
 
-/*   while (p < q) { */
-/*     int r = (q - p) / 2; */
+  struct Exon *p = exondb->exons;
+  struct Exon *q = p + exondb->exons_len - 1;
+  struct Exon *e;
+
+  while (p < q) {
+    e = p + (q - p) / 2;
     
-/*   } */
+    // If this exon ends before I start, eliminate it and all exons to
+    // the left of it
+    if (e->end <= start) 
+      p = e + 1;
 
-/*   struct Exon search; */
-/*   search.chrom = chrom; */
-/*   search.start = start; */
-/*   search.end = end; */
+    // If this exon ends after I start and either it's the first exon
+    // or the one to the left ends before I start, return this exon.
+    else if (e == exondb->exons ||
+             (e - 1)->end <= start)
+      return e;
 
-/* } */
+    // Otherwise eliminate this exon and all those to the right of it
+    else
+      q = e - 1;
+  }
+
+  printf(stderr, "I SHOULD NEVER GET TO HERE");
+  return NULL;
+}
 
