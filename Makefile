@@ -8,11 +8,15 @@ OPTIONS=-Iinclude
 bin/quantify : src/quantify.c geneindex.o
 	gcc $(OPTIONS) -o $@ $^
 
+bin/testgeneindex : src/testgeneindex.c geneindex.o
+	gcc $(OPTIONS) -o $@ $^
+
 cover : 
 	nosetests --with-coverage --cover-html --cover-package pade
 
-test :
-	nosetests --with-doctest
+test : bin/testgeneindex
+	bin/testgeneindex
+#	nosetests --with-doctest
 
 clean :
 	rm -f *.log tests/*~ tests/*.pyc site.tar
