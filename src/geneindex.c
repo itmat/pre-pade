@@ -2,33 +2,7 @@
 #include <strings.h>
 #include <stdlib.h>
 
-enum Strand {
-  NONE,
-  UNKNOWN,
-  FORWARD,
-  REVERSE
-};
-
-struct Exon {
-  char *gene_id;
-  char *transcript_id;
-  int exon_number;
-  char *source;
-  char *feature;
-  char *chrom;
-  enum Strand strand;
-  int start;
-  int end;
-
-  // Extra, not part of GTF file, used for indexing
-  int min_start;
-};
-
-struct ExonDB {
-  struct Exon *exons;
-  int exons_len;
-  int exons_cap;
-};
+#include "geneindex.h"
 
 int print_exon(struct Exon *exon) {
   printf("%s:%d-%d\n", exon->chrom, exon->start, exon->end);
@@ -155,19 +129,4 @@ int index_exons(struct ExonDB *exondb) {
 /*   search.end = end; */
 
 /* } */
-
-int main(int argc, char **argv) {
-
-  if (argc != 2) {
-    fprintf(stderr, "Bad stuff\n");
-    return -1;
-  }
-
-  struct ExonDB exondb;
-
-  parse_gtf_file(&exondb, argv[1]);
-  index_exons(&exondb);
-  return 0;
-
-}
 

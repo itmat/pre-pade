@@ -1,7 +1,12 @@
 PERF_MAX_LOG_N=8
 
-bin/geneindex : src/geneindex.c
-	gcc -o $@ $<
+OPTIONS=-Iinclude
+
+%.o : src/%.c
+	gcc $(OPTIONS) -o $@ -c $<
+
+bin/quantify : src/quantify.c geneindex.o
+	gcc $(OPTIONS) -o $@ $^
 
 cover : 
 	nosetests --with-coverage --cover-html --cover-package pade
