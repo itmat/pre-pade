@@ -73,11 +73,6 @@ int parse_gtf_file(struct ExonDB *exondb, char *filename) {
 
 }
 
-struct ExonEvent {
-  int pos;
-  struct Exon *exon;
-};
-
 int cmp_exons_by_end(struct Exon *a, struct Exon *b) {
   int str = strcmp(a->chrom, b->chrom);
   if (str) {
