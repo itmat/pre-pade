@@ -29,3 +29,5 @@ struct ExonDB {
 struct ExonCursor {
 
 };
+
+struct Exon * search_exons(struct ExonDB *exondb, char *chrom, int start, int end);

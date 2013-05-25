@@ -108,36 +108,46 @@ int index_exons(struct ExonDB *exondb) {
 
 }
 
+int cmp_exon_end(struct Exon *exon, char *chrom, int pos) {
+  int str = strcmp(exon->chrom, chrom);
+  if (str) {
+    return str;
+  }
+  return exon->end - pos;
+}
+
 /*
  * Returns a pointer to the first exon whose end is greater than my
  * start.
  */
 struct Exon * search_exons(struct ExonDB *exondb, char *chrom, int start, int end) {
 
-  struct Exon *p = exondb->exons;
-  struct Exon *q = p + exondb->exons_len - 1;
-  struct Exon *e;
+  int p = 0;
+  int q = exondb->exons_len - 1;
+  int r;
 
   while (p < q) {
-    e = p + (q - p) / 2;
+
+    int r = p + (q - p) / 2;
+    struct Exon *e = exondb->exons + r;
     
+    printf("At %s:%d-%d\n", e->chrom, e->start, e->end);
+
     // If this exon ends before I start, eliminate it and all exons to
     // the left of it
-    if (e->end <= start) 
-      p = e + 1;
+    if (cmp_exon_end(e, chrom, start) <= 0) 
+      p = r + 1;
 
     // If this exon ends after I start and either it's the first exon
     // or the one to the left ends before I start, return this exon.
-    else if (e == exondb->exons ||
-             (e - 1)->end <= start)
+    else if (r == 0 || cmp_exon_end(e - 1, chrom, start) <= 0)
       return e;
 
     // Otherwise eliminate this exon and all those to the right of it
     else
-      q = e - 1;
+      q = r - 1;
   }
 
-  printf(stderr, "I SHOULD NEVER GET TO HERE");
   return NULL;
 }
 

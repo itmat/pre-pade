@@ -25,6 +25,10 @@ void assert_str_equals(char *a, char *b, char *name) {
   add_assertion(!strcmp(a, b), name);
 }
 
+void assert_exon_ptr_equals(struct Exon *a, struct Exon *b, char *name) {
+  add_assertion(a == b, name);
+}
+
 int check_results() {
   int failures = 0;
 
@@ -51,6 +55,7 @@ void test_create_index() {
   struct ExonDB exondb;
   parse_gtf_file(&exondb, "testdata/arabidopsis.gtf");
   index_exons(&exondb);  
+
   assert_equals(13214, exondb.exons_len, "Number of exons loaded");
 
   struct Exon *exon = exondb.exons;
@@ -59,6 +64,9 @@ void test_create_index() {
   assert_equals(28692362, exon->end, "First exon end");
   assert_str_equals("protein_coding", exon->source, "First exon source");
   assert_str_equals("exon", exon->feature, "First exon feature");
+
+  exon = search_exons(&exondb, "1", 0, 0);
+  assert_exon_ptr_equals(exon, exondb.exons, "Search for first exon");
 }
 
 
@@ -71,7 +79,12 @@ int main (int argc, char **argv) {
 
 
 /*
-	protein_coding	exon	28692193	28692362
-	.	-	.	 gene_id "AT1G76480"; transcript_id "AT1G76480.1"; exon_number "6"; gene_name "F14G6.8"; transcript_name "F14G6.8-202"; seqedit "false";
+	
+	gene_id "AT1G76480"; 
+        transcript_id "AT1G76480.1"; 
+        exon_number "6"; 
+        gene_name "F14G6.8"; 
+        transcript_name "F14G6.8-202"; 
+        seqedit "false";
 
 */
