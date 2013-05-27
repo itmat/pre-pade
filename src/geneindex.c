@@ -158,6 +158,9 @@ int cmp_exon(struct Exon *e, char *chrom, int start, int end) {
 
   int result = 0;
 
+  if (strcmp(chrom, e->chrom))
+    result |= WRONG_CHROMOSOME;
+
   // ...eeee
   //         rrrr...
   if ( e->end < start )

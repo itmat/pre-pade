@@ -18,10 +18,14 @@ void add_assertion(int passed, char *name) {
 }
 
 void assert_equals(int a, int b, char *name) {
-  add_assertion(a == b, name);
+  char *msg;
+  asprintf(&msg, "%s: expected %d, got %d", name, a, b);
+  add_assertion(a == b, msg);
 }
 
 void assert_str_equals(char *a, char *b, char *name) {
+  char *msg;
+  asprintf(&msg, "%s: expected %s, got %s", name, a, b);
   add_assertion(!strcmp(a, b), name);
 }
 
@@ -69,9 +73,20 @@ void test_create_index() {
   assert_exon_ptr_equals(exon, exondb.exons, "Search for first exon");
 }
 
+int test_compare_exon() {
+  struct Exon e;
+  e.chrom = "chr1";
+  e.start = 100;
+  e.end   = 200;
+
+  assert_equals(0, cmp_exon(&e, "chr1", 100, 200), "Exact match");
+  assert_equals(WRONG_CHROMOSOME, 
+                cmp_exon(&e, "chr2", 100, 200), "Wrong chromosome");
+}
 
 int main (int argc, char **argv) {
   test_create_index();
+  test_compare_exon();
   return check_results();
 }
 
