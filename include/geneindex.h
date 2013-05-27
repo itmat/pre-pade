@@ -28,6 +28,19 @@ struct ExonDB {
 
 struct ExonCursor {
 
+  // The database we searched in
+  struct ExonDB *exondb;
+  
+  // Search criteria
+  char *chrom;
+  int start;
+  int end;
+  int allow;
+
+  // Next match to be returned
+  struct Exon *next;
 };
 
+
 struct Exon * search_exons(struct ExonDB *exondb, char *chrom, int start, int end);
+struct Exon *next_exon(struct ExonCursor *cursor, int *flags);
