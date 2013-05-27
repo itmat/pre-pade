@@ -1,3 +1,14 @@
+#ifndef GENEINDEX_H
+#define GENEINDEX_H
+
+#define CROSS_EXON_START  1
+#define CROSS_EXON_END    2
+#define START_IN_EXON     4
+#define END_IN_EXON       8
+#define WRONG_CHROMOSOME 16
+#define START_AFTER_EXON 32
+#define END_BEFORE_EXON  64
+
 enum Strand {
   NONE,
   UNKNOWN,
@@ -44,3 +55,5 @@ struct ExonCursor {
 
 struct Exon * search_exons(struct ExonDB *exondb, char *chrom, int start, int end);
 struct Exon *next_exon(struct ExonCursor *cursor, int *flags);
+
+#endif
