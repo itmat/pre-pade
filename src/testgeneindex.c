@@ -83,6 +83,10 @@ const int WRONG_CHROMOSOME = 16;
 const int START_AFTER_EXON = 32;
 const int END_BEFORE_EXON  = 64;
 
+
+/* Compare the given exon to the specified range and return flags
+ * indicating if and how it overlaps. 0 means it matches exactly.
+ */
 int cmp_exon(struct Exon *e, char *chrom, int start, int end) {
 
   int result = 0;
