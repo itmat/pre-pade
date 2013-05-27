@@ -96,8 +96,18 @@ void test_create_index() {
 
   struct ExonCursor cursor;
   int flags;
-  search_exons(&cursor, &db, "chrfoobar", 0, 0, 0);
-  assert_exon_ptr_equals(NULL, next_exon(&cursor, &flags), "Unknown chrom");
+  //  search_exons(&cursor, &db, "chrfoobar", 0, 0, 0);
+  // assert_exon_ptr_equals(NULL, next_exon(&cursor, &flags), "Unknown chrom");
+
+  //search_exons(&cursor, &db, "1", 0, 10, 0);
+  //assert_exon_ptr_equals(NULL, next_exon(&cursor, &flags), 
+  //                         "Not found");
+
+  search_exons(&cursor, &db, "1", 28692193, 28692362, 0);
+  exon = next_exon(&cursor, &flags);
+
+  assert_str_equals("1", exon->chrom, "Chromosome");
+  print_exon(db.exons);
 }
 
 int test_compare_index_entry() {

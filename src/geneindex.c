@@ -123,6 +123,7 @@ int index_exons(struct ExonDB *exondb) {
       entry->chrom = exon->chrom;
       entry->start = exon->start;
       entry->end   = exon->end;
+      entry->exon = exon;
       entry++;
     }
 
@@ -132,6 +133,7 @@ int index_exons(struct ExonDB *exondb) {
       entry->chrom = exon->chrom;
       entry->start = last_end < exon->start ? exon->start : last_end;
       entry->end   = exon->end;
+      entry->exon  = exon;
       entry++;
     }
     
@@ -169,7 +171,8 @@ int search_exons(struct ExonCursor *cursor,
   cursor->start = start;
   cursor->end = end;
   cursor->allow = allow;
-  cursor->next = entry;
+
+  cursor->next = entry ? entry->exon : NULL;
   
   return 0;
 }
@@ -225,41 +228,48 @@ struct Exon *finish_cursor(struct ExonCursor *cursor) {
 
 struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
 
-  struct Exon   *e;
   struct ExonDB *db = cursor->exondb;
   struct Exon *last_exon = db->exons + db->exons_len;
 
   int allow = cursor->allow;
   int disallow = ~allow;
 
+  printf("Advancing: %d\n", cursor->next);
   while (cursor->next != NULL && cursor->next <= last_exon) {
-
+    printf("  moving up\n");
     struct Exon *exon = cursor->next++;
+
+    print_exon(exon);
 
     int cmp = cmp_exon(exon, cursor->chrom, cursor->start, cursor->end);
 
     if ( cmp & WRONG_CHROMOSOME ) {
+      printf("  wrong chrom\n");   
       // If it's on the wrong chromosome, we're definitely done.
       return finish_cursor(cursor);
     }
-   
-    else if (e->min_start > cursor->end) {
+
+    else if (exon->min_start > cursor->end) {
       // At this point all subsequent exons will start after me, so
       // we're done.
+      printf("  past\n");   
       return finish_cursor(cursor);
     }
 
     else if (cmp & disallow) {
+      printf("  miss\n");   
       // If this match would be disallowed according to the flags the
       // user passed in, just skip it.
       continue;
     }
 
     else {
+      printf("Match\n");
       // Otherwise it's a match
       *flags = cmp;
       return exon;
     }
+
   }
 
   // If we get to this point, we've passed the last exon in the
@@ -269,6 +279,9 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
 
 int cmp_index_entry(struct ExonIndexEntry *key,
                     struct ExonIndexEntry *entry) {
+  printf("Comparing %s:%d-%d and %s:%d-%d\n",
+         key->chrom, key->start, key->end,
+         entry->chrom, entry->start, entry->end);
   int cmp = strcmp(key->chrom, entry->chrom);
   int pos = key->start;
 
