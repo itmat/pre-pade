@@ -70,7 +70,6 @@ int parse_gtf_file(struct ExonDB *exondb, char *filename) {
   exondb->exons_len = exons_len;
   exondb->exons_cap = exons_cap;
   exondb->exons = exons;
-
 }
 
 int cmp_exons_by_end(struct Exon *a, struct Exon *b) {
@@ -80,6 +79,7 @@ int cmp_exons_by_end(struct Exon *a, struct Exon *b) {
   }
   return a->end - b->end;
 }
+
 
 int index_exons(struct ExonDB *exondb) {
   printf("Indexing %d exons\n", exondb->exons_len);
@@ -93,19 +93,38 @@ int index_exons(struct ExonDB *exondb) {
   int min_start = 0;
   char *chrom = NULL;
 
+  struct ExonIndexEntry *index = calloc(n, sizeof(struct ExonIndexEntry));
+  struct ExonIndexEntry *entry = index;
+
   for (i = n - 1; i >= 0; i--) {
 
-    if (!chrom || strcmp(chrom, exons[i].chrom)) {
-      chrom = exons[i].chrom;
-      min_start = exons[i].start;
+    struct Exon *exon = exons + i;
+
+    if (!chrom || strcmp(chrom, exon->chrom)) {
+      chrom = exon->chrom;
+      min_start = exon->start;
+
+      entry->chrom = chrom;
+      entry->start = min_start;
+      entry->end   = exon->end;
+      entry++;
     }
 
-    else if (exons[i].start < min_start) {
-      min_start = exons[i].start;
+    else if (exon->start < min_start) {
+      min_start = exon->start;
     }
-    exons[i].min_start = min_start;
+
+    if ((entry - 1)->end != exon->end) {
+      entry->chrom = exon->chrom;
+      entry->start = (entry - 1)->end;
+      entry->end   = exon->end;
+    }
+
+    exon->min_start = min_start;
   }
 
+  exondb->index_len = entry - index;
+  exondb->index = index;
 }
 
 int cmp_exon_end(struct Exon *exon, char *chrom, int pos) {
@@ -140,8 +159,10 @@ struct Exon * search_exons(struct ExonDB *exondb, char *chrom, int start, int en
 
     // If this exon ends after I start and either it's the first exon
     // or the one to the left ends before I start, return this exon.
-    else if (r == 0 || cmp_exon_end(e - 1, chrom, start) <= 0)
+    else if (r == 0 || cmp_exon_end(e - 1, chrom, start) <= 0) {
+      printf("Returning the exon\n");
       return e;
+    }
 
     // Otherwise eliminate this exon and all those to the right of it
     else
@@ -241,4 +262,22 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
   // If we get to this point, we've passed the last exon in the
   // database, so we're done.
   return finish_cursor(cursor);
+}
+
+int cmp_index_entry(struct ExonIndexEntry *key,
+                    struct ExonIndexEntry *entry) {
+  int cmp = strcmp(key->chrom, entry->chrom);
+  int pos = key->start;
+
+  if (cmp)
+    return cmp;
+
+  else if (pos < entry->start)
+    return -1;
+
+  else if (pos > entry->end)
+    return 1;
+  
+  else
+    return 0;
 }

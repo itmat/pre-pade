@@ -19,7 +19,7 @@ enum Strand {
 struct Exon {
   char *gene_id;
   char *transcript_id;
-  int exon_number;
+  int   exon_number;
   char *source;
   char *feature;
   char *chrom;
@@ -35,6 +35,9 @@ struct ExonDB {
   struct Exon *exons;
   int exons_len;
   int exons_cap;
+
+  struct ExonIndexEntry *index;
+  int index_len;
 };
 
 struct ExonCursor {
@@ -52,6 +55,16 @@ struct ExonCursor {
   struct Exon *next;
 };
 
+struct ExonIndexEntry {
+  char *chrom;
+  int start;
+  int end;
+  struct Exon *exon;
+};
+
+
+int cmp_index_entry(struct ExonIndexEntry *key,
+                    struct ExonIndexEntry *entry);
 
 struct Exon * search_exons(struct ExonDB *exondb, char *chrom, int start, int end);
 struct Exon *next_exon(struct ExonCursor *cursor, int *flags);

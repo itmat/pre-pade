@@ -69,13 +69,35 @@ void test_create_index() {
   assert_str_equals("protein_coding", exon->source, "First exon source");
   assert_str_equals("exon", exon->feature, "First exon feature");
 
+
+
   exon = search_exons(&exondb, "1", 0, 0);
   assert_exon_ptr_equals(exon, exondb.exons, "Search for first exon");
 
   exon = search_exons(&exondb, "foo", 0, 0);
-  assert_exon_ptr_equals(exon, exondb.exons, "Search for first exon");
+  assert_exon_ptr_equals(NULL, exon, "Search for first exon");
+
+  exon = search_exons(&exondb, "0", 0, 0);
+  assert_exon_ptr_equals(exondb.exons, exon, "Search for first exon");
+
+  
 }
 
+int test_compare_index_entry() {
+  struct ExonIndexEntry entry = { "chr2", 100, 200 };
+
+  struct ExonIndexEntry left_chrom  = { "chr1", 100 };
+  struct ExonIndexEntry left        = { "chr2", 50 };
+  struct ExonIndexEntry inside      = { "chr2", 150 };
+  struct ExonIndexEntry right       = { "chr2", 250 };
+  struct ExonIndexEntry right_chrom = { "chr3", 100 };
+  
+  assert_equals(-1, cmp_index_entry(&left_chrom, &entry), "Left chrom");
+  assert_equals(-1, cmp_index_entry(&left, &entry), "Left");
+  assert_equals(0, cmp_index_entry(&inside, &entry), "Inside");
+  assert_equals(1, cmp_index_entry(&right, &entry), "Right");
+  assert_equals(1, cmp_index_entry(&right_chrom, &entry), "Right chrom");
+}
 
 int test_compare_exon() {
   struct Exon e;
@@ -117,6 +139,7 @@ int test_compare_exon() {
 int main (int argc, char **argv) {
   test_create_index();
   test_compare_exon();
+  test_compare_index_entry();
   return check_results();
 }
 
