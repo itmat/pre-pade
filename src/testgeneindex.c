@@ -71,6 +71,9 @@ void test_create_index() {
 
   exon = search_exons(&exondb, "1", 0, 0);
   assert_exon_ptr_equals(exon, exondb.exons, "Search for first exon");
+
+  exon = search_exons(&exondb, "foo", 0, 0);
+  assert_exon_ptr_equals(exon, exondb.exons, "Search for first exon");
 }
 
 
@@ -116,8 +119,6 @@ int main (int argc, char **argv) {
   test_compare_exon();
   return check_results();
 }
-
-
 
 /*	
 	gene_id "AT1G76480"; 
