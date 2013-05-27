@@ -93,34 +93,48 @@ int index_exons(struct ExonDB *exondb) {
   int min_start = 0;
   char *chrom = NULL;
 
-  struct ExonIndexEntry *index = calloc(n, sizeof(struct ExonIndexEntry));
-  struct ExonIndexEntry *entry = index;
+  printf("Finding minimum start positions\n");
 
-  for (i = n - 1; i >= 0; i--) {
+  struct Exon *exon;
 
-    struct Exon *exon = exons + i;
+  for (exon = exons + n - 1; exon >= exons; exon--) {
 
     if (!chrom || strcmp(chrom, exon->chrom)) {
       chrom = exon->chrom;
       min_start = exon->start;
-
-      entry->chrom = chrom;
-      entry->start = min_start;
-      entry->end   = exon->end;
-      entry++;
     }
 
     else if (exon->start < min_start) {
       min_start = exon->start;
     }
 
-    if ((entry - 1)->end != exon->end) {
+    exon->min_start = min_start;
+  }
+
+  printf("Building index\n");
+  struct ExonIndexEntry *index = calloc(n, sizeof(struct ExonIndexEntry));
+  struct ExonIndexEntry *entry = index;
+
+  for (exon = exons; exon < exons + n; exon++) {
+
+    // If it's the first exon for this chromosome, the start
+    // position is the start of this exon.
+    if (exon == exons || strcmp(exon->chrom, (exon - 1)->chrom)) {
       entry->chrom = exon->chrom;
-      entry->start = (entry - 1)->end;
+      entry->start = exon->start;
       entry->end   = exon->end;
+      entry++;
     }
 
-    exon->min_start = min_start;
+    // Otherwise it's the end of the last exon.
+    else if (exon->end != (exon - 1)->end) {
+      int last_end = (entry - 1)->end;
+      entry->chrom = exon->chrom;
+      entry->start = last_end < exon->start ? exon->start : last_end;
+      entry->end   = exon->end;
+      entry++;
+    }
+    
   }
 
   exondb->index_len = entry - index;

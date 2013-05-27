@@ -56,31 +56,43 @@ int check_results() {
 }
 
 void test_create_index() {
-  struct ExonDB exondb;
-  parse_gtf_file(&exondb, "testdata/arabidopsis.gtf");
-  index_exons(&exondb);  
+  struct ExonDB db;
+  parse_gtf_file(&db, "testdata/arabidopsis.gtf");
+  index_exons(&db);  
 
-  assert_equals(13214, exondb.exons_len, "Number of exons loaded");
+  assert_equals(13214, db.exons_len, "Number of exons loaded");
 
-  struct Exon *exon = exondb.exons;
+  struct Exon *exon = db.exons;
   assert_str_equals("1", exon->chrom, "First exon chromosome");
   assert_equals(28692193, exon->start, "First exon start");
   assert_equals(28692362, exon->end, "First exon end");
   assert_str_equals("protein_coding", exon->source, "First exon source");
   assert_str_equals("exon", exon->feature, "First exon feature");
 
-
-
-  exon = search_exons(&exondb, "1", 0, 0);
-  assert_exon_ptr_equals(exon, exondb.exons, "Search for first exon");
-
-  exon = search_exons(&exondb, "foo", 0, 0);
-  assert_exon_ptr_equals(NULL, exon, "Search for first exon");
-
-  exon = search_exons(&exondb, "0", 0, 0);
-  assert_exon_ptr_equals(exondb.exons, exon, "Search for first exon");
-
+  int i = 1;
+  int chroms_decrease = 0;
+  int start_gte_end = 0;
+  int entries_decrease = 0;
   
+  struct ExonIndexEntry *entry = db.index;
+  printf("Index len is %d\n", db.index_len);
+
+  for (entry = db.index + 1; entry < db.index + db.index_len; entry++) {
+    if (entry->start >= entry->end)
+      start_gte_end++;
+
+    int chrom_cmp = strcmp((entry - 1)->chrom, entry->chrom);
+
+    if (chrom_cmp == 0 && (entry - 1)->end > entry->start)
+      entries_decrease++;
+
+    else if (chrom_cmp > 0) 
+      chroms_decrease++;
+  }
+
+  assert_equals(0, chroms_decrease, "Chromosomes decrease");
+  assert_equals(0, start_gte_end, "Entries with start greater than end");
+  assert_equals(0, entries_decrease, "Entries decrease");
 }
 
 int test_compare_index_entry() {
