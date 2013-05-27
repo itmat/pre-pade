@@ -153,37 +153,23 @@ int cmp_exon_end(struct Exon *exon, char *chrom, int pos) {
  * Returns a pointer to the first exon whose end is greater than my
  * start.
  */
-struct Exon * search_exons(struct ExonDB *exondb, char *chrom, int start, int end) {
+int search_exons(struct ExonCursor *cursor,
+                 struct ExonDB *exondb, char *chrom, int start, int end, int allow) {
 
-  int p = 0;
-  int q = exondb->exons_len - 1;
-  int r;
+  struct ExonIndexEntry key;
+  key.chrom = chrom;
+  key.start = key.end = start;
 
-  while (p < q) {
+  struct ExonIndexEntry *entry = bsearch(&key, exondb->index, exondb->index_len, 
+                                         sizeof(struct ExonIndexEntry), cmp_index_entry);
 
-    int r = p + (q - p) / 2;
-    struct Exon *e = exondb->exons + r;
-    
-    printf("At %s:%d-%d\n", e->chrom, e->start, e->end);
-
-    // If this exon ends before I start, eliminate it and all exons to
-    // the left of it
-    if (cmp_exon_end(e, chrom, start) <= 0) 
-      p = r + 1;
-
-    // If this exon ends after I start and either it's the first exon
-    // or the one to the left ends before I start, return this exon.
-    else if (r == 0 || cmp_exon_end(e - 1, chrom, start) <= 0) {
-      printf("Returning the exon\n");
-      return e;
-    }
-
-    // Otherwise eliminate this exon and all those to the right of it
-    else
-      q = r - 1;
-  }
-
-  return NULL;
+  cursor->exondb = exondb;
+  cursor->chrom = chrom;
+  cursor->start = start;
+  cursor->end = end;
+  cursor->allow = allow;
+  cursor->next = entry;
+  
 }
 
 /* Compare the given exon to the specified range and return flags

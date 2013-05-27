@@ -66,7 +66,9 @@ struct ExonIndexEntry {
 int cmp_index_entry(struct ExonIndexEntry *key,
                     struct ExonIndexEntry *entry);
 
-struct Exon * search_exons(struct ExonDB *exondb, char *chrom, int start, int end);
+int search_exons(struct ExonCursor *cursor,
+                 struct ExonDB *exondb, char *chrom, int start, int end, int allow);
+
 struct Exon *next_exon(struct ExonCursor *cursor, int *flags);
 
 #endif
