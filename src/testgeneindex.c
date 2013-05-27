@@ -85,10 +85,35 @@ int test_compare_exon() {
   e.start = 100;
   e.end   = 200;
 
-  assert_equals(0, cmp_exon(&e, "chr1", 100, 200), "Exact match");
-  assert_equals(WRONG_CHROMOSOME, 
-                cmp_exon(&e, "chr2", 100, 200), "Wrong chromosome");
+  struct ExonCompTestCase {
+    int expected;
+    char *chrom;
+    int start;
+    int end;
+    char *name;
+  } cases[] = {
+    { 0,                "chr1", 100, 200, "Exact match" },
+    { WRONG_CHROMOSOME, "chr2", 100, 200, "Wrong chromosome" },
+    { START_AFTER_EXON, "chr1", 250, 300, "Start after exon" },
+    { END_BEFORE_EXON,  "chr1",   0,  75, "End before exon" },
+    { CROSS_EXON_END | 
+      START_IN_EXON,    "chr1", 150, 250, "Start in exon, cross exon end" },
+    { CROSS_EXON_START | 
+      END_IN_EXON,      "chr1",  50, 150, "Cross exon start, end in exon" },
+    { START_IN_EXON |
+      END_IN_EXON,      "chr1", 125, 175, "Start and end in exon" },
+    { CROSS_EXON_START |
+      CROSS_EXON_END,   "chr1", 50, 250, "Cross exon start and end" }
+  };
 
+  int n = sizeof(cases) / sizeof(struct ExonCompTestCase);
+  int i;
+
+  for (i = 0; i < n; i++) {
+    struct ExonCompTestCase *tc = cases + i;
+    int got = cmp_exon(&e, tc->chrom, tc->start, tc->end);
+    assert_equals(tc->expected, got, cases[i].name);
+  }
 }
 
 int main (int argc, char **argv) {
