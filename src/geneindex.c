@@ -160,8 +160,9 @@ int search_exons(struct ExonCursor *cursor,
   key.chrom = chrom;
   key.start = key.end = start;
 
-  struct ExonIndexEntry *entry = bsearch(&key, exondb->index, exondb->index_len, 
-                                         sizeof(struct ExonIndexEntry), cmp_index_entry);
+  struct ExonIndexEntry *entry = 
+    bsearch(&key, exondb->index, exondb->index_len, 
+            sizeof(struct ExonIndexEntry), cmp_index_entry);
 
   cursor->exondb = exondb;
   cursor->chrom = chrom;
@@ -170,6 +171,7 @@ int search_exons(struct ExonCursor *cursor,
   cursor->allow = allow;
   cursor->next = entry;
   
+  return 0;
 }
 
 /* Compare the given exon to the specified range and return flags
@@ -230,9 +232,10 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
   int allow = cursor->allow;
   int disallow = ~allow;
 
-  while (cursor->next <= last_exon) {
+  while (cursor->next != NULL && cursor->next <= last_exon) {
 
     struct Exon *exon = cursor->next++;
+
     int cmp = cmp_exon(exon, cursor->chrom, cursor->start, cursor->end);
 
     if ( cmp & WRONG_CHROMOSOME ) {

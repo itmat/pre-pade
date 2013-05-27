@@ -93,6 +93,11 @@ void test_create_index() {
   assert_equals(0, chroms_decrease, "Chromosomes decrease");
   assert_equals(0, start_gte_end, "Entries with start greater than end");
   assert_equals(0, entries_decrease, "Entries decrease");
+
+  struct ExonCursor cursor;
+  int flags;
+  search_exons(&cursor, &db, "chrfoobar", 0, 0, 0);
+  assert_exon_ptr_equals(NULL, next_exon(&cursor, &flags), "Unknown chrom");
 }
 
 int test_compare_index_entry() {
@@ -109,6 +114,7 @@ int test_compare_index_entry() {
   assert_equals(0, cmp_index_entry(&inside, &entry), "Inside");
   assert_equals(1, cmp_index_entry(&right, &entry), "Right");
   assert_equals(1, cmp_index_entry(&right_chrom, &entry), "Right chrom");
+
 }
 
 int test_compare_exon() {
