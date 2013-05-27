@@ -73,11 +73,6 @@ void test_create_index() {
   assert_exon_ptr_equals(exon, exondb.exons, "Search for first exon");
 }
 
-void assert_chrom_cmp(int expected, 
-                      struct Exon *exon, char *chrom, int start, int end, 
-                      char *name) {
-
-}
 
 int test_compare_exon() {
   struct Exon e;
