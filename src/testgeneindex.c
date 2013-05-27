@@ -73,6 +73,12 @@ void test_create_index() {
   assert_exon_ptr_equals(exon, exondb.exons, "Search for first exon");
 }
 
+void assert_chrom_cmp(int expected, 
+                      struct Exon *exon, char *chrom, int start, int end, 
+                      char *name) {
+
+}
+
 int test_compare_exon() {
   struct Exon e;
   e.chrom = "chr1";
@@ -82,6 +88,7 @@ int test_compare_exon() {
   assert_equals(0, cmp_exon(&e, "chr1", 100, 200), "Exact match");
   assert_equals(WRONG_CHROMOSOME, 
                 cmp_exon(&e, "chr2", 100, 200), "Wrong chromosome");
+
 }
 
 int main (int argc, char **argv) {
