@@ -1,9 +1,12 @@
 PERF_MAX_LOG_N=8
 
-OPTIONS=-Iinclude
+OPTIONS=-Iinclude -I../samtools-0.1.19/
 
 %.o : src/%.c
 	gcc $(OPTIONS) -o $@ -c $<
+
+bin/findexons : src/findexons.c geneindex.o ../samtools-0.1.19/libbam.a
+	gcc $(OPTIONS) -g -lz -o $@ $^
 
 bin/quantify : src/quantify.c geneindex.o
 	gcc $(OPTIONS) -o $@ $^

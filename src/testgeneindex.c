@@ -144,11 +144,11 @@ int test_compare_exon() {
     { WRONG_CHROMOSOME, "chr2", 100, 200, "Wrong chromosome" },
     { START_AFTER_EXON, "chr1", 250, 300, "Start after exon" },
     { END_BEFORE_EXON,  "chr1",   0,  75, "End before exon" },
-    { CROSS_EXON_END | 
+    { CROSS_EXON_END   | 
       START_IN_EXON,    "chr1", 150, 250, "Start in exon, cross exon end" },
     { CROSS_EXON_START | 
       END_IN_EXON,      "chr1",  50, 150, "Cross exon start, end in exon" },
-    { START_IN_EXON |
+    { START_IN_EXON    |
       END_IN_EXON,      "chr1", 125, 175, "Start and end in exon" },
     { CROSS_EXON_START |
       CROSS_EXON_END,   "chr1", 50, 250, "Cross exon start and end" }
