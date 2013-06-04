@@ -46,21 +46,23 @@ int main(int argc, char **argv) {
       search_exons(&exon_curs, &db, ref, span.start, span.end, ALLOW_ALL);
       int flags = 0;
       while (exon = next_exon(&exon_curs, &flags)) {
-        printf("%s\t%d\t%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
-               qname,
-               ih, hi,
-               ref,
-               span.order,
-               span.start,
-               span.end,
-               
-               exon->start,
-               exon->end,
-               
-               flags & CROSS_EXON_START,
-               flags & CROSS_EXON_END,
-               flags & START_IN_EXON,
-               flags & END_IN_EXON
+        printf("%s\t", qname);
+        printf("%d\t", ih);
+        printf("%d\t", hi);
+        printf("%s\t", ref);
+        printf("%d\t", span.order);
+        printf("%d\t", span.start);
+        printf("%d\t", span.end);
+        printf("%s\t", exon->gene_id);
+        printf("%s\t", exon->transcript_id);
+        printf("%d\t", exon->exon_number);
+        printf("%d\t", exon->start);
+        printf("%d\t", exon->end);
+        printf("%d\t%d\t%d\t%d\n",
+               (flags & CROSS_EXON_START) > 0,
+               (flags & CROSS_EXON_END) > 0,
+               (flags & START_IN_EXON) > 0,
+               (flags & END_IN_EXON) > 0
                );
       }
       

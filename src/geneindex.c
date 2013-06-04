@@ -250,9 +250,6 @@ int search_exons(struct ExonCursor *cursor,
   struct ExonIndexEntry *entry = 
     bsearch(&key, exondb->index, exondb->index_len, 
             sizeof(struct ExonIndexEntry), cmp_index_entry);
-  if (entry) {
-    fprintf(stderr, "  Found entry %d - %d\n", entry->start, entry->end);
-  }
   cursor->exondb = exondb;
   cursor->chrom = chrom;
   cursor->start = start;
@@ -334,7 +331,7 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
     else if (exon->min_start > cursor->end) {
       // At this point all subsequent exons will start after me, so
       // we're done.
-      fprintf(stderr, "  past\n");   
+      //      fprintf(stderr, "  past\n");   
       return finish_cursor(cursor);
     }
 
@@ -346,7 +343,7 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
     }
 
     else {
-      fprintf(stderr, "Match\n");
+      //      fprintf(stderr, "Match\n");
       // Otherwise it's a match
       *flags = cmp;
       return exon;
@@ -361,10 +358,10 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
 
 int cmp_index_entry(struct ExonIndexEntry *key,
                     struct ExonIndexEntry *entry) {
-    fprintf(stderr, "Comparing %s:%d-%d and %s:%d-%d\n",
-           key->chrom, key->start, key->end,
+  //    fprintf(stderr, "Comparing %s:%d-%d and %s:%d-%d\n",
+  //           key->chrom, key->start, key->end,
   
-            entry->chrom, entry->start, entry->end);
+  //            entry->chrom, entry->start, entry->end);
   int cmp = strcmp(key->chrom, entry->chrom);
   int pos = key->start;
 
