@@ -6,6 +6,7 @@ int init_cigar_cursor(struct CigarCursor *c, bam1_t *read) {
   c->read = read;
   c->start = c->end = read->core.pos;
   c->i = 0;
+  c->order = -1;
 }
 
 int next_span(struct CigarCursor *c) {
@@ -56,5 +57,6 @@ int next_span(struct CigarCursor *c) {
       break;
   }
   c->i = i;
+  c->order++;
   return found_match;
 }

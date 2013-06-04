@@ -8,7 +8,7 @@ SAM_OPTS=-lz
 %.o : src/%.c
 	gcc $(OPTIONS) -o $@ -c $<
 
-bin/findexons : src/findexons.c geneindex.o $(SAM_LIB)
+bin/findexons : samutils.o src/findexons.c geneindex.o $(SAM_LIB)
 	gcc $(OPTIONS) -g $(SAM_OPTS) -o $@ $^
 
 bin/quantify : src/quantify.c geneindex.o

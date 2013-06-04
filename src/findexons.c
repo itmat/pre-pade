@@ -1,4 +1,6 @@
 #include <stdio.h>
+
+#include "samutils.h"
 #include "geneindex.h"
 #include "sam.h"
 
@@ -20,6 +22,7 @@ int main(int argc, char **argv) {
   bam1_t *rec = bam_init1();
 
   int count = 0;
+  
   while (samread(samfile, rec) > 0) {
 
     char *qname = bam1_qname(rec);
@@ -29,27 +32,36 @@ int main(int argc, char **argv) {
     int hi = bam_aux2i(bam_aux_get(rec, "HI"));
     int ih = bam_aux2i(bam_aux_get(rec, "IH"));
     int i;
+    int tid = rec->core.tid;
+    char *ref = samfile->header->target_name[tid];
+    ref = ref ? ref : "";
 
-    for (i = 0; i < rec->core.n_cigar; i++) {
-      int op    = bam_cigar_op(cigar[i]);
-      int oplen = bam_cigar_oplen(cigar[i]);
-      printf("%s\t%d\t%d\t%d\t%d\t%d\t%d\n",
+    struct CigarCursor span;
+    init_cigar_cursor(&span, rec);
+
+    while (next_span(&span)) {
+      printf("%s\t%d\t%d\t%s\t%d\t%d\t%d\n",
              qname,
              ih, hi,
-             -1, -1,
-             pos,
-             pos + oplen);
+             ref,
+             span.order,
+             span.start,
+             span.end);
 
+      //search_exons(struct ExonCursor *cursor,
+      // &db, char *chrom, int start, int end, int allow);
       /*
 
        * fragment name
        * num alns
        * aln num
-        num spans
-        span num
-        * span start
-        * span end
 
+       * chrom
+       * span num
+       * span start
+       * span end
+
+       
         gene id
         transcript id
         num exons

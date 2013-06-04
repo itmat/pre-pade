@@ -1,5 +1,5 @@
-#ifndef GENEINDEX_H
-#define GENEINDEX_H
+#ifndef SAMUTILS_H
+#define SAMUTILS_H
 
 #include "sam.h"
 
@@ -8,6 +8,7 @@ struct CigarCursor {
   int i;
   int start;
   int end;
+  int order;
 };
 
 int init_cigar_cursor(struct CigarCursor *c, bam1_t *read);
