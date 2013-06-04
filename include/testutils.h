@@ -1,6 +1,5 @@
 #include "geneindex.h"
 
-
 struct Assertion {
   char *name;
   int passed;

@@ -2,17 +2,23 @@ PERF_MAX_LOG_N=8
 
 OPTIONS=-Iinclude -I../samtools-0.1.19/
 
+SAM_LIB=../samtools-0.1.19/libbam.a
+SAM_OPTS=-lz
+
 %.o : src/%.c
 	gcc $(OPTIONS) -o $@ -c $<
 
-bin/findexons : src/findexons.c geneindex.o ../samtools-0.1.19/libbam.a
-	gcc $(OPTIONS) -g -lz -o $@ $^
+bin/findexons : src/findexons.c geneindex.o $(SAM_LIB)
+	gcc $(OPTIONS) -g $(SAM_OPTS) -o $@ $^
 
 bin/quantify : src/quantify.c geneindex.o
 	gcc $(OPTIONS) -o $@ $^
 
-bin/testgeneindex : src/testgeneindex.c geneindex.o
+bin/testgeneindex : src/testgeneindex.c geneindex.o testutils.o
 	gcc $(OPTIONS) -o $@ $^
+
+bin/testsamutils : src/testsamutils.c samutils.o testutils.o $(SAM_LIB)
+	gcc $(OPTIONS) $(SAM_OPTS) -o $@ $^
 
 cover : 
 	nosetests --with-coverage --cover-html --cover-package pade

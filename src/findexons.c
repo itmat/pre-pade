@@ -17,9 +17,7 @@ int main(int argc, char **argv) {
   samfile_t *samfile = samopen(sam_filename, "r", NULL);
   
   printf("Initializing bam\n");
-  bam1_t *rec = NULL;
-
-  rec = bam_init1();
+  bam1_t *rec = bam_init1();
 
   int count = 0;
   while (samread(samfile, rec) > 0) {
@@ -75,30 +73,4 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-struct CigarCursor {
-  bam1_t *read;
-  int i;
-  int start;
-  int end;
-};
 
-int next_span(struct CigarCursor *c) {
-
-  bam1_t *read = c->read;
-
-  if (c->i == 0) {
-    c->start = read->core.pos;
-  }
-
-  int n = read->core.n_cigar;
-  uint32_t *cigar = bam1_cigar(read);
-
-  if (c->i > n) 
-    return 0;
-
-  int op    = bam_cigar_op(cigar[c->i]);
-  int oplen = bam_cigar_oplen(cigar[c->i]);  
-
-  c->end = oplen;
-
-}

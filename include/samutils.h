@@ -10,6 +10,7 @@ struct CigarCursor {
   int end;
 };
 
+int init_cigar_cursor(struct CigarCursor *c, bam1_t *read);
 int next_span(struct CigarCursor *c);
 
 #endif
