@@ -234,9 +234,7 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
   int allow = cursor->allow;
   int disallow = ~allow;
 
-  printf("Advancing: %d\n", cursor->next);
   while (cursor->next != NULL && cursor->next <= last_exon) {
-    printf("  moving up\n");
     struct Exon *exon = cursor->next++;
 
     print_exon(exon);
