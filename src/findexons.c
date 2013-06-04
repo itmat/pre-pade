@@ -13,12 +13,12 @@ int main(int argc, char **argv) {
 
   struct ExonDB db;
   parse_gtf_file(&db, "testdata/arabidopsis.gtf");
-
+  index_exons(&db);
   char *sam_filename = argv[2];
 
   samfile_t *samfile = samopen(sam_filename, "r", NULL);
   
-  printf("Initializing bam\n");
+  fprintf(stderr, "Initializing bam\n");
   bam1_t *rec = bam_init1();
 
   int count = 0;
@@ -39,17 +39,31 @@ int main(int argc, char **argv) {
     struct CigarCursor span;
     init_cigar_cursor(&span, rec);
 
+    struct ExonCursor exon_curs;
     while (next_span(&span)) {
-      printf("%s\t%d\t%d\t%s\t%d\t%d\t%d\n",
-             qname,
-             ih, hi,
-             ref,
-             span.order,
-             span.start,
-             span.end);
 
-      //search_exons(struct ExonCursor *cursor,
-      // &db, char *chrom, int start, int end, int allow);
+      struct Exon *exon;
+      search_exons(&exon_curs, &db, ref, span.start, span.end, ALLOW_ALL);
+      int flags = 0;
+      while (exon = next_exon(&exon_curs, &flags)) {
+        printf("%s\t%d\t%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+               qname,
+               ih, hi,
+               ref,
+               span.order,
+               span.start,
+               span.end,
+               
+               exon->start,
+               exon->end,
+               
+               flags & CROSS_EXON_START,
+               flags & CROSS_EXON_END,
+               flags & START_IN_EXON,
+               flags & END_IN_EXON
+               );
+      }
+      
       /*
 
        * fragment name
@@ -62,17 +76,18 @@ int main(int argc, char **argv) {
        * span end
 
        
-        gene id
-        transcript id
-        num exons
-        exon number
-        exon start
-        exon end
+       gene id
+       transcript id
+       num exons
+       
+       exon number
+       * exon start
+       * exon end
         
-        crosses exon start
-        crosses exon end
-        starts in exon
-        ends in exon
+       * crosses exon start
+       * crosses exon end
+       * starts in exon
+       * ends in exon
         
        */
 

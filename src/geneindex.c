@@ -10,7 +10,7 @@ int print_exon(struct Exon *exon) {
 
 int parse_gtf_file(struct ExonDB *exondb, char *filename) {
 
-  printf("Loading GTF file %s\n", filename);
+  fprintf(stderr, "Loading GTF file %s\n", filename);
 
   FILE *file = fopen(filename, "r");
   if (!file) {
@@ -33,7 +33,7 @@ int parse_gtf_file(struct ExonDB *exondb, char *filename) {
     if (exons_len == exons_cap) {
       struct Exon *old_exons = exons;
       int old_exons_cap = exons_cap;
-      printf("Growing exons to %d\n", exons_cap);
+      fprintf(stderr, "Growing exons to %d\n", exons_cap);
 
       exons_cap *= 2;
 
@@ -82,18 +82,18 @@ int cmp_exons_by_end(struct Exon *a, struct Exon *b) {
 
 
 int index_exons(struct ExonDB *exondb) {
-  printf("Indexing %d exons\n", exondb->exons_len);
+  fprintf(stderr, "Indexing %d exons\n", exondb->exons_len);
   int n = exondb->exons_len;
   int i;
 
-  printf("Sorting exons by start pos\n");
+  fprintf(stderr, "Sorting exons by start pos\n");
   struct Exon *exons = exondb->exons;
   qsort(exons, n, sizeof(struct Exon), cmp_exons_by_end);
 
   int min_start = 0;
   char *chrom = NULL;
 
-  printf("Finding minimum start positions\n");
+  fprintf(stderr, "Finding minimum start positions\n");
 
   struct Exon *exon;
 
@@ -111,7 +111,7 @@ int index_exons(struct ExonDB *exondb) {
     exon->min_start = min_start;
   }
 
-  printf("Building index\n");
+  fprintf(stderr, "Building index\n");
   struct ExonIndexEntry *index = calloc(n, sizeof(struct ExonIndexEntry));
   struct ExonIndexEntry *entry = index;
 
@@ -157,15 +157,15 @@ int cmp_exon_end(struct Exon *exon, char *chrom, int pos) {
  */
 int search_exons(struct ExonCursor *cursor,
                  struct ExonDB *exondb, char *chrom, int start, int end, int allow) {
-
   struct ExonIndexEntry key;
   key.chrom = chrom;
   key.start = key.end = start;
-
   struct ExonIndexEntry *entry = 
     bsearch(&key, exondb->index, exondb->index_len, 
             sizeof(struct ExonIndexEntry), cmp_index_entry);
-
+  if (entry) {
+    fprintf(stderr, "  Found entry %d - %d\n", entry->start, entry->end);
+  }
   cursor->exondb = exondb;
   cursor->chrom = chrom;
   cursor->start = start;
@@ -237,12 +237,10 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
   while (cursor->next != NULL && cursor->next <= last_exon) {
     struct Exon *exon = cursor->next++;
 
-    print_exon(exon);
-
     int cmp = cmp_exon(exon, cursor->chrom, cursor->start, cursor->end);
 
     if ( cmp & WRONG_CHROMOSOME ) {
-      printf("  wrong chrom\n");   
+      fprintf(stderr, "  wrong chrom\n");   
       // If it's on the wrong chromosome, we're definitely done.
       return finish_cursor(cursor);
     }
@@ -250,19 +248,19 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
     else if (exon->min_start > cursor->end) {
       // At this point all subsequent exons will start after me, so
       // we're done.
-      printf("  past\n");   
+      fprintf(stderr, "  past\n");   
       return finish_cursor(cursor);
     }
 
     else if (cmp & disallow) {
-      printf("  miss\n");   
+      fprintf(stderr, "  miss\n");   
       // If this match would be disallowed according to the flags the
       // user passed in, just skip it.
       continue;
     }
 
     else {
-      printf("Match\n");
+      fprintf(stderr, "Match\n");
       // Otherwise it's a match
       *flags = cmp;
       return exon;
@@ -277,9 +275,10 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
 
 int cmp_index_entry(struct ExonIndexEntry *key,
                     struct ExonIndexEntry *entry) {
-  printf("Comparing %s:%d-%d and %s:%d-%d\n",
-         key->chrom, key->start, key->end,
-         entry->chrom, entry->start, entry->end);
+  //  fprintf(stderr, "Comparing %s:%d-%d and %s:%d-%d\n",
+  //         key->chrom, key->start, key->end,
+  //
+  // entry->chrom, entry->start, entry->end);
   int cmp = strcmp(key->chrom, entry->chrom);
   int pos = key->start;
 
