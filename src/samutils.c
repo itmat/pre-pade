@@ -24,6 +24,8 @@ int next_span(struct CigarCursor *c) {
     int op    = bam_cigar_op(cigar[i]);
     int oplen = bam_cigar_oplen(cigar[i]);  
     printf("  Op is %d, %d\n", op, oplen);
+    int end_span = 0;
+
     switch (op) {
     
     case BAM_CMATCH:
@@ -35,7 +37,11 @@ int next_span(struct CigarCursor *c) {
       break;
 
     case BAM_CDEL:
+      c->end += oplen;
+      break;
+
     case BAM_CREF_SKIP:
+      end_span = 1;
       break;
 
     case BAM_CSOFT_CLIP:
@@ -48,8 +54,10 @@ int next_span(struct CigarCursor *c) {
     case BAM_CBACK:
       break;
     }
+
+    if (end_span) 
+      break;
   }
-  fprintf(stderr, "Here I am\n");
   c->i = i;
   return found_match;
 }
