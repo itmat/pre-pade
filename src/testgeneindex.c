@@ -54,7 +54,10 @@ void test_create_index() {
   exon = next_exon(&cursor, &flags);
 
   assert_str_equals("1", exon->chrom, "Chromosome");
+
   print_exon(db.exons);
+
+
 }
 
 int test_compare_index_entry() {
@@ -115,29 +118,30 @@ void test_parse_gtf_attr() {
   
   char *in = "gene_id \"ATMG00130\"; transcript_id \"ATMG00130.1\"; exon_number \"17\"; gene_name \"ORF121A\"; transcript_name \"ORF121A-201\"; seqedit \"false\";";
 
-  char *value = parse_gtf_attr_str(in, "gene_id");
+  char *value;
+  parse_gtf_attr_str(in, "gene_id", &value);
   assert_str_equals("ATMG00130", value, "Gene id");
-  if (value) free(value);
+  free(value);
 
   in = "gene_id=\"ATMG00130\";";
-  value = parse_gtf_attr_str(in, "gene_id");
+  parse_gtf_attr_str(in, "gene_id", &value);
   assert_str_equals("ATMG00130", value, "Gene id");
-  if (value) free(value);
+  free(value);
 
   in = "gene_id = \"ATMG00130\";";
-  value = parse_gtf_attr_str(in, "gene_id");
+  parse_gtf_attr_str(in, "gene_id", &value);
   assert_str_equals("ATMG00130", value, "Gene id");
-  if (value) free(value);
+  free(value);
 
   in = "gene_id ATMG00130;";
-  value = parse_gtf_attr_str(in, "gene_id");
+  parse_gtf_attr_str(in, "gene_id", &value);
   assert_str_equals("ATMG00130", value, "Gene id");
-  if (value) free(value);
+  free(value);
 
   in = "gene_id ATMG00130";
-  value = parse_gtf_attr_str(in, "gene_id");
-  assert_equals(NULL, value, "Gene id");
-  if (value) free(value);
+  parse_gtf_attr_str(in, "gene_id", &value);
+  assert_str_equals("", value, "Gene id");
+  free(value);
 
   in = "exon_number \"17\";";
   int exon_number;

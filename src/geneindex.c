@@ -42,17 +42,16 @@ int parse_gtf_attr(char *str, char *field_name, char **start, int *len) {
   return *len;
 }
 
-char *parse_gtf_attr_str(char *str, char *name) {
+int parse_gtf_attr_str(char *str, char *name, char **dest) {
   char *start;
   int len;
   if (parse_gtf_attr(str, name, &start, &len)) {
-    char *res = calloc(len + 1, sizeof(char));
-    strncpy(res, start, len);
-    res[len] = 0;
-    return res;
+    *dest = strndup(start, len);
+    return 1;
   }
   else {
-    return NULL;
+    *dest = strdup("");
+    return 0;
   }
 }
 
@@ -81,10 +80,11 @@ int parse_gtf_file(struct ExonDB *exondb, char *filename) {
   int exons_cap = 1000;
   struct Exon *exons = calloc(exons_cap, sizeof(struct Exon));
 
+  char *line = NULL;
+  size_t linecap = 0;
+
   while (1) {
-    char *line = NULL;
-    size_t linecap = 0;
-    // TODO: Free line
+
     int linelen = getline(&line, &linecap, file);
     if (linelen < 0) {
       break;
@@ -104,28 +104,55 @@ int parse_gtf_file(struct ExonDB *exondb, char *filename) {
 
     const int num_fields = 9;
     char *fields[num_fields];
-    char *tok = line;
-    
+    char *tok = line;    
     int i;
-    for (i = 0; i < num_fields; i++) {
-      fields[i] = tok;
-      if (i < num_fields - 1) {
-        char *end = index(tok, '\t');
-        *end = 0;
-        tok = end + 1;
-      }
-    }
-  
     struct Exon *exon = exons + exons_len;
 
-    exon->chrom   = fields[0];
-    exon->source  = fields[1];
-    exon->feature = fields[2];
-    exon->start   = atoi(fields[3]);
-    exon->end     = atoi(fields[4]);
-    
+    for (i = 0; i < num_fields; i++) {
+      char *end = index(tok, i == num_fields - 1 ? 0 : '\t');
+
+      switch (i) {
+      case 0:
+        exon->chrom = strndup(tok, end - tok);
+        break;
+
+      case 1:
+        exon->source = strndup(tok, end - tok);
+        break;
+
+      case 2:
+        exon->feature = strndup(tok, end - tok);
+        break;
+
+      case 3:
+        exon->start = atoi(tok);
+        break;
+
+      case 4:
+        exon->end = atoi(tok);
+        break;
+
+      case 8:
+
+        if ( !parse_gtf_attr_str(tok, "gene_id", &exon->gene_id) ) {
+          fprintf(stderr, "Warning: can't find gene_id for %s\n", line);
+        }
+        if ( !parse_gtf_attr_str(tok, "transcript_id", &exon->transcript_id) ) {
+          fprintf(stderr, "Warning: can't find transcript_id for %s\n", line);
+        }
+        if ( !parse_gtf_attr_int(tok, "exon_number", &exon->exon_number) ) {
+          fprintf(stderr, "Warning: can't find exon_number for %s\n", line);
+        }
+
+      }
+
+      tok = end + 1;
+    }
+  
     exons_len++;
   }
+
+  free(line);
 
   exondb->exons_len = exons_len;
   exondb->exons_cap = exons_cap;
@@ -296,7 +323,6 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
 
   while (cursor->next != NULL && cursor->next <= last_exon) {
     struct Exon *exon = cursor->next++;
-    
     int cmp = cmp_exon(exon, cursor->chrom, cursor->start, cursor->end);
 
     if ( cmp & WRONG_CHROMOSOME ) {
@@ -335,10 +361,10 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
 
 int cmp_index_entry(struct ExonIndexEntry *key,
                     struct ExonIndexEntry *entry) {
-  //  fprintf(stderr, "Comparing %s:%d-%d and %s:%d-%d\n",
-  //         key->chrom, key->start, key->end,
-  //
-  // entry->chrom, entry->start, entry->end);
+    fprintf(stderr, "Comparing %s:%d-%d and %s:%d-%d\n",
+           key->chrom, key->start, key->end,
+  
+            entry->chrom, entry->start, entry->end);
   int cmp = strcmp(key->chrom, entry->chrom);
   int pos = key->start;
 

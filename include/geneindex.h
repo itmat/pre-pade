@@ -73,7 +73,7 @@ int search_exons(struct ExonCursor *cursor,
 
 struct Exon *next_exon(struct ExonCursor *cursor, int *flags);
 
-char *parse_gtf_attr_str(char *str, char *name);
-int   parse_gtf_attr_int(char *str, char *name, int *value);
+int parse_gtf_attr_str(char *str, char *name, char **dest);
+int parse_gtf_attr_int(char *str, char *name, int *value);
 
 #endif
