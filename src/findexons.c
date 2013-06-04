@@ -29,16 +29,43 @@ int main(int argc, char **argv) {
     int n_cigar = rec->core.n_cigar;
     uint32_t *cigar = bam1_cigar(rec);
     int hi = bam_aux2i(bam_aux_get(rec, "HI"));
+    int ih = bam_aux2i(bam_aux_get(rec, "IH"));
     int i;
-
-    printf("%s: pos: %d, n_cigar: %d, HI: %d\n", qname, pos, n_cigar, hi);
-
-
 
     for (i = 0; i < rec->core.n_cigar; i++) {
       int op    = bam_cigar_op(cigar[i]);
       int oplen = bam_cigar_oplen(cigar[i]);
-      printf(" %d, %d\n", op, oplen);
+      printf("%s\t%d\t%d\t%d\t%d\t%d\t%d\n",
+             qname,
+             ih, hi,
+             -1, -1,
+             pos,
+             pos + oplen);
+
+      /*
+
+       * fragment name
+       * num alns
+       * aln num
+        num spans
+        span num
+        * span start
+        * span end
+
+        gene id
+        transcript id
+        num exons
+        exon number
+        exon start
+        exon end
+        
+        crosses exon start
+        crosses exon end
+        starts in exon
+        ends in exon
+        
+       */
+
     }
   }
 
@@ -46,4 +73,32 @@ int main(int argc, char **argv) {
   samclose(samfile);
 
   return 0;
+}
+
+struct CigarCursor {
+  bam1_t *read;
+  int i;
+  int start;
+  int end;
+};
+
+int next_span(struct CigarCursor *c) {
+
+  bam1_t *read = c->read;
+
+  if (c->i == 0) {
+    c->start = read->core.pos;
+  }
+
+  int n = read->core.n_cigar;
+  uint32_t *cigar = bam1_cigar(read);
+
+  if (c->i > n) 
+    return 0;
+
+  int op    = bam_cigar_op(cigar[c->i]);
+  int oplen = bam_cigar_oplen(cigar[c->i]);  
+
+  c->end = oplen;
+
 }
