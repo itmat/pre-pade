@@ -323,7 +323,7 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
     int cmp = cmp_exon(exon, cursor->chrom, cursor->start, cursor->end);
 
     if ( cmp & WRONG_CHROMOSOME ) {
-      fprintf(stderr, "  wrong chrom\n");   
+      // fprintf(stderr, "  wrong chrom\n");   
       // If it's on the wrong chromosome, we're definitely done.
       return finish_cursor(cursor);
     }
@@ -336,7 +336,7 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
     }
 
     else if (cmp & disallow) {
-      fprintf(stderr, "  miss\n");   
+      // fprintf(stderr, "  miss\n");   
       // If this match would be disallowed according to the flags the
       // user passed in, just skip it.
       continue;

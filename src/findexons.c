@@ -11,10 +11,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  char *gtf_filename = argv[1];
+  char *sam_filename = argv[2];  
+
   struct ExonDB db;
-  parse_gtf_file(&db, "testdata/arabidopsis.gtf");
+  parse_gtf_file(&db, gtf_filename);
   index_exons(&db);
-  char *sam_filename = argv[2];
 
   samfile_t *samfile = samopen(sam_filename, "r", NULL);
   
