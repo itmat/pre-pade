@@ -111,10 +111,48 @@ int test_compare_exon() {
   }
 }
 
+void test_parse_gtf_attr() {
+  
+  char *in = "gene_id \"ATMG00130\"; transcript_id \"ATMG00130.1\"; exon_number \"17\"; gene_name \"ORF121A\"; transcript_name \"ORF121A-201\"; seqedit \"false\";";
+
+  char *value = parse_gtf_attr_str(in, "gene_id");
+  assert_str_equals("ATMG00130", value, "Gene id");
+  if (value) free(value);
+
+  in = "gene_id=\"ATMG00130\";";
+  value = parse_gtf_attr_str(in, "gene_id");
+  assert_str_equals("ATMG00130", value, "Gene id");
+  if (value) free(value);
+
+  in = "gene_id = \"ATMG00130\";";
+  value = parse_gtf_attr_str(in, "gene_id");
+  assert_str_equals("ATMG00130", value, "Gene id");
+  if (value) free(value);
+
+  in = "gene_id ATMG00130;";
+  value = parse_gtf_attr_str(in, "gene_id");
+  assert_str_equals("ATMG00130", value, "Gene id");
+  if (value) free(value);
+
+  in = "gene_id ATMG00130";
+  value = parse_gtf_attr_str(in, "gene_id");
+  assert_equals(NULL, value, "Gene id");
+  if (value) free(value);
+
+  in = "exon_number \"17\";";
+  int exon_number;
+  int status = parse_gtf_attr_int(in, "exon_number", &exon_number);
+  assert_equals(1, status, "Status");
+  assert_equals(17, exon_number, "Exon number");
+}
+
+
+
 int main (int argc, char **argv) {
   test_create_index();
   test_compare_exon();
   test_compare_index_entry();
+  test_parse_gtf_attr();
   return check_results();
 }
 

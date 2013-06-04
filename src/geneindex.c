@@ -1,11 +1,71 @@
 #include <stdio.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <regex.h>
 
 #include "geneindex.h"
 
 int print_exon(struct Exon *exon) {
   printf("%s:%d-%d\n", exon->chrom, exon->start, exon->end);
+}
+
+int parse_gtf_attr(char *str, char *field_name, char **start, int *len) {
+  char *p = strstr(str, field_name);
+
+  if (!p)
+    return 0;
+
+  // Advance past the spaces or equal sign separating key from value
+  p += strlen(field_name);
+ 
+  while (*p == ' ') p++;
+  if (*p == '=') p++;
+  while (*p == ' ') p++;
+
+  char *q = index(p, ';');
+
+  if (!q)
+    return 0;
+
+  q--;
+
+  while (p < q && *q == ' ') q--;
+
+  if (*p == '"' && *q == '"') {
+    p++;
+    q--;
+  }
+
+  *start = p;
+  *len = 1 + q - p;
+
+  return *len;
+}
+
+char *parse_gtf_attr_str(char *str, char *name) {
+  char *start;
+  int len;
+  if (parse_gtf_attr(str, name, &start, &len)) {
+    char *res = calloc(len + 1, sizeof(char));
+    strncpy(res, start, len);
+    res[len] = 0;
+    return res;
+  }
+  else {
+    return NULL;
+  }
+}
+
+int parse_gtf_attr_int(char *str, char *name, int *value) {
+  char *start;
+  int len;
+  if (parse_gtf_attr(str, name, &start, &len)) {
+    *value = atoi(start);
+    return 1;
+  }
+  else {
+    return 0;
+  }
 }
 
 int parse_gtf_file(struct ExonDB *exondb, char *filename) {
@@ -236,7 +296,7 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags) {
 
   while (cursor->next != NULL && cursor->next <= last_exon) {
     struct Exon *exon = cursor->next++;
-
+    
     int cmp = cmp_exon(exon, cursor->chrom, cursor->start, cursor->end);
 
     if ( cmp & WRONG_CHROMOSOME ) {
