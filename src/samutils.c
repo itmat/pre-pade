@@ -16,12 +16,27 @@ int next_fragment(bam1_t **reads, samfile_t *samfile, int n) {
   int is_last = 0;
 
   for (i = 0; i < n && samread(samfile, *(reads + i)) > 0; i++) {
+    int is_first = reads[i]->core.flag & BAM_FREAD1;
+    int is_last  = reads[i]->core.flag & BAM_FREAD2;
+    
     num_reads++;
-    if (reads[i]->core.flag & BAM_FREAD2) 
+
+    // BAM_FREAD1 is supposed to indicate that it's the first read in
+    // a template, and BAM_FREAD2 is supposed to indicate that it's
+    // the last read in a template. So if BAM_FREAD1 is set, that
+    // should mean that this is the second (and last) read. If neither
+    // BAM_FREAD1 nor BAM_FREAD2 are set, we will assume that the
+    // reads are not paired. This is consistent with SAM specification
+    // v1.4-r985, section 1.4.2, bullet 2. In practice, this is how
+    // RUM sets the flags. I'm not sure if other tools set it similarly.
+    if (is_last || (!is_first || is_last))
       return num_reads;
   }
 
-  fprintf(stderr, "Error: I found a fragment with more than two segments\n");
+  if (!i) 
+    return 0;
+
+  fprintf(stderr, "Error: I found a fragment (%s) with %d reads\n", bam1_qname(reads[i]), i);
   exit(1);
 }
 
