@@ -37,11 +37,16 @@ struct Exon {
   int max_count;
 };
 
+typedef struct ExonList ExonList;
+struct ExonList {
+  struct Exon *items;
+  int len;
+  int cap;
+};
+
 typedef struct ExonDB ExonDB;
 struct ExonDB {
-  struct Exon *exons;
-  int exons_len;
-  int exons_cap;
+  ExonList exons;
 
   struct ExonIndexEntry *index;
   int index_len;
@@ -71,6 +76,8 @@ struct ExonIndexEntry {
   int end;
   struct Exon *exon;
 };
+
+
 
 
 int cmp_index_entry(struct ExonIndexEntry *key,

@@ -154,9 +154,9 @@ int parse_gtf_file(ExonDB *exondb, char *filename) {
 
   free(line);
 
-  exondb->exons_len = exons_len;
-  exondb->exons_cap = exons_cap;
-  exondb->exons = exons;
+  exondb->exons.len = exons_len;
+  exondb->exons.cap = exons_cap;
+  exondb->exons.items = exons;
 }
 
 int cmp_exons_by_end(Exon *a, Exon *b) {
@@ -168,12 +168,12 @@ int cmp_exons_by_end(Exon *a, Exon *b) {
 }
 
 int index_exons(ExonDB *exondb) {
-  fprintf(stderr, "Indexing %d exons\n", exondb->exons_len);
-  int n = exondb->exons_len;
+  fprintf(stderr, "Indexing %d exons\n", exondb->exons.len);
+  int n = exondb->exons.len;
   int i;
 
   fprintf(stderr, "Sorting exons by start pos\n");
-  Exon *exons = exondb->exons;
+  Exon *exons = exondb->exons.items;
   qsort(exons, n, sizeof(Exon), ( int (*)(const void *, const void*) ) cmp_exons_by_end);
 
   int min_start = 0;
@@ -237,6 +237,59 @@ int cmp_exon_end(Exon *exon, char *chrom, int pos) {
   return exon->end - pos;
 }
 
+
+
+/*
+int find_candidates() {
+
+  int num_spans = num_fwd_spans + num_rev_spans;
+
+  Span *first_fwd_span = num_fwd_spans ? spans                     : NULL;
+  Span *last_fwd_span  = num_fwd_spans ? spans + num_fwd_spans - 1 : NULL;
+  Span *first_rev_span = num_rev_spans ? spans + num_fwd_spans     : NULL;
+  Span *last_rev_span  = num_rev_spans ? spans + num_spans - 1     : NULL;
+
+  for (span_num = 0; span_num < num_spans; span_num++) {
+      Span *span = read_spans + span_num;
+
+      struct Exon *exon;
+      search_exons(&exon_curs, &db, ref, span->start, span->end, ALLOW_ALL);
+
+      int flags = 0;
+      
+      Exon *allow;
+      Exon *deny;
+
+      while (exon = next_exon(&exon_curs, &flags)) {      
+
+        int match = 1;
+
+        // If it crosses either the start or end of the exon, we can't
+        // count it.
+        if (flags & (CROSS_EXON_START | CROSS_EXON_END))
+          match = 0;
+        
+        // If the span starts in the exon, then it can only be a match
+        // if it's the first span of either the forward or reverse read
+        if ( ( flags & START_IN_EXON ) && 
+             ! ( span == first_fwd_span || span == first_rev_span) )
+          match = 0;
+
+        // If the span ends in the exon, then it can only be a match
+        // if it's the last span of either the forward or reverse read
+        else if ( (flags & END_IN_EXON) &&
+             ! ( span == last_fwd_span || span == last_rev_span ) )
+          match = 0;
+
+        if (match) {
+          add_candidate();
+        }
+
+      }
+  }
+}
+
+*/
 
 /*
  * Returns a pointer to the first exon whose end is greater than my
@@ -314,7 +367,7 @@ Exon *finish_cursor(ExonCursor *cursor) {
 Exon *next_exon(ExonCursor *cursor, int *flags) {
 
   ExonDB *db = cursor->exondb;
-  Exon *last_exon = db->exons + db->exons_len;
+  Exon *last_exon = db->exons.items + db->exons.len;
 
   int allow = cursor->allow;
   int disallow = ~allow;

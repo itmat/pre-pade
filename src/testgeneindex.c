@@ -7,9 +7,9 @@ void test_create_index() {
   parse_gtf_file(&db, "testdata/arabidopsis.gtf");
   index_exons(&db);  
 
-  assert_equals(13214, db.exons_len, "Number of exons loaded");
+  assert_equals(13214, db.exons.len, "Number of exons loaded");
 
-  struct Exon *exon = db.exons;
+  struct Exon *exon = db.exons.items;
   assert_str_equals("1", exon->chrom, "First exon chromosome");
   assert_equals(28692193, exon->start, "First exon start");
   assert_equals(28692362, exon->end, "First exon end");
