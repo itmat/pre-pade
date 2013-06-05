@@ -9,6 +9,22 @@ int init_cigar_cursor(struct CigarCursor *c, bam1_t *read) {
   c->order = -1;
 }
 
+int next_fragment(bam1_t **reads, samfile_t *samfile, int n) {
+
+  int num_reads = 0;
+  int i;
+  int is_last = 0;
+
+  for (i = 0; i < n && samread(samfile, *(reads + i)) > 0; i++) {
+    num_reads++;
+    if (reads[i]->core.flag & BAM_FREAD2) 
+      return num_reads;
+  }
+
+  fprintf(stderr, "Error: I found a fragment with more than two segments\n");
+  exit(1);
+}
+
 int next_span(struct CigarCursor *c) {
 
   bam1_t *read = c->read;

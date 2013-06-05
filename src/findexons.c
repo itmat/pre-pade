@@ -4,6 +4,11 @@
 #include "geneindex.h"
 #include "sam.h"
 
+// Exon level counts
+// Transcript level counts
+// Junction level counts
+
+
 int main(int argc, char **argv) {
 
   if (argc != 3) {
@@ -22,8 +27,10 @@ int main(int argc, char **argv) {
   
   fprintf(stderr, "Initializing bam\n");
   bam1_t *rec = bam_init1();
-
+  
   int count = 0;
+  
+  struct Span *read_spans = calloc(MAX_SPANS_PER_READ, sizeof(struct Span));
   
   while (samread(samfile, rec) > 0) {
 
