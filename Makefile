@@ -23,8 +23,9 @@ bin/testsamutils : src/testsamutils.c samutils.o testutils.o $(SAM_LIB)
 cover : 
 	nosetests --with-coverage --cover-html --cover-package pade
 
-test : bin/testgeneindex
+test : bin/testgeneindex bin/testsamutils
 	bin/testgeneindex
+	bin/testsamutils
 #	nosetests --with-doctest
 
 clean :

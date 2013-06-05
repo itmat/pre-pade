@@ -18,6 +18,7 @@ enum Strand {
   REVERSE
 };
 
+typedef struct Exon Exon;
 struct Exon {
   char *gene_id;
   char *transcript_id;
@@ -31,8 +32,12 @@ struct Exon {
 
   // Extra, not part of GTF file, used for indexing
   int min_start;
+
+  int min_count;
+  int max_count;
 };
 
+typedef struct ExonDB ExonDB;
 struct ExonDB {
   struct Exon *exons;
   int exons_len;
@@ -41,6 +46,8 @@ struct ExonDB {
   struct ExonIndexEntry *index;
   int index_len;
 };
+
+typedef struct ExonCursor ExonCursor;
 
 struct ExonCursor {
 
@@ -57,6 +64,7 @@ struct ExonCursor {
   struct Exon *next;
 };
 
+typedef struct ExonIndexEntry ExonIndexEntry;
 struct ExonIndexEntry {
   char *chrom;
   int start;
