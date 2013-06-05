@@ -25,43 +25,49 @@ int main(int argc, char **argv) {
 
   samfile_t *samfile = samopen(sam_filename, "r", NULL);
   
-  fprintf(stderr, "Initializing bam\n");
-  bam1_t *rec = bam_init1();
-  
-  int count = 0;
-  
   struct Span *read_spans = calloc(MAX_SPANS_PER_READ, sizeof(struct Span));
-  
-  while (samread(samfile, rec) > 0) {
 
-    char *qname = bam1_qname(rec);
-    int pos = rec->core.pos;
-    int n_cigar = rec->core.n_cigar;
-    uint32_t *cigar = bam1_cigar(rec);
-    int hi = bam_aux2i(bam_aux_get(rec, "HI"));
-    int ih = bam_aux2i(bam_aux_get(rec, "IH"));
+  bam1_t *reads[] = { bam_init1(), bam_init1() };
+  int num_reads;
+  
+  while (num_reads = next_fragment(reads, samfile, 2)) {
+
+    int num_fwd_spans = extract_spans(read_spans, reads[0], MAX_SPANS_PER_READ);
+    int num_rev_spans = 0;
+
+    if (num_reads == 2) {
+      num_rev_spans = extract_spans(read_spans + num_fwd_spans, reads[1], MAX_SPANS_PER_READ - num_fwd_spans);
+    }
+
+    printf("Num spans: %d, %d\n", num_fwd_spans, num_rev_spans);
+
+
+    char *qname = bam1_qname(reads[0]);
+    int pos = reads[0]->core.pos;
+    int n_cigar = reads[0]->core.n_cigar;
+    uint32_t *cigar = bam1_cigar(reads[0]);
+    int hi = bam_aux2i(bam_aux_get(reads[0], "HI"));
+    int ih = bam_aux2i(bam_aux_get(reads[0], "IH"));
     int i;
-    int tid = rec->core.tid;
+    int tid = reads[0]->core.tid;
     char *ref = samfile->header->target_name[tid];
     ref = ref ? ref : "";
 
-    struct CigarCursor span;
-    init_cigar_cursor(&span, rec);
-
     struct ExonCursor exon_curs;
-    while (next_span(&span)) {
+    int span_num;
+    for (span_num = 0; span_num < num_fwd_spans + num_rev_spans; span_num++) {
+      Span *span = read_spans + span_num;
 
       struct Exon *exon;
-      search_exons(&exon_curs, &db, ref, span.start, span.end, ALLOW_ALL);
+      search_exons(&exon_curs, &db, ref, span->start, span->end, ALLOW_ALL);
       int flags = 0;
       while (exon = next_exon(&exon_curs, &flags)) {
         printf("%s\t", qname);
         printf("%d\t", ih);
         printf("%d\t", hi);
         printf("%s\t", ref);
-        printf("%d\t", span.order);
-        printf("%d\t", span.start);
-        printf("%d\t", span.end);
+        printf("%d\t", span->start);
+        printf("%d\t", span->end);
         printf("%s\t", exon->gene_id);
         printf("%s\t", exon->transcript_id);
         printf("%d\t", exon->exon_number);
@@ -105,7 +111,8 @@ int main(int argc, char **argv) {
     }
   }
 
-  bam_destroy1(rec);
+  bam_destroy1(reads[0]);
+  bam_destroy1(reads[1]);
   samclose(samfile);
 
   return 0;

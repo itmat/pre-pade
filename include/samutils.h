@@ -5,6 +5,7 @@
 
 #define MAX_SPANS_PER_READ 1000
 
+typedef struct CigarCursor CigarCursor;
 struct CigarCursor {
   bam1_t *read;
   int i;
@@ -13,6 +14,7 @@ struct CigarCursor {
   int order;
 };
 
+typedef struct Span Span;
 struct Span {
   int start;
   int end;

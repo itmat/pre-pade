@@ -2,7 +2,19 @@
 #include "sam.h"
 #include "samutils.h"
 
-int init_cigar_cursor(struct CigarCursor *c, bam1_t *read) {
+int extract_spans(Span *spans, bam1_t *read, int n) {
+  CigarCursor c;
+  init_cigar_cursor(&c, read);
+  int i = 0;
+  while (next_span(&c)) {
+    spans[i].start = c.start;
+    spans[i].end   = c.end;
+    i++;
+  }
+  return i;
+}
+
+int init_cigar_cursor(CigarCursor *c, bam1_t *read) {
   c->read = read;
   c->start = c->end = read->core.pos;
   c->i = 0;
