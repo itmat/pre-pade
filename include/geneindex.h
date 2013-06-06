@@ -2,6 +2,7 @@
 #define GENEINDEX_H
 
 #include <stdio.h>
+#include "sam.h"
 
 #define CROSS_EXON_START  1
 #define CROSS_EXON_END    2
@@ -43,6 +44,14 @@ enum Strand {
   FORWARD,
   REVERSE
 };
+
+typedef struct Span Span;
+struct Span {
+  int start;
+  int end;
+};
+
+
 
 typedef struct Exon Exon;
 struct Exon {
@@ -153,5 +162,28 @@ int parse_gtf_attr_int(char *str, char *name, int *value);
 
 void consolidate_exon_matches(ExonMatches *matches);
 int cmp_match_by_exon(ExonMatch *a, ExonMatch *b);
+void parse_gtf_file(ExonDB *exondb, char *filename);
+void index_exons(ExonDB *exondb);
+void init_exon_matches(ExonMatches *matches);
+void find_candidates(ExonMatches *matches, ExonDB *db, char *ref,
+                     Span *spans, int num_fwd_spans, int num_rev_spans);
 
+#define MAX_SPANS_PER_READ 1000
+
+typedef struct CigarCursor CigarCursor;
+struct CigarCursor {
+  bam1_t *read;
+  int i;
+  int start;
+  int end;
+  int order;
+};
+
+int next_fragment(bam1_t **reads, samfile_t *samfile, int n);
+void init_cigar_cursor(struct CigarCursor *c, bam1_t *read);
+int next_span(struct CigarCursor *c);
+int extract_spans(Span *spans, bam1_t *read, int n);
+
+int cmp_exon(Exon *e, char *chrom, int start, int end);
+void add_match(ExonMatches *matches, Exon *exon, int overlap, int conflict);
 #endif

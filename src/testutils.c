@@ -1,3 +1,4 @@
+#include <string.h>
 #include "testutils.h"
 #include "geneindex.h"
 
@@ -21,8 +22,8 @@ void assert_str_equals(char *a, char *b, char *name) {
 
 void assert_not_null(void *x, char *name) {
   char *msg;
-  asprintf(&msg, "%s: expected non null, was null", name, x);
-  add_assertion(x, msg);
+  asprintf(&msg, "%s: expected non null, was null", name);
+  add_assertion(x != NULL, msg);
 }
 
 void assert_exon_ptr_equals(struct Exon *a, struct Exon *b, char *name) {

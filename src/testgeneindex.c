@@ -16,7 +16,6 @@ void test_create_index() {
   assert_str_equals("protein_coding", exon->source, "First exon source");
   assert_str_equals("exon", exon->feature, "First exon feature");
 
-  int i = 1;
   int chroms_decrease = 0;
   int start_gte_end = 0;
   int entries_decrease = 0;
@@ -56,7 +55,7 @@ void test_create_index() {
 
 }
 
-int test_compare_index_entry() {
+void test_compare_index_entry() {
   struct ExonIndexEntry entry = { "chr2", 100, 200 };
 
   struct ExonIndexEntry left_chrom  = { "chr1", 100 };
@@ -73,7 +72,7 @@ int test_compare_index_entry() {
 
 }
 
-int test_compare_exon() {
+void test_compare_exon() {
   struct Exon e;
   e.chrom = "chr1";
   e.start = 100;

@@ -5,7 +5,7 @@
 #include "samutils.h"
 #include "geneindex.h"
 
-int print_exon(Exon *exon) {
+void print_exon(Exon *exon) {
   printf("%s:%d-%d\n", exon->chrom, exon->start, exon->end);
 }
 
@@ -68,7 +68,7 @@ int parse_gtf_attr_int(char *str, char *name, int *value) {
   }
 }
 
-int parse_gtf_file(ExonDB *exondb, char *filename) {
+void parse_gtf_file(ExonDB *exondb, char *filename) {
 
   LOG_INFO("Loading GTF file %s\n", filename);
 
@@ -104,7 +104,7 @@ int parse_gtf_file(ExonDB *exondb, char *filename) {
     }
 
     const int num_fields = 9;
-    char *fields[num_fields];
+
     char *tok = line;    
     int i;
     Exon *exon = exons + exons_len;
@@ -153,7 +153,8 @@ int parse_gtf_file(ExonDB *exondb, char *filename) {
     exons_len++;
   }
 
-  free(line);
+  if (line) 
+    free(line);
 
   exondb->exons.len = exons_len;
   exondb->exons.cap = exons_cap;
@@ -168,10 +169,9 @@ int cmp_exons_by_end(Exon *a, Exon *b) {
   return a->end - b->end;
 }
 
-int index_exons(ExonDB *exondb) {
+void index_exons(ExonDB *exondb) {
   LOG_INFO("Indexing %d exons\n", exondb->exons.len);
   int n = exondb->exons.len;
-  int i;
 
   Exon *exons = exondb->exons.items;
   qsort(exons, n, sizeof(Exon), ( int (*)(const void *, const void*) ) cmp_exons_by_end);
@@ -206,7 +206,7 @@ int index_exons(ExonDB *exondb) {
     // position is the start of the chromosome.
     if (exon == exons || strcmp(exon->chrom, (exon - 1)->chrom)) {
       entry->chrom = exon->chrom;
-      entry->start = exon->start;
+      entry->start = 0;
       entry->end   = exon->end;
       entry->exon = exon;
       entry++;
@@ -242,16 +242,19 @@ void init_exon_matches(ExonMatches *matches) {
 }
 
 void add_match(ExonMatches *matches, Exon *exon, int overlap, int conflict) {
+
   if (matches->len == matches->cap) {
+
     ExonMatch *old = matches->items;
     int old_cap = matches->cap;
     
     matches->cap *= 2;
     
     matches->items = calloc(matches->cap, sizeof(ExonMatch));
-    memcpy(matches->items, old, old_cap * sizeof(Exon));
+    memcpy(matches->items, old, old_cap * sizeof(ExonMatch));
     free(old);
   }
+
   ExonMatch *m = matches->items + matches->len++;
   m->exon = exon;
   m->overlap = overlap;
@@ -260,7 +263,7 @@ void add_match(ExonMatches *matches, Exon *exon, int overlap, int conflict) {
 };
 
 
-int find_candidates(ExonMatches *matches, ExonDB *db, char *ref,
+void find_candidates(ExonMatches *matches, ExonDB *db, char *ref,
                     Span *spans, int num_fwd_spans, int num_rev_spans) {
 
   matches->len = 0;
@@ -281,8 +284,9 @@ int find_candidates(ExonMatches *matches, ExonDB *db, char *ref,
     search_exons(&exon_curs, db, ref, span->start, span->end, ALLOW_ALL);
 
     int flags = 0;
-      
-    while (exon = next_exon(&exon_curs, &flags)) {      
+
+    while ((exon = next_exon(&exon_curs, &flags))) {      
+
       LOG_TRACE("    Looking at exon %d-%d, flags are %d\n", exon->start, exon->end, flags);      
       int conflict = 0;
 
@@ -290,7 +294,7 @@ int find_candidates(ExonMatches *matches, ExonDB *db, char *ref,
       // count it.
       if (flags & (CROSS_EXON_START | CROSS_EXON_END))
         conflict = 1;
-        
+
       // If the span starts in the exon, then it can only be a match
       // if it's the first span of either the forward or reverse read
       if ( ( flags & START_IN_EXON ) && 
@@ -304,8 +308,11 @@ int find_candidates(ExonMatches *matches, ExonDB *db, char *ref,
         conflict = 1;
 
       add_match(matches, exon, 1, conflict);
+
     }
+
   }
+
   consolidate_exon_matches(matches);
 }
 

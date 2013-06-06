@@ -111,5 +111,5 @@ int main(int argc, char **argv) {
   test_next_fragment_paired();
   test_next_fragment_single();
   check_results();
-  
+  return 0;
 }

@@ -3,25 +3,5 @@
 
 #include "sam.h"
 
-#define MAX_SPANS_PER_READ 1000
-
-typedef struct CigarCursor CigarCursor;
-struct CigarCursor {
-  bam1_t *read;
-  int i;
-  int start;
-  int end;
-  int order;
-};
-
-typedef struct Span Span;
-struct Span {
-  int start;
-  int end;
-};
-
-int next_fragment(bam1_t **reads, samfile_t *samfile, int n);
-int init_cigar_cursor(struct CigarCursor *c, bam1_t *read);
-int next_span(struct CigarCursor *c);
 
 #endif

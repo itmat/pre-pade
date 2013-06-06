@@ -31,7 +31,7 @@ void parse_args(struct Args *args, int argc, char **argv) {
     { NULL,      0,                 NULL, 0   }
   };
 
-  int bflag, ch, fd;
+  int ch;
   while ((ch = getopt_long(argc, argv, "d:o:x:", longopts, NULL)) != -1) {
     switch(ch) {
     case 'd':
@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
   }
 
 
-  while (num_reads = next_fragment(reads, samfile, 2)) {
+  while ((num_reads = next_fragment(reads, samfile, 2))) {
 
     int num_fwd_spans = extract_spans(read_spans, reads[0], MAX_SPANS_PER_READ);
     int num_rev_spans = 0;
@@ -135,9 +135,6 @@ int main(int argc, char **argv) {
 
     char *qname = bam1_qname(reads[0]);
     LOG_TRACE("On read %s\n", qname);
-    int pos = reads[0]->core.pos;
-    int n_cigar = reads[0]->core.n_cigar;
-    uint32_t *cigar = bam1_cigar(reads[0]);
     int hi = bam_aux2i(bam_aux_get(reads[0], "HI"));
     int ih = bam_aux2i(bam_aux_get(reads[0], "IH"));
     int i;
