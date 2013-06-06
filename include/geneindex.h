@@ -78,6 +78,22 @@ struct ExonIndexEntry {
 };
 
 
+typedef struct ExonMatch ExonMatch;
+
+struct ExonMatch {
+  Exon *exon;
+  int overlap;
+  int conflict;
+};
+
+typedef struct ExonMatches ExonMatches;
+
+struct ExonMatches {
+  ExonMatch *items;
+  int len;
+  int cap;
+};
+
 
 
 int cmp_index_entry(struct ExonIndexEntry *key,
@@ -90,5 +106,8 @@ struct Exon *next_exon(struct ExonCursor *cursor, int *flags);
 
 int parse_gtf_attr_str(char *str, char *name, char **dest);
 int parse_gtf_attr_int(char *str, char *name, int *value);
+
+void consolidate_exon_matches(ExonMatches *matches);
+int cmp_match_by_exon(ExonMatch *a, ExonMatch *b);
 
 #endif

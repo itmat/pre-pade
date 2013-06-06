@@ -150,13 +150,66 @@ void test_parse_gtf_attr() {
   assert_equals(17, exon_number, "Exon number");
 }
 
+void test_exon_matches() {
+  ExonMatches ms;
+  Exon a;
+  Exon b;
+  Exon c;
+  a.chrom = "a";
+  b.chrom = "b";
+  c.chrom = "c";
+  init_exon_matches(&ms);
 
+  add_match(&ms, &a, 1, 0);
+  add_match(&ms, &b, 1, 0);
+  add_match(&ms, &c, 1, 1);
+  add_match(&ms, &a, 1, 0);
+  add_match(&ms, &b, 1, 1);
+  add_match(&ms, &c, 1, 1);
+  add_match(&ms, &a, 1, 0);
+  add_match(&ms, &b, 1, 0);
+  add_match(&ms, &c, 1, 1);
+
+  assert_equals(16, ms.cap, "Capacity");
+
+  assert_str_equals("a", ms.items[0].exon->chrom, "Chromosome");
+  assert_str_equals("b", ms.items[1].exon->chrom, "Chromosome");
+  assert_str_equals("c", ms.items[2].exon->chrom, "Chromosome");
+
+  consolidate_exon_matches(&ms);
+  assert_equals(3, ms.len, "Len");
+
+  ExonMatch *ma = NULL, *mb = NULL, *mc = NULL;
+  int i;
+
+  for (i = 0; i < 3; i++) {
+    ExonMatch *m = ms.items + i;
+    char *chrom = m->exon->chrom;
+    
+    if      (!strcmp(chrom, "a")) ma = m;
+    else if (!strcmp(chrom, "b")) mb = m;
+    else if (!strcmp(chrom, "c")) mc = m;
+  }
+
+  assert_not_null(ma, "ma");
+  assert_not_null(mb, "mb");
+  assert_not_null(mc, "mc");
+
+  assert_str_equals("a", ma->exon->chrom, "chrom a");
+  assert_str_equals("b", mb->exon->chrom, "chrom b");
+  assert_str_equals("c", mc->exon->chrom, "chrom c");
+
+  assert_equals(0, ma->conflict, "conflict a");
+  assert_equals(1, mb->conflict, "conflict b");
+  assert_equals(3, mc->conflict, "conflict c");
+}
 
 int main (int argc, char **argv) {
   test_create_index();
   test_compare_exon();
   test_compare_index_entry();
   test_parse_gtf_attr();
+  test_exon_matches();
   return check_results();
 }
 

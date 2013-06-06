@@ -23,18 +23,17 @@ bin/testsamutils : src/testsamutils.c samutils.o testutils.o $(SAM_LIB)
 cover : 
 	nosetests --with-coverage --cover-html --cover-package pade
 
+test_geneindex : bin/testgeneindex
+	bin/testgeneindex
+
 test : bin/testgeneindex bin/testsamutils
 	bin/testgeneindex
 	bin/testsamutils
 #	nosetests --with-doctest
 
 clean :
-	rm -f *.log tests/*~ tests/*.pyc site.tar
-	cd doc; make clean
-	rm -rf doc/html/generated
-	rm -rf cover
+	rm -f *.o
 	rm -f `find . -name \*~`
-	rm -f `find . -name \*.pyc`
 
 site :
 	rm -rf doc/generated

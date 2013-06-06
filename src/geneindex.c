@@ -2,7 +2,7 @@
 #include <strings.h>
 #include <stdlib.h>
 #include <regex.h>
-
+#include "samutils.h"
 #include "geneindex.h"
 
 int print_exon(Exon *exon) {
@@ -237,10 +237,33 @@ int cmp_exon_end(Exon *exon, char *chrom, int pos) {
   return exon->end - pos;
 }
 
+void init_exon_matches(ExonMatches *matches) {
+  matches->cap = 1;
+  matches->len = 0;
+  matches->items = calloc(matches->cap, sizeof(ExonMatch));
+}
+
+void add_match(ExonMatches *matches, Exon *exon, int overlap, int conflict) {
+  if (matches->len == matches->cap) {
+    ExonMatch *old = matches->items;
+    int old_cap = matches->cap;
+    
+    matches->cap *= 2;
+    
+    matches->items = calloc(matches->cap, sizeof(ExonMatch));
+    memcpy(matches->items, old, old_cap * sizeof(Exon));
+    free(old);
+  }
+  ExonMatch *m = matches->items + matches->len++;
+  m->exon = exon;
+  m->overlap = overlap;
+  m->conflict = conflict;
+
+};
 
 
-/*
-int find_candidates() {
+int find_candidates(ExonMatches *matches, ExonDB *db, char *ref,
+                    Span *spans, int num_fwd_spans, int num_rev_spans) {
 
   int num_spans = num_fwd_spans + num_rev_spans;
 
@@ -248,48 +271,70 @@ int find_candidates() {
   Span *last_fwd_span  = num_fwd_spans ? spans + num_fwd_spans - 1 : NULL;
   Span *first_rev_span = num_rev_spans ? spans + num_fwd_spans     : NULL;
   Span *last_rev_span  = num_rev_spans ? spans + num_spans - 1     : NULL;
+  Span *span;
 
-  for (span_num = 0; span_num < num_spans; span_num++) {
-      Span *span = read_spans + span_num;
+  for (span = spans; span < spans + num_spans; span++) {
 
-      struct Exon *exon;
-      search_exons(&exon_curs, &db, ref, span->start, span->end, ALLOW_ALL);
+    struct Exon *exon;
+    ExonCursor exon_curs;
+    search_exons(&exon_curs, db, ref, span->start, span->end, ALLOW_ALL);
 
-      int flags = 0;
+    int flags = 0;
       
-      Exon *allow;
-      Exon *deny;
+    while (exon = next_exon(&exon_curs, &flags)) {      
+      
+      int conflict = 0;
 
-      while (exon = next_exon(&exon_curs, &flags)) {      
-
-        int match = 1;
-
-        // If it crosses either the start or end of the exon, we can't
-        // count it.
-        if (flags & (CROSS_EXON_START | CROSS_EXON_END))
-          match = 0;
+      // If it crosses either the start or end of the exon, we can't
+      // count it.
+      if (flags & (CROSS_EXON_START | CROSS_EXON_END))
+        conflict = 1;
         
-        // If the span starts in the exon, then it can only be a match
-        // if it's the first span of either the forward or reverse read
-        if ( ( flags & START_IN_EXON ) && 
-             ! ( span == first_fwd_span || span == first_rev_span) )
-          match = 0;
+      // If the span starts in the exon, then it can only be a match
+      // if it's the first span of either the forward or reverse read
+      if ( ( flags & START_IN_EXON ) && 
+           ! ( span == first_fwd_span || span == first_rev_span) )
+        conflict = 1;
 
-        // If the span ends in the exon, then it can only be a match
-        // if it's the last span of either the forward or reverse read
-        else if ( (flags & END_IN_EXON) &&
-             ! ( span == last_fwd_span || span == last_rev_span ) )
-          match = 0;
+      // If the span ends in the exon, then it can only be a match
+      // if it's the last span of either the forward or reverse read
+      else if ( (flags & END_IN_EXON) &&
+                ! ( span == last_fwd_span || span == last_rev_span ) )
+        conflict = 1;
 
-        if (match) {
-          add_candidate();
-        }
-
-      }
+      add_match(matches, exon, 1, conflict);
+    }
   }
+  consolidate_exon_matches(matches);
 }
 
-*/
+int cmp_match_by_exon(ExonMatch *a, ExonMatch *b) {
+  return b->exon - a->exon;
+}
+
+void consolidate_exon_matches(ExonMatches *matches) {
+  qsort(matches->items, matches->len, sizeof(ExonMatch), ( int (*)(const void *, const void*) ) cmp_match_by_exon);  
+
+  ExonMatch *p   = matches->items;
+  ExonMatch *q   = matches->items + 1;
+  ExonMatch *end = matches->items + matches->len;
+
+  while (q < end) {
+    if (cmp_match_by_exon(p, q)) {
+      p++;
+      p->exon = q->exon;
+      p->overlap = q->overlap;
+      p->conflict = q->conflict;
+    }
+    else {
+      matches->len--;
+      p->overlap += q->overlap;
+      p->conflict += q->conflict;
+    }
+    q++;
+  }
+
+}
 
 /*
  * Returns a pointer to the first exon whose end is greater than my

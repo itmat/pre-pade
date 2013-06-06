@@ -16,7 +16,13 @@ void assert_equals(int a, int b, char *name) {
 void assert_str_equals(char *a, char *b, char *name) {
   char *msg;
   asprintf(&msg, "%s: expected %s, got %s", name, a, b);
-  add_assertion(!strcmp(a, b), name);
+  add_assertion(!strcmp(a, b), msg);
+}
+
+void assert_not_null(void *x, char *name) {
+  char *msg;
+  asprintf(&msg, "%s: expected non null, was null", name, x);
+  add_assertion(x, msg);
 }
 
 void assert_exon_ptr_equals(struct Exon *a, struct Exon *b, char *name) {
