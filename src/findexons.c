@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <getopt.h>
 
 #include "samutils.h"
 #include "geneindex.h"
@@ -8,21 +9,76 @@
 // Transcript level counts
 // Junction level counts
 
-int main(int argc, char **argv) {
+struct Args {
+  char *gtf_filename;
+  char *sam_filename;
+  char *out_filename;
+  char *details_filename;
+};
 
-  if (argc != 3) {
-    fprintf(stderr, "Usage: %s GTF_FILE SAM_FILE\n", argv[0]);
-    return 1;
+void parse_args(struct Args *args, int argc, char **argv) {
+  args->sam_filename = NULL;
+  args->gtf_filename = NULL;
+  args->out_filename = NULL;
+  args->details_filename = NULL;
+
+  static struct option longopts[] = {
+    { "details", required_argument, NULL, 'd' },
+    { "output",  required_argument, NULL, 'o' },
+    { NULL,      0,                 NULL, 0   }
+  };
+
+  int bflag, ch, fd;
+  while ((ch = getopt_long(argc, argv, "d:o:", longopts, NULL)) != -1) {
+    switch(ch) {
+    case 'd':
+      args->details_filename = optarg;
+      break;
+
+    case 'o':
+      args->out_filename = optarg;
+      break;
+
+    default:
+      printf("Bad usage\n");
+    }
+
   }
 
-  char *gtf_filename = argv[1];
-  char *sam_filename = argv[2];  
+  if (argc - optind != 2) {
+    fprintf(stderr, "Usage: %s GTF_FILE SAM_FILE\n", argv[0]);
+    exit(1);
+  }
+  
+  
+  args->gtf_filename = argv[optind];
+  args->sam_filename = argv[optind + 1];
+
+  printf("GTF input file: %s\n", args->gtf_filename);
+  printf("SAM input file: %s\n", args->sam_filename);
+  printf("Output file: %s\n", args->out_filename ? args->out_filename : "(stdout)");
+}
+
+int main(int argc, char **argv) {
+  
+  struct Args args;
+  parse_args(&args, argc, argv);
+
+  FILE *details_file = NULL;
+  if (args.details_filename) {
+    details_file = fopen(args.details_filename, "w");
+    if (!details_file) {
+      perror(args.details_filename);
+      exit(1);
+    }
+  }
+
 
   struct ExonDB db;
-  parse_gtf_file(&db, gtf_filename);
+  parse_gtf_file(&db, args.gtf_filename);
   index_exons(&db);
 
-  samfile_t *samfile = samopen(sam_filename, "r", NULL);
+  samfile_t *samfile = samopen(args.sam_filename, "r", NULL);
   
   struct Span *read_spans = calloc(MAX_SPANS_PER_READ, sizeof(struct Span));
 
@@ -31,6 +87,19 @@ int main(int argc, char **argv) {
 
   ExonMatches matches;
   init_exon_matches(&matches);  
+
+  if (details_file) {
+    fprintf(details_file, "%s\t", "gene_id");
+    fprintf(details_file, "%s\t", "transcript_id");
+    fprintf(details_file, "%s\t", "exon_number");
+    fprintf(details_file, "%s\t", "chrom");
+    fprintf(details_file, "%s\t", "start");
+    fprintf(details_file, "%s\t", "end");
+    fprintf(details_file, "%s\t", "read_name");
+    fprintf(details_file, "%s\t", "alignment_number");
+    fprintf(details_file, "%s\n", "consistent");
+  }
+
 
   while (num_reads = next_fragment(reads, samfile, 2)) {
 
@@ -56,6 +125,28 @@ int main(int argc, char **argv) {
     find_candidates(&matches, &db, ref, read_spans, 
                     num_fwd_spans, num_rev_spans);
 
+    for (i = 0; i < matches.len; i++) {
+
+      int consistent = !matches.items[i].conflict;
+      Exon *exon = matches.items[i].exon;
+
+      if (details_file) {
+        fprintf(details_file, "%s\t", exon->gene_id);
+        fprintf(details_file, "%s\t", exon->transcript_id);
+        fprintf(details_file, "%d\t", exon->exon_number);
+        fprintf(details_file, "%s\t", exon->chrom);
+        fprintf(details_file, "%d\t", exon->start);
+        fprintf(details_file, "%d\t", exon->end);
+        fprintf(details_file, "%s\t", qname);
+        fprintf(details_file, "%d\t", hi);
+        fprintf(details_file, "%d\n", consistent);
+      }
+      if (consistent) {
+        exon->max_count++;
+        if (ih == 1)
+          exon->min_count++;
+      }
+    }
     /*
     struct ExonCursor exon_curs;
     int span_num;

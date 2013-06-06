@@ -121,6 +121,24 @@ struct ExonMatches {
 };
 
 
+struct QuantCandidate {
+  
+  char *quant_type;
+  
+  // The feature
+  char *gene_id;
+  char *transcript_id;
+  int exon_number;
+  char *chrom;
+  int start;
+  int end;
+  
+  char *read_id;
+  int alignment_number;
+  int num_alignments;
+  int consistent;
+  
+};
 
 int cmp_index_entry(struct ExonIndexEntry *key,
                     struct ExonIndexEntry *entry);
