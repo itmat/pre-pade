@@ -22,7 +22,6 @@ void test_create_index() {
   int entries_decrease = 0;
   
   struct ExonIndexEntry *entry = db.index;
-  printf("Index len is %d\n", db.index_len);
 
   for (entry = db.index + 1; entry < db.index + db.index_len; entry++) {
     if (entry->start >= entry->end)
@@ -54,9 +53,6 @@ void test_create_index() {
   exon = next_exon(&cursor, &flags);
 
   assert_str_equals("1", exon->chrom, "Chromosome");
-
-  print_exon(db.exons);
-
 
 }
 

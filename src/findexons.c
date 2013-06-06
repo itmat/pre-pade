@@ -8,9 +8,6 @@
 // Transcript level counts
 // Junction level counts
 
-
-
-
 int main(int argc, char **argv) {
 
   if (argc != 3) {
@@ -31,7 +28,10 @@ int main(int argc, char **argv) {
 
   bam1_t *reads[] = { bam_init1(), bam_init1() };
   int num_reads;
-  
+
+  ExonMatches matches;
+  init_exon_matches(&matches);  
+
   while (num_reads = next_fragment(reads, samfile, 2)) {
 
     int num_fwd_spans = extract_spans(read_spans, reads[0], MAX_SPANS_PER_READ);
@@ -41,10 +41,8 @@ int main(int argc, char **argv) {
       num_rev_spans = extract_spans(read_spans + num_fwd_spans, reads[1], MAX_SPANS_PER_READ - num_fwd_spans);
     }
 
-    printf("Num spans: %d, %d\n", num_fwd_spans, num_rev_spans);
-
-
     char *qname = bam1_qname(reads[0]);
+    LOG_TRACE("On read %s\n", qname);
     int pos = reads[0]->core.pos;
     int n_cigar = reads[0]->core.n_cigar;
     uint32_t *cigar = bam1_cigar(reads[0]);
@@ -55,6 +53,10 @@ int main(int argc, char **argv) {
     char *ref = samfile->header->target_name[tid];
     ref = ref ? ref : "";
 
+    find_candidates(&matches, &db, ref, read_spans, 
+                    num_fwd_spans, num_rev_spans);
+
+    /*
     struct ExonCursor exon_curs;
     int span_num;
     for (span_num = 0; span_num < num_fwd_spans + num_rev_spans; span_num++) {
@@ -83,39 +85,14 @@ int main(int argc, char **argv) {
                );
       }
       
-      /*
-
-       * fragment name
-       * num alns
-       * aln num
-
-       * chrom
-       * span num
-       * span start
-       * span end
-
-       
-       gene id
-       transcript id
-       num exons
-       
-       exon number
-       * exon start
-       * exon end
-        
-       * crosses exon start
-       * crosses exon end
-       * starts in exon
-       * ends in exon
-        
-       */
-
-    }
+      }
+    */
   }
+  LOG_INFO("Cleaning up %s\n", "");
 
   bam_destroy1(reads[0]);
   bam_destroy1(reads[1]);
-  samclose(samfile);
+  //samclose(samfile);
 
   return 0;
 }

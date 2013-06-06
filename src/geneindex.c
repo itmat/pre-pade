@@ -9,6 +9,7 @@ int print_exon(Exon *exon) {
   printf("%s:%d-%d\n", exon->chrom, exon->start, exon->end);
 }
 
+
 int parse_gtf_attr(char *str, char *field_name, char **start, int *len) {
   char *p = strstr(str, field_name);
 
@@ -69,7 +70,7 @@ int parse_gtf_attr_int(char *str, char *name, int *value) {
 
 int parse_gtf_file(ExonDB *exondb, char *filename) {
 
-  fprintf(stderr, "Loading GTF file %s\n", filename);
+  LOG_INFO("Loading GTF file %s\n", filename);
 
   FILE *file = fopen(filename, "r");
   if (!file) {
@@ -93,7 +94,7 @@ int parse_gtf_file(ExonDB *exondb, char *filename) {
     if (exons_len == exons_cap) {
       Exon *old_exons = exons;
       int old_exons_cap = exons_cap;
-      fprintf(stderr, "Growing exons to %d\n", exons_cap);
+      LOG_DEBUG("Growing exons to %d\n", exons_cap);
 
       exons_cap *= 2;
 
@@ -168,18 +169,17 @@ int cmp_exons_by_end(Exon *a, Exon *b) {
 }
 
 int index_exons(ExonDB *exondb) {
-  fprintf(stderr, "Indexing %d exons\n", exondb->exons.len);
+  LOG_INFO("Indexing %d exons\n", exondb->exons.len);
   int n = exondb->exons.len;
   int i;
 
-  fprintf(stderr, "Sorting exons by start pos\n");
   Exon *exons = exondb->exons.items;
   qsort(exons, n, sizeof(Exon), ( int (*)(const void *, const void*) ) cmp_exons_by_end);
 
   int min_start = 0;
   char *chrom = NULL;
 
-  fprintf(stderr, "Finding minimum start positions\n");
+  LOG_INFO("Finding minimum start positions for %d exons\n", exondb->exons.len);
 
   Exon *exon;
 
@@ -197,7 +197,6 @@ int index_exons(ExonDB *exondb) {
     exon->min_start = min_start;
   }
 
-  fprintf(stderr, "Building index\n");
   struct ExonIndexEntry *index = calloc(n, sizeof(ExonIndexEntry));
   ExonIndexEntry *entry = index;
 
@@ -265,6 +264,7 @@ void add_match(ExonMatches *matches, Exon *exon, int overlap, int conflict) {
 int find_candidates(ExonMatches *matches, ExonDB *db, char *ref,
                     Span *spans, int num_fwd_spans, int num_rev_spans) {
 
+  matches->len = 0;
   int num_spans = num_fwd_spans + num_rev_spans;
 
   Span *first_fwd_span = num_fwd_spans ? spans                     : NULL;
@@ -457,10 +457,7 @@ Exon *next_exon(ExonCursor *cursor, int *flags) {
 
 int cmp_index_entry(ExonIndexEntry *key,
                     ExonIndexEntry *entry) {
-  //    fprintf(stderr, "Comparing %s:%d-%d and %s:%d-%d\n",
-  //           key->chrom, key->start, key->end,
-  
-  //            entry->chrom, entry->start, entry->end);
+
   int cmp = strcmp(key->chrom, entry->chrom);
   int pos = key->start;
 

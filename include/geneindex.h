@@ -1,6 +1,8 @@
 #ifndef GENEINDEX_H
 #define GENEINDEX_H
 
+#include <stdio.h>
+
 #define CROSS_EXON_START  1
 #define CROSS_EXON_END    2
 #define START_IN_EXON     4
@@ -10,6 +12,30 @@
 #define END_BEFORE_EXON  64
 
 #define ALLOW_ALL START_IN_EXON | END_IN_EXON | CROSS_EXON_START | CROSS_EXON_END
+
+#define LOG_MESSAGE(fmt, level, args...) fprintf(stderr, "%s %s (%s:%d): "fmt, level, __FUNCTION__, __FILE__, __LINE__, args)
+
+#if defined( LOG_LEVEL_TRACE )
+#  define LOG_LEVEL_DEBUG
+#  define LOG_TRACE(fmt, args...) LOG_MESSAGE(fmt, "TRACE", args)
+#else
+#  define LOG_TRACE(fmt, args...)
+#endif
+
+#if defined(LOG_LEVEL_DEBUG)
+#  define LOG_LEVEL_INFO
+#  define LOG_DEBUG(fmt, args...) LOG_MESSAGE(fmt, "DEBUG", args)
+#else
+#  define LOG_DEBUG(fmt, args...)
+#endif
+
+#if defined( LOG_LEVEL_INFO )
+#  define LOG_INFO(fmt, args...) LOG_MESSAGE(fmt, "INFO", args)
+#else
+#  define LOG_INFO(fmt, args...)
+#endif
+
+
 
 enum Strand {
   NONE,
