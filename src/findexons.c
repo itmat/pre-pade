@@ -14,6 +14,7 @@ struct Args {
   char *sam_filename;
   char *out_filename;
   char *details_filename;
+  char *index_filename;
 };
 
 void parse_args(struct Args *args, int argc, char **argv) {
@@ -21,15 +22,17 @@ void parse_args(struct Args *args, int argc, char **argv) {
   args->gtf_filename = NULL;
   args->out_filename = NULL;
   args->details_filename = NULL;
+  args->index_filename = NULL;
 
   static struct option longopts[] = {
     { "details", required_argument, NULL, 'd' },
     { "output",  required_argument, NULL, 'o' },
+    { "index",   required_argument, NULL, 'x' },
     { NULL,      0,                 NULL, 0   }
   };
 
   int bflag, ch, fd;
-  while ((ch = getopt_long(argc, argv, "d:o:", longopts, NULL)) != -1) {
+  while ((ch = getopt_long(argc, argv, "d:o:x:", longopts, NULL)) != -1) {
     switch(ch) {
     case 'd':
       args->details_filename = optarg;
@@ -37,6 +40,10 @@ void parse_args(struct Args *args, int argc, char **argv) {
 
     case 'o':
       args->out_filename = optarg;
+      break;
+
+    case 'x':
+      args->index_filename = optarg;
       break;
 
     default:
@@ -77,6 +84,22 @@ int main(int argc, char **argv) {
   struct ExonDB db;
   parse_gtf_file(&db, args.gtf_filename);
   index_exons(&db);
+
+  if (args.index_filename) {
+    fprintf(stderr, "Dumping index to %s\n", args.index_filename);
+    
+    FILE *index_file = fopen(args.index_filename, "w");
+    if (!index_file) {
+      perror(args.index_filename);
+      exit(1);
+    }
+    ExonIndexEntry *e;
+    for (e = db.index; e < db.index + db.index_len; e++) {
+      fprintf(index_file,  "%s:%d-%d\t%s:%d-%d\n",
+              e->chrom, e->start, e->end, 
+              e->exon->chrom, e->exon->start, e->exon->end);
+    }
+  }
 
   samfile_t *samfile = samopen(args.sam_filename, "r", NULL);
   
@@ -180,6 +203,16 @@ int main(int argc, char **argv) {
     */
   }
   int i;
+
+  printf("%s\t", "gene_id");
+  printf("%s\t", "transcript_id");
+  printf("%s\t", "exon_number");
+  printf("%s\t", "chrom");
+  printf("%s\t", "start");
+  printf("%s\t", "end");
+  printf("%s\t", "min_count");
+  printf("%s\n", "max_count");
+
   for (i = 0; i < db.exons.len; i++) {
     Exon *exon = db.exons.items + i;
     if (exon->min_count) {

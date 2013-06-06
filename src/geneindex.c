@@ -203,7 +203,7 @@ int index_exons(ExonDB *exondb) {
   for (exon = exons; exon < exons + n; exon++) {
 
     // If it's the first exon for this chromosome, the start
-    // position is the start of this exon.
+    // position is the start of the chromosome.
     if (exon == exons || strcmp(exon->chrom, (exon - 1)->chrom)) {
       entry->chrom = exon->chrom;
       entry->start = exon->start;
@@ -214,9 +214,8 @@ int index_exons(ExonDB *exondb) {
 
     // Otherwise it's the end of the last exon.
     else if (exon->end != (exon - 1)->end) {
-      int last_end = (entry - 1)->end;
       entry->chrom = exon->chrom;
-      entry->start = last_end < exon->start ? exon->start : last_end;
+      entry->start = (entry - 1)->end;
       entry->end   = exon->end;
       entry->exon  = exon;
       entry++;
@@ -275,6 +274,8 @@ int find_candidates(ExonMatches *matches, ExonDB *db, char *ref,
 
   for (span = spans; span < spans + num_spans; span++) {
 
+    LOG_TRACE("  Looking at span %d-%d\n", span->start, span->end);
+
     struct Exon *exon;
     ExonCursor exon_curs;
     search_exons(&exon_curs, db, ref, span->start, span->end, ALLOW_ALL);
@@ -282,7 +283,7 @@ int find_candidates(ExonMatches *matches, ExonDB *db, char *ref,
     int flags = 0;
       
     while (exon = next_exon(&exon_curs, &flags)) {      
-      
+      LOG_TRACE("    Looking at exon %d-%d, flags are %d\n", exon->start, exon->end, flags);      
       int conflict = 0;
 
       // If it crosses either the start or end of the exon, we can't
@@ -349,6 +350,11 @@ int search_exons(ExonCursor *cursor,
     bsearch(&key, exondb->index, exondb->index_len, 
             sizeof(ExonIndexEntry), 
             (int (*) (const void *, const void *))cmp_index_entry);
+  LOG_TRACE("  Bsearch came back with %s:%d-%d\n",
+            entry ? entry->exon->chrom : "",
+            entry ? entry->exon->start : 0,
+            entry ? entry->exon->end : 0);
+            
   cursor->exondb = exondb;
   cursor->chrom = chrom;
   cursor->start = start;
