@@ -136,7 +136,11 @@ int main(int argc, char **argv) {
     char *qname = bam1_qname(reads[0]);
     LOG_TRACE("On read %s\n", qname);
     int hi = bam_aux2i(bam_aux_get(reads[0], "HI"));
-    int ih = bam_aux2i(bam_aux_get(reads[0], "IH"));
+    int num_alns = bam_aux2i(bam_aux_get(reads[0], "IH"));
+    if (!num_alns) {
+      num_alns = bam_aux2i(bam_aux_get(reads[0], "NH"));
+    }
+
     int i;
     int tid = reads[0]->core.tid;
     char *ref = samfile->header->target_name[tid];
@@ -163,41 +167,10 @@ int main(int argc, char **argv) {
       }
       if (consistent) {
         exon->max_count++;
-        if (ih == 1)
+        if (num_alns == 1)
           exon->min_count++;
       }
     }
-    /*
-    struct ExonCursor exon_curs;
-    int span_num;
-    for (span_num = 0; span_num < num_fwd_spans + num_rev_spans; span_num++) {
-      Span *span = read_spans + span_num;
-
-      struct Exon *exon;
-      search_exons(&exon_curs, &db, ref, span->start, span->end, ALLOW_ALL);
-      int flags = 0;
-      while (exon = next_exon(&exon_curs, &flags)) {
-        printf("%s\t", qname);
-        printf("%d\t", ih);
-        printf("%d\t", hi);
-        printf("%s\t", ref);
-        printf("%d\t", span->start);
-        printf("%d\t", span->end);
-        printf("%s\t", exon->gene_id);
-        printf("%s\t", exon->transcript_id);
-        printf("%d\t", exon->exon_number);
-        printf("%d\t", exon->start);
-        printf("%d\t", exon->end);
-        printf("%d\t%d\t%d\t%d\n",
-               (flags & CROSS_EXON_START) > 0,
-               (flags & CROSS_EXON_END) > 0,
-               (flags & START_IN_EXON) > 0,
-               (flags & END_IN_EXON) > 0
-               );
-      }
-      
-      }
-    */
   }
   int i;
 

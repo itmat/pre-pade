@@ -25,7 +25,6 @@ int next_fragment(bam1_t **reads, samfile_t *samfile, int n) {
 
   int num_reads = 0;
   int i;
-  fprintf(stderr, "reading frag\n");
 
   if (samread(samfile, *reads) > 0) {
     num_reads++;
@@ -34,9 +33,14 @@ int next_fragment(bam1_t **reads, samfile_t *samfile, int n) {
       return 1;
 
     else if (samread(samfile, *(reads + 1)) > 0) {
-      if (strcmp(bam1_qname(reads[0]), bam1_qname(reads[1])) ||
-          bam_aux_get(reads[0], "HI") != bam_aux_get(reads[1], "HI")) {
-        fprintf(stderr, "Error: paired flag is set, but next read is different\n");
+      char *qname[] = { bam1_qname(reads[0]),  bam1_qname(reads[1]) };
+      int      hi[] = { bam_aux2i(bam_aux_get(reads[0], "HI")),
+                        bam_aux2i(bam_aux_get(reads[1], "HI")) };
+
+      if (strcmp(qname[0], qname[1]) || hi[0] != hi[1]) {
+        fprintf(stderr, "Error: paired flag is set, but next read is different. %s(%d) vs %s(%d) \n",
+                qname[0], hi[0], qname[1], hi[1]);
+
         exit(1);
       }
       else {
