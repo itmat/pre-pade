@@ -54,9 +54,9 @@ void parse_args(struct Args *args, int argc, char **argv) {
   args->gtf_filename = argv[optind];
   args->sam_filename = argv[optind + 1];
 
-  printf("GTF input file: %s\n", args->gtf_filename);
-  printf("SAM input file: %s\n", args->sam_filename);
-  printf("Output file: %s\n", args->out_filename ? args->out_filename : "(stdout)");
+  fprintf(stderr, "GTF input file: %s\n", args->gtf_filename);
+  fprintf(stderr, "SAM input file: %s\n", args->sam_filename);
+  fprintf(stderr, "Output file: %s\n", args->out_filename ? args->out_filename : "(stdout)");
 }
 
 int main(int argc, char **argv) {
@@ -179,6 +179,21 @@ int main(int argc, char **argv) {
       }
     */
   }
+  int i;
+  for (i = 0; i < db.exons.len; i++) {
+    Exon *exon = db.exons.items + i;
+    if (exon->min_count) {
+      printf("%s\t", exon->gene_id);
+      printf("%s\t", exon->transcript_id);
+      printf("%d\t", exon->exon_number);
+      printf("%s\t", exon->chrom);
+      printf("%d\t", exon->start);
+      printf("%d\t", exon->end);
+      printf("%d\t", exon->min_count);
+      printf("%d\n", exon->max_count);
+    }
+  }
+
   LOG_INFO("Cleaning up %s\n", "");
 
   bam_destroy1(reads[0]);
