@@ -54,6 +54,12 @@ struct Span {
 
 
 typedef struct Exon Exon;
+typedef struct ExonList ExonList;
+typedef struct ExonDB ExonDB;
+typedef struct Transcript Transcript;
+typedef struct ExonCursor ExonCursor;
+
+
 struct Exon {
   char *gene_id;
   char *transcript_id;
@@ -65,6 +71,8 @@ struct Exon {
   int start;
   int end;
 
+  Transcript *transcript;
+
   // Extra, not part of GTF file, used for indexing
   int min_start;
 
@@ -72,22 +80,32 @@ struct Exon {
   int max_count;
 };
 
-typedef struct ExonList ExonList;
 struct ExonList {
   struct Exon *items;
   int len;
   int cap;
 };
 
-typedef struct ExonDB ExonDB;
+
 struct ExonDB {
   ExonList exons;
 
   struct ExonIndexEntry *index;
   int index_len;
+
+  Transcript *transcripts;
+  int num_transcripts;
 };
 
-typedef struct ExonCursor ExonCursor;
+
+
+struct Transcript {
+  Exon **exons;
+  int num_exons;
+  char *id;
+};
+
+
 
 struct ExonCursor {
 

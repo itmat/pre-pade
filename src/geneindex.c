@@ -5,6 +5,7 @@
 #include "samutils.h"
 #include "geneindex.h"
 
+
 void print_exon(Exon *exon) {
   printf("%s:%d-%d\n", exon->chrom, exon->start, exon->end);
 }
@@ -168,6 +169,71 @@ int cmp_exons_by_end(Exon *a, Exon *b) {
   }
   return a->end - b->end;
 }
+
+int cmp_transcript(Transcript *a, Transcript *b) {
+  return strcmp(a->id, b->id);
+}
+
+int cmp_id_to_transcript(char *id, Transcript *b) {
+  return strcmp(id, b->id);
+}
+
+void add_transcripts(ExonDB *db) {
+  LOG_DEBUG("Adding transcripts%s\n", "");
+
+  Exon *exons = db->exons.items;
+  int i, n = db->exons.len;
+  Transcript *p, *q;
+
+  // First make a list of all the transcript IDs from our exons  
+  Transcript *transcripts = calloc(n, sizeof(Transcript));
+  for (i = 0; i < n; i++) {
+    transcripts[i].id = exons[i].transcript_id;
+    transcripts[i].num_exons = 1;
+  }
+
+  // Now sort the transcripts and go through them removing all duplicates and accumulating the exon counts
+
+  qsort(transcripts, n, sizeof(Transcript), ( int (*)(const void *, const void*) ) cmp_transcript);
+
+  for (p = transcripts, q = p + 1; q < transcripts + n; q++) {
+    // If p and q have the same transcript id, just increment the
+    // num_exons counter for p and let q advance.
+    if ( !strcmp(p->id, q->id) ) {
+      p->num_exons++;
+    }
+
+    // Otherwise we've found a new transcript. Advance p, and set its values to q's.
+    else {
+      memcpy(++p, q, sizeof(Transcript));
+    }
+  }
+
+  // p is now the end of the real list of transcripts, so set the count appropriately
+  int num_transcripts = p + 1 - transcripts;
+  LOG_DEBUG("Found %d transcripts\n", num_transcripts);
+  // Allocate space for the exon pointers in each transcript
+  for (i = 0; i < num_transcripts; i++) {
+    transcripts[i].exons = calloc(transcripts[i].num_exons, sizeof(Exon*));
+  }
+
+  // Now for each exon, find its transcript, set its pointer to that
+  // transcript, and add the exon to that transcript's list.
+  for (i = 0; i < n; i++) {
+
+    Exon *e = exons + i;
+
+    Transcript *t = bsearch(e->transcript_id, transcripts, num_transcripts, 
+                            sizeof(Transcript), 
+                            (int (*) (const void *, const void *))cmp_id_to_transcript);
+    e->transcript = t;
+    t->exons[e->exon_number - 1] = e;
+  }
+
+  db->num_transcripts = num_transcripts;
+  db->transcripts = transcripts;
+}
+
 
 void index_exons(ExonDB *exondb) {
   LOG_INFO("Indexing %d exons\n", exondb->exons.len);

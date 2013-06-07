@@ -6,6 +6,7 @@ void test_create_index() {
   struct ExonDB db;
   parse_gtf_file(&db, "testdata/arabidopsis.gtf");
   index_exons(&db);  
+  add_transcripts(&db);
 
   assert_equals(13214, db.exons.len, "Number of exons loaded");
 
@@ -50,8 +51,13 @@ void test_create_index() {
 
   search_exons(&cursor, &db, "1", 28692193, 28692362, 0);
   exon = next_exon(&cursor, &flags);
-
+  
   assert_str_equals("1", exon->chrom, "Chromosome");
+
+  assert_str_equals("AT1G76510.1", db.transcripts[3].id, "Transcript id");
+  assert_equals(14, db.transcripts[3].num_exons, "Transcript id");
+  assert_equals(12, db.transcripts[3].exons[11]->exon_number, "Exon number");
+  assert_equals(db.transcripts + 3, db.transcripts[3].exons[11]->transcript, "Exon's pointer to transcript");
 
 }
 
