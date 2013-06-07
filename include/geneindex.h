@@ -61,7 +61,11 @@ typedef struct ExonList ExonList;
 typedef struct ExonDB ExonDB;
 typedef struct Transcript Transcript;
 typedef struct ExonCursor ExonCursor;
+typedef struct Quant Quant;
 
+struct Quant {
+  int min, max;
+};
 
 struct Exon {
   char *gene_id;
@@ -79,9 +83,11 @@ struct Exon {
   // Extra, not part of GTF file, used for indexing
   int min_start;
 
-  int min_count;
-  int max_count;
+  Quant exon_quant;
+  Quant junction_quant;
 };
+
+
 
 struct ExonList {
   struct Exon *items;
@@ -198,7 +204,7 @@ struct CigarCursor {
   int i;
   int start;
   int end;
-  int order;
+  int pos;
 };
 
 int next_fragment(bam1_t **reads, samfile_t *samfile, int n);
@@ -210,4 +216,7 @@ int cmp_exon(Exon *e, char *chrom, int start, int end);
 void add_match(ExonMatches *matches, Exon *exon, int overlap, int conflict);
 Exon *next_exon_in_transcript(Exon *e);
 void add_transcripts(ExonDB *db);
+
+void incr_quant(Quant *q, int unique);
+
 #endif

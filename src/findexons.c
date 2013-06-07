@@ -5,6 +5,7 @@
 #include "geneindex.h"
 #include "sam.h"
 
+#define MIN_OVERLAP 8
 // Exon level counts
 // Transcript level counts
 // Junction level counts
@@ -16,6 +17,55 @@ struct Args {
   char *details_filename;
   char *index_filename;
 };
+
+void incr_quant(Quant *q, int unique) {
+  q->max++;
+  if (unique)
+    q->min++;
+}
+
+void print_exon_quants(FILE *file, ExonDB *db) {
+
+  int i;
+  for (i = 0; i < db->exons.len; i++) {
+    
+    Exon *exon = db->exons.items + i;
+    
+    if (exon->exon_quant.min) {
+      fprintf(file, "%s\t", "exon");
+      fprintf(file, "%s\t", exon->gene_id);
+      fprintf(file, "%s\t", exon->transcript_id);
+      fprintf(file, "%d\t", exon->exon_number);
+      fprintf(file, "%s\t", exon->chrom);
+      fprintf(file, "%d\t", exon->start);
+      fprintf(file, "%d\t", exon->end);
+      fprintf(file, "%d\t", exon->exon_quant.min);
+      fprintf(file, "%d\n", exon->exon_quant.max);
+    }
+  }
+
+  for (i = 0; i < db->num_transcripts; i++) {
+    
+    Transcript *t = db->transcripts + i;
+    
+    Exon *left, *right;
+    for (left = t->exons[0]; (right = next_exon_in_transcript(left)); left = right) {
+      if (left->junction_quant.min) {
+        fprintf(file, "%s\t",    "junction");
+        fprintf(file, "%s\t",    left->gene_id);
+        fprintf(file, "%s\t",    left->transcript_id);
+        fprintf(file, "%d,%d\t", left->exon_number, right->exon_number);
+        fprintf(file, "%s\t",    left->chrom);
+        fprintf(file, "%d\t",    left->end - 1);
+        fprintf(file, "%d\t",    right->start);
+        fprintf(file, "%d\t",    left->junction_quant.min);
+        fprintf(file, "%d\n",    left->junction_quant.max);
+      }      
+    }
+  }
+}
+
+
 
 void parse_args(struct Args *args, int argc, char **argv) {
   args->sam_filename = NULL;
@@ -57,15 +107,13 @@ void parse_args(struct Args *args, int argc, char **argv) {
     exit(1);
   }
   
-  
   args->gtf_filename = argv[optind];
   args->sam_filename = argv[optind + 1];
-
+  
   fprintf(stderr, "GTF input file: %s\n", args->gtf_filename);
   fprintf(stderr, "SAM input file: %s\n", args->sam_filename);
   fprintf(stderr, "Output file: %s\n", args->out_filename ? args->out_filename : "(stdout)");
 }
-
 
 int main(int argc, char **argv) {
   
@@ -81,11 +129,10 @@ int main(int argc, char **argv) {
     }
   }
 
-
   struct ExonDB db;
   parse_gtf_file(&db, args.gtf_filename);
   index_exons(&db);
-
+  add_transcripts(&db);
   if (args.index_filename) {
     fprintf(stderr, "Dumping index to %s\n", args.index_filename);
     
@@ -123,7 +170,6 @@ int main(int argc, char **argv) {
     fprintf(details_file, "%s\t", "alignment_number");
     fprintf(details_file, "%s\n", "consistent");
   }
-
 
   while ((num_reads = next_fragment(reads, samfile, 2))) {
 
@@ -167,14 +213,19 @@ int main(int argc, char **argv) {
         fprintf(details_file, "%d\n", consistent);
       }
       if (consistent) {
-        exon->max_count++;
-        if (num_alns == 1)
-          exon->min_count++;
+        incr_quant(&exon->exon_quant, num_alns == 1);
+      }
+
+      if (matches_junction(exon, read_spans, num_fwd_spans, num_rev_spans, MIN_OVERLAP)) {
+        fprintf(stderr, "Found a junction!\n");
+        incr_quant(&exon->junction_quant, num_alns == 1);
       }
     }
   }
+
   int i;
 
+  printf("%s\t", "type");
   printf("%s\t", "gene_id");
   printf("%s\t", "transcript_id");
   printf("%s\t", "exon_number");
@@ -184,27 +235,17 @@ int main(int argc, char **argv) {
   printf("%s\t", "min_count");
   printf("%s\n", "max_count");
 
-  for (i = 0; i < db.exons.len; i++) {
-    Exon *exon = db.exons.items + i;
-    if (exon->min_count) {
-      printf("%s\t", exon->gene_id);
-      printf("%s\t", exon->transcript_id);
-      printf("%d\t", exon->exon_number);
-      printf("%s\t", exon->chrom);
-      printf("%d\t", exon->start);
-      printf("%d\t", exon->end);
-      printf("%d\t", exon->min_count);
-      printf("%d\n", exon->max_count);
-    }
-  }
-
+  print_exon_quants(stdout, &db);
   LOG_INFO("Cleaning up %s\n", "");
 
   bam_destroy1(reads[0]);
   bam_destroy1(reads[1]);
   //samclose(samfile);
 
+
+
   return 0;
 }
+
 
 

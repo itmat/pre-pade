@@ -67,10 +67,57 @@ void test_cigar_to_spans() {
     { 128, 1, { { 152316, 152373 } } },
     { 162, 1, { { 14232813, 14232886 } } },
     { 172, 2, { { 3619619, 3619627 },
-                { 3619984-3620048  } } },
+                { 3619984, 3620048  } } },
     { 642, 1, { { 15291546, 15291622 } } },
     { 670, 2, { { 3950665, 3950724 },
                 { 3951436, 3951453 } } }
+  };
+
+  int num_cases = sizeof(cases) / sizeof(struct SpanAssertion);
+  int read_num = 0;
+  int case_num = 0;
+  CigarCursor curs;
+  while (case_num < num_cases &&
+         samread(samfile, rec) > 0) {
+
+    if (cases[case_num].read_num == read_num) {
+
+      int num_spans = cases[case_num].num_spans;
+      Span *span;
+
+      init_cigar_cursor(&curs, rec);
+
+      for (span = cases[case_num].spans; span < cases[case_num].spans + num_spans; span++) {
+
+        assert_equals(1, next_span(&curs), "Should have found a span");
+        assert_equals(span->start, curs.start, "Start");
+        assert_equals(span->end, curs.end, "End");
+      }
+
+      assert_equals(0, next_span(&curs), "No more spans");
+
+      case_num++;
+    }
+    read_num++;
+  }
+
+}
+
+void test_cigar_to_spans2() {
+
+  char *sam_filename = "testdata/cigar_bug.sam";
+  samfile_t *samfile = samopen(sam_filename, "r", NULL);  
+  bam1_t *rec = bam_init1();
+
+  struct SpanAssertion {
+    int read_num;
+    int num_spans;
+    struct Span spans[10];
+  };
+
+  struct SpanAssertion cases[] = {
+    { 0, 2, { { 46383142, 46383163 },
+              { 46384677, 46384749 } } }
   };
 
   int num_cases = sizeof(cases) / sizeof(struct SpanAssertion);
@@ -108,6 +155,7 @@ void test_cigar_to_spans() {
 int main(int argc, char **argv) {
 
   test_cigar_to_spans();
+  test_cigar_to_spans2();
   test_next_fragment_paired();
   test_next_fragment_single();
   check_results();

@@ -6,6 +6,7 @@ int extract_spans(Span *spans, bam1_t *read, int n) {
   CigarCursor c;
   init_cigar_cursor(&c, read);
   int i = 0;
+  printf("in extract spans\n");
   while (next_span(&c)) {
     spans[i].start = c.start;
     spans[i].end   = c.end;
@@ -16,9 +17,9 @@ int extract_spans(Span *spans, bam1_t *read, int n) {
 
 void init_cigar_cursor(CigarCursor *c, bam1_t *read) {
   c->read = read;
-  c->start = c->end = read->core.pos;
+  c->pos = read->core.pos;
+  c->start = c->end = 0;
   c->i = 0;
-  c->order = -1;
 }
 
 int next_fragment(bam1_t **reads, samfile_t *samfile, int n) {
@@ -65,6 +66,8 @@ int next_span(struct CigarCursor *c) {
   int i;
   int found_match = 0;
 
+  c->start = c->end = c->pos;
+
   for (i = c->i; i < n; i++) {
     int op    = bam_cigar_op(cigar[i]);
     int oplen = bam_cigar_oplen(cigar[i]);  
@@ -73,22 +76,31 @@ int next_span(struct CigarCursor *c) {
     switch (op) {
     
     case BAM_CMATCH:
+      LOG_TRACE("  matching %d\n", oplen);
       c->end += oplen;
+      c->pos += oplen;
       found_match = 1;
       break;
       
     case BAM_CINS:     
+      LOG_TRACE("  inserting %d\n", oplen);
       break;
 
     case BAM_CDEL:
+      LOG_TRACE("  deleting %d\n", oplen);
       c->end += oplen;
+      c->pos += oplen;
       break;
 
     case BAM_CREF_SKIP:
+      LOG_TRACE("  skipping %d\n", oplen);
       end_span = 1;
+      c->pos += oplen;
+      i++;
       break;
 
     case BAM_CSOFT_CLIP:
+      LOG_TRACE("  soft-clipping %d\n", oplen);
       break; 
       
     case BAM_CHARD_CLIP:
@@ -103,6 +115,6 @@ int next_span(struct CigarCursor *c) {
       break;
   }
   c->i = i;
-  c->order++;
+
   return found_match;
 }
