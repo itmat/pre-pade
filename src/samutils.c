@@ -6,7 +6,6 @@ int extract_spans(Span *spans, bam1_t *read, int n) {
   CigarCursor c;
   init_cigar_cursor(&c, read);
   int i = 0;
-  printf("in extract spans\n");
   while (next_span(&c)) {
     spans[i].start = c.start;
     spans[i].end   = c.end;
@@ -25,15 +24,16 @@ void init_cigar_cursor(CigarCursor *c, bam1_t *read) {
 int next_fragment(bam1_t **reads, samfile_t *samfile, int n) {
 
   int num_reads = 0;
-  int i;
 
   if (samread(samfile, *reads) > 0) {
+
     num_reads++;
     
-    if ( ! (reads[i]->core.flag & BAM_FPAIRED) )
+    if ( ! (reads[0]->core.flag & BAM_FPAIRED) )
       return 1;
 
     else if (samread(samfile, *(reads + 1)) > 0) {
+
       char *qname[] = { bam1_qname(reads[0]),  bam1_qname(reads[1]) };
       int      hi[] = { bam_aux2i(bam_aux_get(reads[0], "HI")),
                         bam_aux2i(bam_aux_get(reads[1], "HI")) };
