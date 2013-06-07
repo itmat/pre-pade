@@ -55,9 +55,9 @@ void test_create_index() {
   assert_str_equals("1", exon->chrom, "Chromosome");
 
   assert_str_equals("AT1G76510.1", db.transcripts[3].id, "Transcript id");
-  assert_equals(14, db.transcripts[3].num_exons, "Transcript id");
-  assert_equals(12, db.transcripts[3].exons[11]->exon_number, "Exon number");
-  assert_equals(db.transcripts + 3, db.transcripts[3].exons[11]->transcript, "Exon's pointer to transcript");
+  assert_equals(14, db.transcripts[3].exons_len, "Num exons");
+  assert_equals(3, db.transcripts[3].exons[11]->exon_number, "Exon number");
+  assert_equals((size_t)(db.transcripts + 3), (size_t)(db.transcripts[3].exons[11]->transcript), "Exon's pointer to transcript");
 
 }
 
@@ -205,12 +205,23 @@ void test_exon_matches() {
   assert_equals(3, mc->conflict, "conflict c");
 }
 
+void test_matches_junction() {
+  ExonDB db;
+  parse_gtf_file(&db, "testdata/arabidopsis.gtf");
+  index_exons(&db);  
+  add_transcripts(&db);
+
+  printf("%d: %d-%d\n", db.exons.items[0].exon_number, db.exons.items[0].start, db.exons.items[0].end);
+  
+}
+
 int main (int argc, char **argv) {
   test_create_index();
   test_compare_exon();
   test_compare_index_entry();
   test_parse_gtf_attr();
   test_exon_matches();
+  test_matches_junction();
   return check_results();
 }
 
@@ -223,3 +234,4 @@ int main (int argc, char **argv) {
         seqedit "false";
 
 */
+

@@ -134,6 +134,15 @@ void parse_gtf_file(ExonDB *exondb, char *filename) {
         exon->end = atoi(tok);
         break;
 
+      case 6:
+        switch (strlen(tok) > 0 ? tok[0] : 0) {
+        case '+': exon->strand = '+'; break;
+        case '-': exon->strand = '-'; break;
+        default: 
+          fprintf(stderr, "Warning: Couldn't parse strand from %s\n", tok);
+        }
+        break;
+
       case 8:
 
         if ( !parse_gtf_attr_str(tok, "gene_id", &exon->gene_id) ) {
@@ -178,6 +187,14 @@ int cmp_id_to_transcript(char *id, Transcript *b) {
   return strcmp(id, b->id);
 }
 
+int cmp_exon_ptr_end(Exon **a, Exon **b) {
+  int str = strcmp((*a)->chrom, (*b)->chrom);
+  if (str) {
+    return str;
+  }
+  return (*a)->end - (*b)->end;
+}
+
 void add_transcripts(ExonDB *db) {
   LOG_DEBUG("Adding transcripts%s\n", "");
 
@@ -189,7 +206,7 @@ void add_transcripts(ExonDB *db) {
   Transcript *transcripts = calloc(n, sizeof(Transcript));
   for (i = 0; i < n; i++) {
     transcripts[i].id = exons[i].transcript_id;
-    transcripts[i].num_exons = 1;
+    transcripts[i].exons_cap = 1;
   }
 
   // Now sort the transcripts and go through them removing all duplicates and accumulating the exon counts
@@ -198,9 +215,9 @@ void add_transcripts(ExonDB *db) {
 
   for (p = transcripts, q = p + 1; q < transcripts + n; q++) {
     // If p and q have the same transcript id, just increment the
-    // num_exons counter for p and let q advance.
+    // exons_cap counter for p and let q advance.
     if ( !strcmp(p->id, q->id) ) {
-      p->num_exons++;
+      p->exons_cap++;
     }
 
     // Otherwise we've found a new transcript. Advance p, and set its values to q's.
@@ -214,7 +231,7 @@ void add_transcripts(ExonDB *db) {
   LOG_DEBUG("Found %d transcripts\n", num_transcripts);
   // Allocate space for the exon pointers in each transcript
   for (i = 0; i < num_transcripts; i++) {
-    transcripts[i].exons = calloc(transcripts[i].num_exons, sizeof(Exon*));
+    transcripts[i].exons = calloc(transcripts[i].exons_cap, sizeof(Exon*));
   }
 
   // Now for each exon, find its transcript, set its pointer to that
@@ -227,7 +244,11 @@ void add_transcripts(ExonDB *db) {
                             sizeof(Transcript), 
                             (int (*) (const void *, const void *))cmp_id_to_transcript);
     e->transcript = t;
-    t->exons[e->exon_number - 1] = e;
+    t->exons[t->exons_len++] = e;
+  }
+
+  for (i = 0; i < num_transcripts; i++) {
+    qsort(transcripts[i].exons, transcripts[i].exons_cap, sizeof(Exon*), ( int (*)(const void *, const void*) ) cmp_exon_ptr_end);
   }
 
   db->num_transcripts = num_transcripts;
@@ -327,6 +348,13 @@ void add_match(ExonMatches *matches, Exon *exon, int overlap, int conflict) {
   m->conflict = conflict;
 
 };
+
+Exon *next_exon_in_transcript(Exon *e) {
+  Transcript *t = e->transcript;
+  int i = e->exon_number - 1;
+  return i < t->exons_len ? t->exons[i + 1] : NULL;
+}
+
 
 
 void find_candidates(ExonMatches *matches, ExonDB *db, char *ref,
@@ -552,3 +580,53 @@ int cmp_index_entry(ExonIndexEntry *key,
   else
     return 0;
 }
+
+
+int matches_junction(Exon *left, Span *spans, int num_fwd_spans, int num_rev_spans, int min_overlap) {
+
+  Exon *right = next_exon_in_transcript(left);
+  Span *last_fwd_span = spans + num_fwd_spans - 1;
+  Span *last_rev_span = spans + num_fwd_spans + num_rev_spans - 1;
+
+  // If there's no exon to the right of this one in the transcript,
+  // then there's no junction to match to.
+  if (!right)
+    return 0;
+
+  // Find the first span for which the end of the span is greater than or
+  // equal to the end of the left exon
+  Span *span = spans;
+  for (span = spans; span + 1 < last_rev_span; span++) {
+ 
+    // If the span's end is still to the left of the left exon's end,
+    // then continue to the next span.
+    if (span->end < left->end)
+      continue;
+
+    // If it's to the right of the left exon's end, then we can't
+    // confirm the junction with a gap in this read.
+    else if (span->end > left->end) 
+      return 0;
+
+    // Otherwise the end of this span matches the end of the exon. If
+    // it's the last span in the forward read, than we can't use the
+    // gap after it to confirm the junction, because it may simply be
+    // that the end of the forward read coincidentally matches the end
+    // of the exon.
+    if (span == last_fwd_span)
+      return 0;
+    
+    // Now we know we have a span with a gap to the right of it, where
+    // the right edge of the span matches the right edge of the
+    // exon. If the left edge of the next span matches the left edge
+    // of the next exon, and both this span and the next are at least
+    // as long as the min_overlap, then we have a hit. Otherwise we don't.
+    return ((span+1)->start == right->start &&
+            span->end - span->start >= min_overlap &&
+            (span+1)->end - (span+1)->start >= min_overlap);
+  }
+
+  return 0;
+}
+
+

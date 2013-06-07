@@ -37,6 +37,9 @@
 #endif
 
 
+#define STRAND_PLUS '+'
+#define STRAND_MINUS '-'
+
 
 enum Strand {
   NONE,
@@ -101,7 +104,8 @@ struct ExonDB {
 
 struct Transcript {
   Exon **exons;
-  int num_exons;
+  int exons_len;
+  int exons_cap;
   char *id;
 };
 
@@ -204,4 +208,6 @@ int extract_spans(Span *spans, bam1_t *read, int n);
 
 int cmp_exon(Exon *e, char *chrom, int start, int end);
 void add_match(ExonMatches *matches, Exon *exon, int overlap, int conflict);
+Exon *next_exon_in_transcript(Exon *e);
+void add_transcripts(ExonDB *db);
 #endif

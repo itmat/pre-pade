@@ -66,6 +66,7 @@ void parse_args(struct Args *args, int argc, char **argv) {
   fprintf(stderr, "Output file: %s\n", args->out_filename ? args->out_filename : "(stdout)");
 }
 
+
 int main(int argc, char **argv) {
   
   struct Args args;
