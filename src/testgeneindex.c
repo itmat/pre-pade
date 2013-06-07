@@ -211,7 +211,64 @@ void test_matches_junction() {
   index_exons(&db);  
   add_transcripts(&db);
 
-  printf("%d: %d-%d\n", db.exons.items[0].exon_number, db.exons.items[0].start, db.exons.items[0].end);
+  const int j_start = 28696939;
+  const int j_end   = 28697165;
+
+  assert_str_equals("AT1G76490.1", db.transcripts[1].id, "Transcript id\n");
+  assert_equals(j_start, db.transcripts[1].exons[0]->end, "Intron start\n");
+  assert_equals(j_end, db.transcripts[1].exons[1]->start, "Intron end\n");
+  Exon *exon = db.transcripts[1].exons[0];
+
+  Exon *e2 = next_exon_in_transcript(exon);
+  assert_equals(2, e2->exon_number, "Exon number 2");
+  Exon *e3 = next_exon_in_transcript(e2);
+  assert_equals(3, e3->exon_number, "Exon number 3");
+  Exon *e4 = next_exon_in_transcript(e3);
+  assert_equals(4, e4->exon_number, "Exon number 4");
+  Exon *e5 = next_exon_in_transcript(e4);
+  assert_equals(0, e5, "No exon 5");
+
+  Span min_match[] = { { j_start - 10, j_start },
+                       { j_end, j_end + 10 } };
+
+  assert_equals(1, matches_junction(exon, min_match, 2, 0, 8), "Matches fwd only");
+  assert_equals(1, matches_junction(exon, min_match, 2, 0, 10), "Barely matches fwd only");
+  assert_equals(0, matches_junction(exon, min_match, 2, 0, 11), "Not enough overlap");
+
+  assert_equals(1, matches_junction(exon, min_match, 0, 2, 8), "Matches rev only");
+  assert_equals(1, matches_junction(exon, min_match, 0, 2, 10), "Barely matches rev only");
+  assert_equals(0, matches_junction(exon, min_match, 0, 2, 11), "Not enough overlap");
+
+  Span match_at_tail[] = { 
+    { 0, 10 },
+    { j_start - 10, j_start },
+    { j_end, j_end + 10 } };
+
+  assert_equals(1, matches_junction(exon, match_at_tail, 3, 0, 8), "Matches fwd only");
+  assert_equals(1, matches_junction(exon, match_at_tail, 0, 3, 8), "Matches rev only");
+
+  assert_equals(1, matches_junction(exon, match_at_tail, 1, 2, 8), "1 fwd, 2 rev");
+  assert_equals(0, matches_junction(exon, match_at_tail, 2, 1, 8), "1 fwd, 2 rev, junction in unread portion of fragment");
+
+  Span match_at_head[] = { 
+    { j_start - 10, j_start },
+    { j_end, j_end + 10 },
+    { j_end + 1000, j_end + 2000 } };
+  assert_equals(1, matches_junction(exon, match_at_head, 3, 0, 8), "Matches fwd only");
+  assert_equals(1, matches_junction(exon, match_at_head, 0, 3, 8), "Matches rev only");
+  assert_equals(0, matches_junction(exon, match_at_head, 1, 2, 8), "2 fwd, 1 rev, junction in unread portion");
+  assert_equals(1, matches_junction(exon, match_at_head, 2, 1, 8), "2 fwd, 1 rev");
+
+  Span no_spans[] = {};
+  assert_equals(0, matches_junction(exon, no_spans, 0, 0, 0), "No spans");
+
+  Span crosses_junction[] = { 
+    { 0, 100 },
+    { j_start - 10, j_end + 10 },
+    { j_end + 1000, j_end + 2000 } };
+
+  assert_equals(0, matches_junction(exon, no_spans, 0, 0, 0), "Crosses junction");
+
   
 }
 

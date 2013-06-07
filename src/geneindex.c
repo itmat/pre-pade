@@ -350,9 +350,16 @@ void add_match(ExonMatches *matches, Exon *exon, int overlap, int conflict) {
 };
 
 Exon *next_exon_in_transcript(Exon *e) {
+
   Transcript *t = e->transcript;
-  int i = e->exon_number - 1;
-  return i < t->exons_len ? t->exons[i + 1] : NULL;
+
+  int i;
+  for (i = 0; i + 1 < t->exons_len; i++) {
+    if (t->exons[i] == e) {
+      return t->exons[i + 1];
+    }
+  }
+  return NULL;
 }
 
 
@@ -583,8 +590,8 @@ int cmp_index_entry(ExonIndexEntry *key,
 
 
 int matches_junction(Exon *left, Span *spans, int num_fwd_spans, int num_rev_spans, int min_overlap) {
-
   Exon *right = next_exon_in_transcript(left);
+
   Span *last_fwd_span = spans + num_fwd_spans - 1;
   Span *last_rev_span = spans + num_fwd_spans + num_rev_spans - 1;
 
@@ -596,8 +603,7 @@ int matches_junction(Exon *left, Span *spans, int num_fwd_spans, int num_rev_spa
   // Find the first span for which the end of the span is greater than or
   // equal to the end of the left exon
   Span *span = spans;
-  for (span = spans; span + 1 < last_rev_span; span++) {
- 
+  for (span = spans; span < last_rev_span; span++) {
     // If the span's end is still to the left of the left exon's end,
     // then continue to the next span.
     if (span->end < left->end)
