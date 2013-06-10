@@ -640,3 +640,9 @@ int matches_junction(Exon *left, Span *spans, int num_fwd_spans, int num_rev_spa
 }
 
 
+int load_model(ExonDB *db, char *filename) {
+  parse_gtf_file(db, filename);
+  index_exons(db);
+  add_transcripts(db);
+  return 0;
+}

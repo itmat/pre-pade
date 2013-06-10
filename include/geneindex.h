@@ -219,4 +219,7 @@ void add_transcripts(ExonDB *db);
 
 void incr_quant(Quant *q, int unique);
 
+int matches_junction(Exon *left, Span *spans, int num_fwd_spans, int num_rev_spans, int min_overlap);
+int load_model(ExonDB *db, char *filename);
 #endif
+

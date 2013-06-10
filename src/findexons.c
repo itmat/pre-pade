@@ -16,6 +16,8 @@ struct Args {
   char *out_filename;
   char *details_filename;
   char *index_filename;
+  int   exons;
+  int   junctions;
 };
 
 void incr_quant(Quant *q, int unique) {
@@ -78,6 +80,8 @@ void parse_args(struct Args *args, int argc, char **argv) {
     { "details", required_argument, NULL, 'd' },
     { "output",  required_argument, NULL, 'o' },
     { "index",   required_argument, NULL, 'x' },
+    { "exons",         no_argument, NULL, 0   },
+    { "junctions",     no_argument, NULL, 0   },
     { NULL,      0,                 NULL, 0   }
   };
 
@@ -115,40 +119,50 @@ void parse_args(struct Args *args, int argc, char **argv) {
   fprintf(stderr, "Output file: %s\n", args->out_filename ? args->out_filename : "(stdout)");
 }
 
+FILE *open_details_file(char *filename) {
+  
+  FILE *details_file = fopen(filename, "w");
+  if (details_file)
+    return details_file;
+  
+  perror(filename);
+  exit(1);
+}
+
+void dump_index(char *filename, ExonDB *db) {
+  
+  fprintf(stderr, "Dumping index to %s\n", filename);
+  
+  FILE *index_file = fopen(filename, "w");
+  if (!index_file) {
+    perror(filename);
+    exit(1);
+  }
+  ExonIndexEntry *e;
+  for (e = db->index; e < db->index + db->index_len; e++) {
+    fprintf(index_file,  "%s:%d-%d\t%s:%d-%d\n",
+            e->chrom, e->start, e->end, 
+            e->exon->chrom, e->exon->start, e->exon->end);
+  }
+  fclose(index_file);
+
+}
+
 int main(int argc, char **argv) {
   
   struct Args args;
   parse_args(&args, argc, argv);
 
-  FILE *details_file = NULL;
-  if (args.details_filename) {
-    details_file = fopen(args.details_filename, "w");
-    if (!details_file) {
-      perror(args.details_filename);
-      exit(1);
-    }
-  }
 
   struct ExonDB db;
-  parse_gtf_file(&db, args.gtf_filename);
-  index_exons(&db);
-  add_transcripts(&db);
-  if (args.index_filename) {
-    fprintf(stderr, "Dumping index to %s\n", args.index_filename);
-    
-    FILE *index_file = fopen(args.index_filename, "w");
-    if (!index_file) {
-      perror(args.index_filename);
-      exit(1);
-    }
-    ExonIndexEntry *e;
-    for (e = db.index; e < db.index + db.index_len; e++) {
-      fprintf(index_file,  "%s:%d-%d\t%s:%d-%d\n",
-              e->chrom, e->start, e->end, 
-              e->exon->chrom, e->exon->start, e->exon->end);
-    }
-  }
+  load_model(&db, args.gtf_filename);
 
+  FILE *details_file = args.details_filename ? 
+    open_details_file(args.details_filename) : NULL;
+
+  if (args.index_filename)
+    dump_index(args.index_filename, &db);
+ 
   samfile_t *samfile = samopen(args.sam_filename, "r", NULL);
   
   struct Span *read_spans = calloc(MAX_SPANS_PER_READ, sizeof(struct Span));
@@ -222,8 +236,6 @@ int main(int argc, char **argv) {
       }
     }
   }
-
-  int i;
 
   printf("%s\t", "type");
   printf("%s\t", "gene_id");

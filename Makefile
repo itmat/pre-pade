@@ -5,6 +5,10 @@ OPTIONS=-Iinclude -I../samtools-0.1.19/ -DLOG_LEVEL_DEBUG -Wall
 SAM_LIB=../samtools-0.1.19/libbam.a
 SAM_OPTS=-lz
 
+bins=bin/findexons bin/dumptranscripts
+
+all : $(bins)
+
 %.o : src/%.c
 	gcc $(OPTIONS) -o $@ -c $<
 
@@ -14,17 +18,11 @@ bin/dumptranscripts : geneindex.o src/dumptranscripts.c
 bin/findexons : samutils.o src/findexons.c geneindex.o $(SAM_LIB)
 	gcc $(OPTIONS) -g $(SAM_OPTS) -o $@ $^
 
-bin/quantify : src/quantify.c geneindex.o
-	gcc $(OPTIONS) -o $@ $^
-
 bin/testgeneindex : src/testgeneindex.c geneindex.o testutils.o
 	gcc $(OPTIONS) -o $@ $^
 
 bin/testsamutils : src/testsamutils.c samutils.o testutils.o $(SAM_LIB)
 	gcc $(OPTIONS) $(SAM_OPTS) -o $@ $^
-
-cover : 
-	nosetests --with-coverage --cover-html --cover-package pade
 
 test_geneindex : bin/testgeneindex
 	bin/testgeneindex
@@ -35,7 +33,7 @@ test : bin/testgeneindex bin/testsamutils
 #	nosetests --with-doctest
 
 clean :
-	rm -f *.o
+	rm -f *.o $(bins)
 	rm -f `find . -name \*~`
 
 site :
