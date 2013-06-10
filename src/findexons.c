@@ -182,9 +182,19 @@ void parse_args(struct Args *args, int argc, char **argv) {
 FILE *open_details_file(char *filename) {
   
   FILE *details_file = fopen(filename, "w");
-  if (details_file)
+  if (details_file) {
+    fprintf(details_file, "%s\t", "gene_id");
+    fprintf(details_file, "%s\t", "transcript_id");
+    fprintf(details_file, "%s\t", "exon_number");
+    fprintf(details_file, "%s\t", "chrom");
+    fprintf(details_file, "%s\t", "start");
+    fprintf(details_file, "%s\t", "end");
+    fprintf(details_file, "%s\t", "read_name");
+    fprintf(details_file, "%s\t", "alignment_number");
+    fprintf(details_file, "%s\n", "consistent");
     return details_file;
-  
+  }
+
   perror(filename);
   exit(1);
 }
@@ -208,6 +218,28 @@ void dump_index(char *filename, ExonDB *db) {
 
 }
 
+
+void print_match_details(FILE *file, bam1_t **reads, int num_reads, 
+                         ExonMatches *matches) {
+  int i;
+  for (i = 0; i < matches->len; i++) {
+
+    int hi = bam_aux2i(bam_aux_get(reads[0], "HI"));
+    char *qname = bam1_qname(reads[0]);
+    Exon *exon = matches->items[i].exon;
+
+    fprintf(file, "%s\t", exon->gene_id);
+    fprintf(file, "%s\t", exon->transcript_id);
+    fprintf(file, "%d\t", exon->exon_number);
+    fprintf(file, "%s\t", exon->chrom);
+    fprintf(file, "%d\t", exon->start);
+    fprintf(file, "%d\t", exon->end);
+    fprintf(file, "%s\t", qname);
+    fprintf(file, "%d\t", hi);
+    fprintf(file, "%d\n", !matches->items[i].conflict);
+  }
+}
+
 void accumulate_counts(ExonDB *db, samfile_t *samfile, FILE *details_file) {
   struct Span *read_spans = calloc(MAX_SPANS_PER_READ, sizeof(struct Span));
 
@@ -217,17 +249,6 @@ void accumulate_counts(ExonDB *db, samfile_t *samfile, FILE *details_file) {
   ExonMatches matches;
   init_exon_matches(&matches);  
 
-  if (details_file) {
-    fprintf(details_file, "%s\t", "gene_id");
-    fprintf(details_file, "%s\t", "transcript_id");
-    fprintf(details_file, "%s\t", "exon_number");
-    fprintf(details_file, "%s\t", "chrom");
-    fprintf(details_file, "%s\t", "start");
-    fprintf(details_file, "%s\t", "end");
-    fprintf(details_file, "%s\t", "read_name");
-    fprintf(details_file, "%s\t", "alignment_number");
-    fprintf(details_file, "%s\n", "consistent");
-  }
   while ((num_reads = next_fragment(reads, samfile, 2))) {
 
     int num_fwd_spans = extract_spans(read_spans, reads[0], MAX_SPANS_PER_READ);
@@ -249,24 +270,14 @@ void accumulate_counts(ExonDB *db, samfile_t *samfile, FILE *details_file) {
 
     find_candidates(&matches, db, ref, read_spans, num_fwd_spans, num_rev_spans);
 
+    if (details_file)
+      print_match_details(details_file, reads, num_reads, &matches);
+
     for (i = 0; i < matches.len; i++) {
 
       int consistent = !matches.items[i].conflict;
       Exon *exon = matches.items[i].exon;
 
-      if (details_file) {
-        int hi = bam_aux2i(bam_aux_get(reads[0], "HI"));
-        char *qname = bam1_qname(reads[0]);
-        fprintf(details_file, "%s\t", exon->gene_id);
-        fprintf(details_file, "%s\t", exon->transcript_id);
-        fprintf(details_file, "%d\t", exon->exon_number);
-        fprintf(details_file, "%s\t", exon->chrom);
-        fprintf(details_file, "%d\t", exon->start);
-        fprintf(details_file, "%d\t", exon->end);
-        fprintf(details_file, "%s\t", qname);
-        fprintf(details_file, "%d\t", hi);
-        fprintf(details_file, "%d\n", consistent);
-      }
       if (consistent) {
         incr_quant(&exon->exon_quant, num_alns == 1);
       }
