@@ -6,6 +6,7 @@
 #include "geneindex.h"
 
 
+
 void print_exon(Exon *exon) {
   printf("%s:%d-%d\n", exon->chrom, exon->start, exon->end);
 }
@@ -127,7 +128,7 @@ void parse_gtf_file(ExonDB *exondb, char *filename) {
         break;
 
       case 3:
-        exon->start = atoi(tok);
+        exon->start = atoi(tok) - 1;
         break;
 
       case 4:
@@ -615,16 +616,18 @@ int matches_junction(Exon *left, Span *spans, int num_fwd_spans, int num_rev_spa
 
     // If it's to the right of the left exon's end, then we can't
     // confirm the junction with a gap in this read.
-    else if (span->end > left->end) 
+    else if (span->end > left->end)  {
       return 0;
+    }
 
     // Otherwise the end of this span matches the end of the exon. If
     // it's the last span in the forward read, than we can't use the
     // gap after it to confirm the junction, because it may simply be
     // that the end of the forward read coincidentally matches the end
     // of the exon.
-    if (span == last_fwd_span)
+    if (span == last_fwd_span) {
       return 0;
+    }
     
     // Now we know we have a span with a gap to the right of it, where
     // the right edge of the span matches the right edge of the
