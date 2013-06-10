@@ -68,6 +68,75 @@ void print_exon_quants(FILE *file, ExonDB *db) {
 }
 
 
+struct option longopts[] = {
+  { "details",   required_argument, NULL, 'd' },
+  { "output",    required_argument, NULL, 'o' },
+  { "type",      no_argument,       NULL, 't' },
+  { NULL,        0,                 NULL,  0  }
+};
+
+
+
+struct QuantType {
+  char *name;
+  int set;
+};
+
+struct QuantType QUANT_TYPES[] = {
+  { "all",      1 },
+  { "exon",     0 },
+  { "junction", 0 }
+};
+
+void usage(char *prog, int retval) {
+  fprintf(stderr, "\nUsage: %s [OPTIONS] GTF_FILE SAM_FILE\n", prog);
+
+  struct option *opt = longopts;
+  const int size = 1000;
+  char buf[size];
+  
+  printf("\nOptions:\n");
+
+  for (opt = longopts; opt->name; opt++) {
+
+    char *help = "";
+    char *arg = "";
+
+    switch (opt->val) {
+    case 'd': 
+      help = "Print each read/exon candidate pairing to FILE.";
+      arg  = "FILE";
+      break;
+
+    case 'o':
+      help = "Write output to FILE rather than stdout.";
+      arg  = "FILE";
+      break;
+
+    case 't':
+      help = buf;
+      help[0] = 0;
+      strlcat(help, "Quantify the given type of structure. Will quantify all if no type is\n    specified. Can be specified multiple times with different types. The\n    following are valid types:\n", size);
+      int i;
+      for (i = 1; i < sizeof(QUANT_TYPES) / sizeof(struct QuantType); i++) {
+        strlcat(help, "      ", size);
+        strlcat(help, QUANT_TYPES[i].name, size);
+        strlcat(help, "\n", size);
+      }
+      arg = "TYPE";
+      break;
+    default: break;
+    }
+
+    if (strcmp(arg, "")) {
+      printf("  -%c, --%s %s\n    %s\n\n", opt->val, opt->name, arg, help);
+    }
+    else {
+      printf("  -%c, --%s\n    %s\n\n", opt->val, opt->name, help);
+    }
+  }
+  exit(retval);
+}
 
 void parse_args(struct Args *args, int argc, char **argv) {
   args->sam_filename = NULL;
@@ -75,15 +144,6 @@ void parse_args(struct Args *args, int argc, char **argv) {
   args->out_filename = NULL;
   args->details_filename = NULL;
   args->index_filename = NULL;
-
-  static struct option longopts[] = {
-    { "details", required_argument, NULL, 'd' },
-    { "output",  required_argument, NULL, 'o' },
-    { "index",   required_argument, NULL, 'x' },
-    { "exons",         no_argument, NULL, 0   },
-    { "junctions",     no_argument, NULL, 0   },
-    { NULL,      0,                 NULL, 0   }
-  };
 
   int ch;
   while ((ch = getopt_long(argc, argv, "d:o:x:", longopts, NULL)) != -1) {
@@ -107,8 +167,7 @@ void parse_args(struct Args *args, int argc, char **argv) {
   }
 
   if (argc - optind != 2) {
-    fprintf(stderr, "Usage: %s GTF_FILE SAM_FILE\n", argv[0]);
-    exit(1);
+    usage(argv[0], 1);
   }
   
   args->gtf_filename = argv[optind];
