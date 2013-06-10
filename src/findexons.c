@@ -237,17 +237,14 @@ void accumulate_counts(ExonDB *db, samfile_t *samfile, FILE *details_file) {
       num_rev_spans = extract_spans(read_spans + num_fwd_spans, reads[1], MAX_SPANS_PER_READ - num_fwd_spans);
     }
 
-    char *qname = bam1_qname(reads[0]);
-    LOG_TRACE("On read %s\n", qname);
-    int hi = bam_aux2i(bam_aux_get(reads[0], "HI"));
+    int i;
+    int tid = reads[0]->core.tid;
+    char *ref = samfile->header->target_name[tid];
     int num_alns = bam_aux2i(bam_aux_get(reads[0], "IH"));
     if (!num_alns) {
       num_alns = bam_aux2i(bam_aux_get(reads[0], "NH"));
     }
 
-    int i;
-    int tid = reads[0]->core.tid;
-    char *ref = samfile->header->target_name[tid];
     ref = ref ? ref : "";
 
     find_candidates(&matches, db, ref, read_spans, num_fwd_spans, num_rev_spans);
@@ -258,6 +255,8 @@ void accumulate_counts(ExonDB *db, samfile_t *samfile, FILE *details_file) {
       Exon *exon = matches.items[i].exon;
 
       if (details_file) {
+        int hi = bam_aux2i(bam_aux_get(reads[0], "HI"));
+        char *qname = bam1_qname(reads[0]);
         fprintf(details_file, "%s\t", exon->gene_id);
         fprintf(details_file, "%s\t", exon->transcript_id);
         fprintf(details_file, "%d\t", exon->exon_number);
