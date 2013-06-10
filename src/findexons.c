@@ -6,9 +6,10 @@
 #include "sam.h"
 
 #define MIN_OVERLAP 8
-// Exon level counts
-// Transcript level counts
-// Junction level counts
+
+// Transcript counts
+// Intron counts
+// Gene counts
 
 struct Args {
   char *gtf_filename;
@@ -207,23 +208,7 @@ void dump_index(char *filename, ExonDB *db) {
 
 }
 
-int main(int argc, char **argv) {
-  
-  struct Args args;
-  parse_args(&args, argc, argv);
-
-
-  struct ExonDB db;
-  load_model(&db, args.gtf_filename);
-
-  FILE *details_file = args.details_filename ? 
-    open_details_file(args.details_filename) : NULL;
-
-  if (args.index_filename)
-    dump_index(args.index_filename, &db);
- 
-  samfile_t *samfile = samopen(args.sam_filename, "r", NULL);
-  
+void accumulate_counts(ExonDB *db, samfile_t *samfile, FILE *details_file) {
   struct Span *read_spans = calloc(MAX_SPANS_PER_READ, sizeof(struct Span));
 
   bam1_t *reads[] = { bam_init1(), bam_init1() };
@@ -243,7 +228,6 @@ int main(int argc, char **argv) {
     fprintf(details_file, "%s\t", "alignment_number");
     fprintf(details_file, "%s\n", "consistent");
   }
-
   while ((num_reads = next_fragment(reads, samfile, 2))) {
 
     int num_fwd_spans = extract_spans(read_spans, reads[0], MAX_SPANS_PER_READ);
@@ -266,8 +250,7 @@ int main(int argc, char **argv) {
     char *ref = samfile->header->target_name[tid];
     ref = ref ? ref : "";
 
-    find_candidates(&matches, &db, ref, read_spans, 
-                    num_fwd_spans, num_rev_spans);
+    find_candidates(&matches, db, ref, read_spans, num_fwd_spans, num_rev_spans);
 
     for (i = 0; i < matches.len; i++) {
 
@@ -295,7 +278,29 @@ int main(int argc, char **argv) {
       }
     }
   }
+  bam_destroy1(reads[0]);
+  bam_destroy1(reads[1]);
 
+}
+
+int main(int argc, char **argv) {
+  
+  struct Args args;
+  parse_args(&args, argc, argv);
+
+
+  struct ExonDB db;
+  load_model(&db, args.gtf_filename);
+
+  FILE *details_file = args.details_filename ? 
+    open_details_file(args.details_filename) : NULL;
+
+  if (args.index_filename)
+    dump_index(args.index_filename, &db);
+
+  samfile_t *samfile = samopen(args.sam_filename, "r", NULL);
+  accumulate_counts(&db, samfile, details_file);
+ 
   printf("%s\t", "type");
   printf("%s\t", "gene_id");
   printf("%s\t", "transcript_id");
@@ -309,11 +314,8 @@ int main(int argc, char **argv) {
   print_exon_quants(stdout, &db);
   LOG_INFO("Cleaning up %s\n", "");
 
-  bam_destroy1(reads[0]);
-  bam_destroy1(reads[1]);
-  //samclose(samfile);
 
-
+  samclose(samfile);
 
   return 0;
 }
