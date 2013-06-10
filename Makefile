@@ -1,6 +1,6 @@
 PERF_MAX_LOG_N=8
 
-OPTIONS=-Iinclude -I../samtools-0.1.19/ -DLOG_LEVEL_DEBUG -Wall
+OPTIONS=-Iinclude -I../samtools-0.1.19/ -Wall
 
 SAM_LIB=../samtools-0.1.19/libbam.a
 SAM_OPTS=-lz

@@ -19,7 +19,22 @@ struct Args {
   char *index_filename;
   int   exons;
   int   junctions;
+  unsigned int  types_specified;
+  unsigned int  do_types;
 };
+
+
+#define QUANT_TYPE_EXON       0
+#define QUANT_TYPE_INTRON     1
+#define QUANT_TYPE_JUNCTION   2
+#define QUANT_TYPE_TRANSCRIPT 3
+#define QUANT_TYPE_GENE       4
+
+const char *QUANT_TYPE_NAMES[] = { "exon", "intron", "junction", "transcript", "gene" };
+const int NUM_QUANT_TYPES = sizeof(QUANT_TYPE_NAMES) / sizeof(char*);
+
+
+
 
 void incr_quant(Quant *q, int unique) {
   q->max++;
@@ -78,16 +93,7 @@ struct option longopts[] = {
 
 
 
-struct QuantType {
-  char *name;
-  int set;
-};
 
-struct QuantType QUANT_TYPES[] = {
-  { "all",      1 },
-  { "exon",     0 },
-  { "junction", 0 }
-};
 
 void usage(char *prog, int retval) {
   fprintf(stderr, "\nUsage: %s [OPTIONS] GTF_FILE SAM_FILE\n", prog);
@@ -119,9 +125,9 @@ void usage(char *prog, int retval) {
       help[0] = 0;
       strlcat(help, "Quantify the given type of structure. Will quantify all if no type is\n    specified. Can be specified multiple times with different types. The\n    following are valid types:\n", size);
       int i;
-      for (i = 1; i < sizeof(QUANT_TYPES) / sizeof(struct QuantType); i++) {
+      for (i = 0; i < NUM_QUANT_TYPES; i++) {
         strlcat(help, "      ", size);
-        strlcat(help, QUANT_TYPES[i].name, size);
+        strlcat(help, QUANT_TYPE_NAMES[i], size);
         strlcat(help, "\n", size);
       }
       arg = "TYPE";
@@ -147,7 +153,10 @@ void parse_args(struct Args *args, int argc, char **argv) {
   args->index_filename = NULL;
 
   int ch;
-  while ((ch = getopt_long(argc, argv, "d:o:x:", longopts, NULL)) != -1) {
+  args->types_specified = 0;
+  int i;
+  
+  while ((ch = getopt_long(argc, argv, "d:o:x:t:", longopts, NULL)) != -1) {
     switch(ch) {
     case 'd':
       args->details_filename = optarg;
@@ -161,11 +170,34 @@ void parse_args(struct Args *args, int argc, char **argv) {
       args->index_filename = optarg;
       break;
 
+    case 't':
+      for (i = 0; i < sizeof(QUANT_TYPE_NAMES) / sizeof(char*); i++)
+        if (!strcmp(QUANT_TYPE_NAMES[i], optarg)) 
+          break;
+      if (i == NUM_QUANT_TYPES) {
+        fprintf(stderr, "Invalid value \"%s\" for --type or -t option. ", optarg);
+        fprintf(stderr, "Valid options are:\n");
+        for (i = 1; i < NUM_QUANT_TYPES; i++) {
+          fprintf(stderr, "  %s\n", QUANT_TYPE_NAMES[i]);
+        }
+        exit(1);
+      }
+      args->types_specified |= (1 << (unsigned int)i);
+      
     default:
       printf("Bad usage\n");
     }
-
   }
+
+  if (args->types_specified) {
+    fprintf(stderr, "Changed: %d\n", args->types_specified);
+    args->do_types = args->types_specified;
+  }
+  else {
+    args->do_types = ~0;
+    fprintf(stderr, "Default\n");
+  }
+
 
   if (argc - optind != 2) {
     usage(argv[0], 1);
@@ -240,7 +272,8 @@ void print_match_details(FILE *file, bam1_t **reads, int num_reads,
   }
 }
 
-void accumulate_counts(ExonDB *db, samfile_t *samfile, FILE *details_file) {
+void accumulate_counts(ExonDB *db, samfile_t *samfile, FILE *details_file, 
+                       unsigned int types) {
   struct Span *read_spans = calloc(MAX_SPANS_PER_READ, sizeof(struct Span));
 
   bam1_t *reads[] = { bam_init1(), bam_init1() };
@@ -248,6 +281,21 @@ void accumulate_counts(ExonDB *db, samfile_t *samfile, FILE *details_file) {
 
   ExonMatches matches;
   init_exon_matches(&matches);  
+
+  const int do_exons       = types & (1 << QUANT_TYPE_EXON);
+  const int do_introns     = types & (1 << QUANT_TYPE_INTRON);
+  const int do_junctions   = types & (1 << QUANT_TYPE_JUNCTION);
+  const int do_transcripts = types & (1 << QUANT_TYPE_TRANSCRIPT);
+  const int do_genes       = types & (1 << QUANT_TYPE_GENE);
+
+  int i;
+
+  fprintf(stderr, "Types quantified:\n");
+  for (i = 0; i < NUM_QUANT_TYPES; i++) {
+    fprintf(stderr, "  %10s: %s\n", 
+            QUANT_TYPE_NAMES[i],
+            (types & (1 << i)) ? "yes" : "no");
+  }
 
   while ((num_reads = next_fragment(reads, samfile, 2))) {
 
@@ -270,20 +318,22 @@ void accumulate_counts(ExonDB *db, samfile_t *samfile, FILE *details_file) {
 
     find_candidates(&matches, db, ref, read_spans, num_fwd_spans, num_rev_spans);
 
-    if (details_file)
+    if (details_file) {
       print_match_details(details_file, reads, num_reads, &matches);
+    }
 
     for (i = 0; i < matches.len; i++) {
 
       int consistent = !matches.items[i].conflict;
       Exon *exon = matches.items[i].exon;
 
-      if (consistent) {
+      if (do_exons && consistent) {
         incr_quant(&exon->exon_quant, num_alns == 1);
       }
 
-      if (matches_junction(exon, read_spans, num_fwd_spans, num_rev_spans, MIN_OVERLAP)) {
-        fprintf(stderr, "Found a junction!\n");
+
+      if (do_junctions &&
+          matches_junction(exon, read_spans, num_fwd_spans, num_rev_spans, MIN_OVERLAP)) {
         incr_quant(&exon->junction_quant, num_alns == 1);
       }
     }
@@ -302,14 +352,21 @@ int main(int argc, char **argv) {
   struct ExonDB db;
   load_model(&db, args.gtf_filename);
 
-  FILE *details_file = args.details_filename ? 
-    open_details_file(args.details_filename) : NULL;
+  FILE *details_file;
+  if (args.details_filename) {
+    fprintf(stderr, "Writing debugging output to %s\n", args.details_filename);
+    details_file = open_details_file(args.details_filename);
+  }
+  else {
+    details_file = NULL;
+    fprintf(stderr, "Not producing debugging output\n");
+  }
 
   if (args.index_filename)
     dump_index(args.index_filename, &db);
 
   samfile_t *samfile = samopen(args.sam_filename, "r", NULL);
-  accumulate_counts(&db, samfile, details_file);
+  accumulate_counts(&db, samfile, details_file, args.do_types);
  
   printf("%s\t", "type");
   printf("%s\t", "gene_id");
