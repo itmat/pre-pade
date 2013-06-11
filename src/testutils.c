@@ -1,6 +1,6 @@
 #include <string.h>
 #include "testutils.h"
-#include "geneindex.h"
+#include "quant.h"
 
 void add_assertion(int passed, char *name) {
   struct Assertion *assertion = RESULTS.assertions + RESULTS.assertions_len++;

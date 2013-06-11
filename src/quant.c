@@ -2,7 +2,7 @@
 #include <strings.h>
 #include <stdlib.h>
 #include <regex.h>
-#include "geneindex.h"
+#include "quant.h"
 
 void print_exon(Exon *exon) {
   printf("%s:%d-%d\n", exon->chrom, exon->start, exon->end);

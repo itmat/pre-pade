@@ -1,4 +1,4 @@
-#include "geneindex.h"
+#include "quant.h"
 
 struct Assertion {
   char *name;

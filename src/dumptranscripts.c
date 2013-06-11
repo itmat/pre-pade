@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "geneindex.h"
+#include "quant.h"
 
 int main(int argc, char **argv) {
   

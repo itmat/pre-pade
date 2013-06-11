@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "geneindex.h"
+#include "quant.h"
 #include "testutils.h"
 
 void test_create_index() {

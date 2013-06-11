@@ -2,7 +2,7 @@
 #include <getopt.h>
 
 #include "sam.h"
-#include "geneindex.h"
+#include "quant.h"
 
 
 #define DEFAULT_MIN_OVERLAP 8
