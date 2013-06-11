@@ -282,8 +282,8 @@ void index_exons(ExonDB *exondb) {
     exon->min_start = min_start;
   }
 
-  struct ExonIndexEntry *index = calloc(n, sizeof(ExonIndexEntry));
-  ExonIndexEntry *entry = index;
+  IndexEntry *index = calloc(n, sizeof(IndexEntry));
+  IndexEntry *entry = index;
 
   for (exon = exons; exon < exons + n; exon++) {
 
@@ -450,12 +450,12 @@ void consolidate_exon_matches(ExonMatches *matches) {
  */
 int search_exons(ExonCursor *cursor,
                  ExonDB *exondb, char *chrom, int start, int end, int allow) {
-  ExonIndexEntry key;
+  IndexEntry key;
   key.chrom = chrom;
   key.start = key.end = start;
-  ExonIndexEntry *entry = 
+  IndexEntry *entry = 
     bsearch(&key, exondb->index, exondb->index_len, 
-            sizeof(ExonIndexEntry), 
+            sizeof(IndexEntry), 
             (int (*) (const void *, const void *))cmp_index_entry);
   LOG_TRACE("  Bsearch came back with %s:%d-%d\n",
             entry ? entry->exon->chrom : "",
@@ -568,8 +568,8 @@ Exon *next_exon(ExonCursor *cursor, int *flags) {
   return finish_cursor(cursor);
 }
 
-int cmp_index_entry(ExonIndexEntry *key,
-                    ExonIndexEntry *entry) {
+int cmp_index_entry(IndexEntry *key,
+                    IndexEntry *entry) {
 
   int cmp = strcmp(key->chrom, entry->chrom);
   int pos = key->start;

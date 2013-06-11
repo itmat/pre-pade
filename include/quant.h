@@ -71,7 +71,7 @@ typedef struct ExonDB ExonDB;
 typedef struct Transcript Transcript;
 typedef struct ExonCursor ExonCursor;
 typedef struct Quant Quant;
-typedef struct ExonIndexEntry ExonIndexEntry;
+typedef struct IndexEntry IndexEntry;
 typedef struct ExonMatch ExonMatch;
 typedef struct ExonMatches ExonMatches;
 typedef struct CigarCursor CigarCursor;
@@ -139,7 +139,7 @@ struct ExonList {
 struct ExonDB {
   ExonList exons;
 
-  struct ExonIndexEntry *index;
+  struct IndexEntry *index;
   int index_len;
 
   Transcript *transcripts;
@@ -174,17 +174,17 @@ struct ExonCursor {
   struct Exon *next;
 };
 
-/* The index is made up of a list of ExonIndexEntry structs, which
+/* The index is made up of a list of IndexEntry structs, which
    divide the genome into non-overlapping segments. This allows us to
    do a binary search on the index given some coordinates.  */
-struct ExonIndexEntry {
+struct IndexEntry {
 
-  // The coordinates of this rangen
+  // The coordinates of this range
   char *chrom;
   int start, end;
 
   // The first exon that overlaps the range specified above. To find
-  // all matching exons given a span, we search for the ExonIndexEntry
+  // all matching exons given a span, we search for the IndexEntry
   // that contains the start coordinate. That entry points to the
   // first matching exon. Then we advance through the exon list (just
   // doing exon++ since they're stored in sorted order) until we get
@@ -226,8 +226,8 @@ struct CigarCursor {
 /* These functions should all be documented where they're defined. */
 
 
-int cmp_index_entry(struct ExonIndexEntry *key,
-                    struct ExonIndexEntry *entry);
+int cmp_index_entry(struct IndexEntry *key,
+                    struct IndexEntry *entry);
 int search_exons(struct ExonCursor *cursor,
                  struct ExonDB *exondb, char *chrom, int start, int end, int allow);
 struct Exon *next_exon(struct ExonCursor *cursor, int *flags);

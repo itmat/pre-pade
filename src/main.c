@@ -268,7 +268,7 @@ void dump_index(char *filename, ExonDB *db) {
     perror(filename);
     exit(1);
   }
-  ExonIndexEntry *e;
+  IndexEntry *e;
   for (e = db->index; e < db->index + db->index_len; e++) {
     fprintf(index_file,  "%s:%d-%d\t%s:%d-%d\n",
             e->chrom, e->start, e->end, 

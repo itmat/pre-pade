@@ -22,7 +22,7 @@ void test_create_index() {
   int start_gte_end = 0;
   int entries_decrease = 0;
   
-  struct ExonIndexEntry *entry = db.index;
+  struct IndexEntry *entry = db.index;
 
   for (entry = db.index + 1; entry < db.index + db.index_len; entry++) {
     if (entry->start >= entry->end)
@@ -65,13 +65,13 @@ void test_create_index() {
 }
 
 void test_compare_index_entry() {
-  struct ExonIndexEntry entry = { "chr2", 100, 200 };
+  struct IndexEntry entry = { "chr2", 100, 200 };
 
-  struct ExonIndexEntry left_chrom  = { "chr1", 100 };
-  struct ExonIndexEntry left        = { "chr2", 50 };
-  struct ExonIndexEntry inside      = { "chr2", 150 };
-  struct ExonIndexEntry right       = { "chr2", 250 };
-  struct ExonIndexEntry right_chrom = { "chr3", 100 };
+  struct IndexEntry left_chrom  = { "chr1", 100 };
+  struct IndexEntry left        = { "chr2", 50 };
+  struct IndexEntry inside      = { "chr2", 150 };
+  struct IndexEntry right       = { "chr2", 250 };
+  struct IndexEntry right_chrom = { "chr3", 100 };
   
   assert_equals(-1, cmp_index_entry(&left_chrom, &entry), "Left chrom");
   assert_equals(-1, cmp_index_entry(&left, &entry), "Left");

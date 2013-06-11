@@ -1,4 +1,4 @@
-SAM_DIR=
+SAM_DIR=$(HOME)/src/samtools-0.1.19/
 
 CC=gcc
 
