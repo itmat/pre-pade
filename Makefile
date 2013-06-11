@@ -4,7 +4,7 @@ CC=gcc
 
 # Our headers are in include/, and we also need the SAM headers, which
 # are in the root directory of the samtools distribution.
-CFLAGS=-Iinclude -I$(SAM_DIR) -Wall
+CFLAGS=-Iinclude -I$(SAM_DIR) -Wall -DLOG_LEVEL_DEBUG
 
 # The location of the compiled sam library
 SAM_LIB=$(SAM_DIR)/libbam.a

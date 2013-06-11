@@ -143,6 +143,7 @@ struct RegionList {
    allows searching based on coordinate.  */
 struct GeneModel {
   RegionList exons;
+  RegionList introns;
 
   Transcript *transcripts;
   int num_transcripts;

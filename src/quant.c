@@ -257,24 +257,38 @@ void add_transcripts(GeneModel *gm) {
 void add_introns(GeneModel *gm) {
   Transcript *t;
   int num_introns = 0;
+  fprintf(stderr, "Adding introns\n");
   for (t = gm->transcripts; t < gm->transcripts + gm->num_transcripts; t++) {
-    if (t->exons_len) {
-      num_introns += t->exons_len - 1;
+    int introns_in_this_transcript = t->exons_len - 1;
+    if (introns_in_this_transcript > 0) {
+      num_introns += introns_in_this_transcript;
     }
   }
+  LOG_DEBUG("Allocating %d introns\n", num_introns);
 
   Region *introns = calloc(num_introns, sizeof(Region));
-  Region *intron = introns;
+
+  int j = 0;
+  LOG_DEBUG("Populating introns%s\n", "");
   for (t = gm->transcripts; t < gm->transcripts + gm->num_transcripts; t++) {
     int i;
-    for (i = 1; i + 1 < t->exons_len; i++) {
-      intron->start = t->exons[i]->end;
-      intron->end   = t->exons[i+1]->start;
-      intron->chrom = t->exons[i]->chrom;
+    for (i = 1; i < t->exons_len; i++) {
+      introns[j].start = t->exons[i-1]->end;
+      introns[j].end   = t->exons[i]->start;
+      introns[j].chrom = t->exons[i]->chrom;
+      j++;
     }
   }
-
+  fprintf(stderr, "J is %d\n", j);
+  LOG_DEBUG("Sorting %d introns\n", num_introns);
   qsort(introns, num_introns, sizeof(Region), ( int (*)(const void *, const void*) ) cmp_exons_by_end);
+
+  gm->introns.cap = num_introns;
+  gm->introns.len = num_introns;
+  gm->introns.items = introns;
+
+  LOG_DEBUG("Indexing introns%s\n", "");
+  index_regions(&gm->introns);
 
 }
 
@@ -671,6 +685,7 @@ int load_model(GeneModel *gm, char *filename) {
   parse_gtf_file(gm, filename);
   index_regions(&gm->exons);
   add_transcripts(gm);
+  add_introns(gm);
   return 0;
 }
 
