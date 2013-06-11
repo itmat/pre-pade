@@ -47,6 +47,16 @@ void incr_quant(Quant *q, int unique) {
 
 void print_exon_quants(FILE *file, ExonDB *db) {
 
+  fprintf(file, "%s\t", "type");
+  fprintf(file, "%s\t", "gene_id");
+  fprintf(file, "%s\t", "transcript_id");
+  fprintf(file, "%s\t", "exon_number");
+  fprintf(file, "%s\t", "chrom");
+  fprintf(file, "%s\t", "start");
+  fprintf(file, "%s\t", "end");
+  fprintf(file, "%s\t", "min_count");
+  fprintf(file, "%s\n", "max_count");
+
   int i;
   for (i = 0; i < db->exons.len; i++) {
     
@@ -351,6 +361,16 @@ int main(int argc, char **argv) {
   struct Args args;
   parse_args(&args, argc, argv);
 
+  FILE *out;
+  if (args.out_filename) {
+    out = fopen(args.out_filename, "w");
+    if (!out) {
+      perror(args.out_filename);
+      exit(1);
+    }
+  }
+  else 
+    out = stdout;
 
   struct ExonDB db;
   load_model(&db, args.gtf_filename);
@@ -371,17 +391,7 @@ int main(int argc, char **argv) {
   samfile_t *samfile = samopen(args.sam_filename, "r", NULL);
   accumulate_counts(&db, samfile, details_file, args.do_types);
  
-  printf("%s\t", "type");
-  printf("%s\t", "gene_id");
-  printf("%s\t", "transcript_id");
-  printf("%s\t", "exon_number");
-  printf("%s\t", "chrom");
-  printf("%s\t", "start");
-  printf("%s\t", "end");
-  printf("%s\t", "min_count");
-  printf("%s\n", "max_count");
-
-  print_exon_quants(stdout, &db);
+  print_exon_quants(out, &db);
   LOG_INFO("Cleaning up %s\n", "");
 
 
