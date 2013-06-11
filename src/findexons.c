@@ -7,6 +7,9 @@
 
 #define MIN_OVERLAP 8
 
+// Maximum number of spans that are allowed to appear in 
+#define MAX_SPANS_PER_READ 1000
+
 // Transcript counts
 // Intron counts
 // Gene counts
@@ -274,7 +277,7 @@ void print_match_details(FILE *file, bam1_t **reads, int num_reads,
 
 void accumulate_counts(ExonDB *db, samfile_t *samfile, FILE *details_file, 
                        unsigned int types) {
-  struct Span *read_spans = calloc(MAX_SPANS_PER_READ, sizeof(struct Span));
+  struct Span read_spans[MAX_SPANS_PER_READ];
 
   bam1_t *reads[] = { bam_init1(), bam_init1() };
   int num_reads;
