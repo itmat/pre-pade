@@ -50,7 +50,7 @@ void test_next_fragment_single() {
 
 
 void test_cigar_to_spans() {
-  char *sam_filename = "work/RUM.sam";
+  char *sam_filename = "testdata/RUM.sam";
   samfile_t *samfile = samopen(sam_filename, "r", NULL);  
   bam1_t *rec = bam_init1();
 
@@ -100,6 +100,8 @@ void test_cigar_to_spans() {
     read_num++;
   }
 
+  if (case_num < num_cases)
+    assert_equals(0, 1, "Ran out of records in sam file");
 }
 
 void test_cigar_to_spans2() {
@@ -157,6 +159,5 @@ int main(int argc, char **argv) {
   test_cigar_to_spans2();
   test_next_fragment_paired();
   test_next_fragment_single();
-  check_results();
-  return 0;
+  return check_results();
 }

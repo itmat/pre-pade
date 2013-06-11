@@ -44,6 +44,8 @@ test_geneindex : bin/testgeneindex
 test : bin/testgeneindex bin/testsamutils
 	bin/testgeneindex
 	bin/testsamutils
+	@echo
+	@echo "It looks like all tests passed."
 
 clean :
 	rm -f *.o $(bins)
