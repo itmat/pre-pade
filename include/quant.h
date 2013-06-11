@@ -131,6 +131,11 @@ struct ExonList {
   struct Exon *items;
   int len; // Current length of items
   int cap; // Current capacity (number of allocated items). len <= cap.
+
+  struct IndexEntry *index;
+  int index_len;
+
+
 };
 
 /* This is the main data structure used to store our transcript
@@ -138,9 +143,6 @@ struct ExonList {
    allows searching based on coordinate.  */
 struct ExonDB {
   ExonList exons;
-
-  struct IndexEntry *index;
-  int index_len;
 
   Transcript *transcripts;
   int num_transcripts;

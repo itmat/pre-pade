@@ -308,8 +308,8 @@ void index_exons(ExonDB *exondb) {
     
   }
 
-  exondb->index_len = entry - index;
-  exondb->index = index;
+  exondb->exons.index_len = entry - index;
+  exondb->exons.index = index;
 }
 
 int cmp_exon_end(Exon *exon, char *chrom, int pos) {
@@ -454,7 +454,7 @@ int search_exons(ExonCursor *cursor,
   key.chrom = chrom;
   key.start = key.end = start;
   IndexEntry *entry = 
-    bsearch(&key, exondb->index, exondb->index_len, 
+    bsearch(&key, exondb->exons.index, exondb->exons.index_len, 
             sizeof(IndexEntry), 
             (int (*) (const void *, const void *))cmp_index_entry);
   LOG_TRACE("  Bsearch came back with %s:%d-%d\n",

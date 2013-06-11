@@ -22,9 +22,9 @@ void test_create_index() {
   int start_gte_end = 0;
   int entries_decrease = 0;
   
-  struct IndexEntry *entry = db.index;
+  struct IndexEntry *entry = db.exons.index;
 
-  for (entry = db.index + 1; entry < db.index + db.index_len; entry++) {
+  for (entry = db.exons.index + 1; entry < db.exons.index + db.exons.index_len; entry++) {
     if (entry->start >= entry->end)
       start_gte_end++;
 
