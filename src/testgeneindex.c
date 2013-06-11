@@ -174,9 +174,9 @@ void test_exon_matches() {
 
   assert_equals(16, ms.cap, "Capacity");
 
-  assert_str_equals("a", ms.items[0].exon->chrom, "Chromosome");
-  assert_str_equals("b", ms.items[1].exon->chrom, "Chromosome");
-  assert_str_equals("c", ms.items[2].exon->chrom, "Chromosome");
+  assert_str_equals("a", ms.items[0].region->chrom, "Chromosome");
+  assert_str_equals("b", ms.items[1].region->chrom, "Chromosome");
+  assert_str_equals("c", ms.items[2].region->chrom, "Chromosome");
 
   consolidate_exon_matches(&ms);
   assert_equals(3, ms.len, "Len");
@@ -186,7 +186,7 @@ void test_exon_matches() {
 
   for (i = 0; i < 3; i++) {
     RegionMatch *m = ms.items + i;
-    char *chrom = m->exon->chrom;
+    char *chrom = m->region->chrom;
     
     if      (!strcmp(chrom, "a")) ma = m;
     else if (!strcmp(chrom, "b")) mb = m;
@@ -197,9 +197,9 @@ void test_exon_matches() {
   assert_not_null(mb, "mb");
   assert_not_null(mc, "mc");
 
-  assert_str_equals("a", ma->exon->chrom, "chrom a");
-  assert_str_equals("b", mb->exon->chrom, "chrom b");
-  assert_str_equals("c", mc->exon->chrom, "chrom c");
+  assert_str_equals("a", ma->region->chrom, "chrom a");
+  assert_str_equals("b", mb->region->chrom, "chrom b");
+  assert_str_equals("c", mc->region->chrom, "chrom c");
 
   assert_equals(0, ma->conflict, "conflict a");
   assert_equals(1, mb->conflict, "conflict b");

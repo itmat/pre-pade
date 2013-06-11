@@ -378,7 +378,7 @@ void add_match(RegionMatches *matches, Region *exon, int overlap, int conflict) 
   }
 
   RegionMatch *m = matches->items + matches->len++;
-  m->exon = exon;
+  m->region = exon;
   m->overlap = overlap;
   m->conflict = conflict;
 
@@ -454,7 +454,7 @@ void find_candidates(RegionMatches *matches, GeneModel *gm, char *ref,
 }
 
 int cmp_match_by_exon(RegionMatch *a, RegionMatch *b) {
-  return b->exon - a->exon;
+  return b->region - a->region;
 }
 
 void consolidate_exon_matches(RegionMatches *matches) {
@@ -467,7 +467,7 @@ void consolidate_exon_matches(RegionMatches *matches) {
   while (q < end) {
     if (cmp_match_by_exon(p, q)) {
       p++;
-      p->exon = q->exon;
+      p->region = q->region;
       p->overlap = q->overlap;
       p->conflict = q->conflict;
     }

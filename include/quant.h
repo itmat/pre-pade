@@ -199,8 +199,8 @@ struct IndexEntry {
 // Represents a match (or mismatch) of an exon for a particular read span. 
 struct RegionMatch {
 
-  // The exon we found
-  Region *exon;
+  // The region we found
+  Region *region;
 
   // Does the exon overlap the read span?
   int overlap;

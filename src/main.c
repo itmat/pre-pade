@@ -286,7 +286,7 @@ void print_match_details(FILE *file, bam1_t **reads, int num_reads,
 
     int hi = bam_aux2i(bam_aux_get(reads[0], "HI"));
     char *qname = bam1_qname(reads[0]);
-    Region *exon = matches->items[i].exon;
+    Region *exon = matches->items[i].region;
 
     fprintf(file, "%s\t", exon->gene_id);
     fprintf(file, "%s\t", exon->transcript_id);
@@ -353,12 +353,11 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
     for (i = 0; i < matches.len; i++) {
 
       int consistent = !matches.items[i].conflict;
-      Region *exon = matches.items[i].exon;
+      Region *exon = matches.items[i].region;
 
       if (do_exons && consistent) {
         incr_quant(&exon->exon_quant, num_alns == 1);
       }
-
 
       if (do_junctions &&
           matches_junction(exon, read_spans, num_fwd_spans, num_rev_spans, min_overlap)) {
