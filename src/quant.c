@@ -254,21 +254,20 @@ void add_transcripts(ExonDB *db) {
 }
 
 
-void index_exons(ExonDB *exondb) {
-  LOG_INFO("Indexing %d exons\n", exondb->exons.len);
-  int n = exondb->exons.len;
+void index_exons(ExonList *exons) {
+  LOG_INFO("Indexing %d exons\n", exons->len);
+  int n = exons->len;
 
-  Exon *exons = exondb->exons.items;
-  qsort(exons, n, sizeof(Exon), ( int (*)(const void *, const void*) ) cmp_exons_by_end);
+  qsort(exons->items, n, sizeof(Exon), ( int (*)(const void *, const void*) ) cmp_exons_by_end);
 
   int min_start = 0;
   char *chrom = NULL;
 
-  LOG_INFO("Finding minimum start positions for %d exons\n", exondb->exons.len);
+  LOG_INFO("Finding minimum start positions for %d exons\n", exons->len);
 
   Exon *exon;
 
-  for (exon = exons + n - 1; exon >= exons; exon--) {
+  for (exon = exons->items + n - 1; exon >= exons->items; exon--) {
 
     if (!chrom || strcmp(chrom, exon->chrom)) {
       chrom = exon->chrom;
@@ -285,11 +284,11 @@ void index_exons(ExonDB *exondb) {
   IndexEntry *index = calloc(n, sizeof(IndexEntry));
   IndexEntry *entry = index;
 
-  for (exon = exons; exon < exons + n; exon++) {
+  for (exon = exons->items; exon < exons->items + n; exon++) {
 
     // If it's the first exon for this chromosome, the start
     // position is the start of the chromosome.
-    if (exon == exons || strcmp(exon->chrom, (exon - 1)->chrom)) {
+    if (exon == exons->items || strcmp(exon->chrom, (exon - 1)->chrom)) {
       entry->chrom = exon->chrom;
       entry->start = 0;
       entry->end   = exon->end;
@@ -308,8 +307,8 @@ void index_exons(ExonDB *exondb) {
     
   }
 
-  exondb->exons.index_len = entry - index;
-  exondb->exons.index = index;
+  exons->index_len = entry - index;
+  exons->index = index;
 }
 
 int cmp_exon_end(Exon *exon, char *chrom, int pos) {
@@ -646,7 +645,7 @@ int matches_junction(Exon *left, Span *spans, int num_fwd_spans, int num_rev_spa
 
 int load_model(ExonDB *db, char *filename) {
   parse_gtf_file(db, filename);
-  index_exons(db);
+  index_exons(&db->exons);
   add_transcripts(db);
   return 0;
 }

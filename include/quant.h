@@ -238,7 +238,7 @@ int parse_gtf_attr_int(char *str, char *name, int *value);
 void consolidate_exon_matches(ExonMatches *matches);
 int cmp_match_by_exon(ExonMatch *a, ExonMatch *b);
 void parse_gtf_file(ExonDB *exondb, char *filename);
-void index_exons(ExonDB *exondb);
+void index_exons(ExonList *exons);
 void init_exon_matches(ExonMatches *matches);
 void find_candidates(ExonMatches *matches, ExonDB *db, char *ref,
                      Span *spans, int num_fwd_spans, int num_rev_spans);
