@@ -5,7 +5,7 @@
 #include "geneindex.h"
 #include "sam.h"
 
-#define MIN_OVERLAP 8
+#define DEFAULT_MIN_OVERLAP 8
 
 // Maximum number of spans that are allowed to appear in 
 #define MAX_SPANS_PER_READ 1000
@@ -24,6 +24,7 @@ struct Args {
   int   junctions;
   unsigned int  types_specified;
   unsigned int  do_types;
+  int min_overlap;
 };
 
 
@@ -98,14 +99,12 @@ void print_exon_quants(FILE *file, ExonDB *db) {
 
 
 struct option longopts[] = {
-  { "details",   required_argument, NULL, 'd' },
-  { "output",    required_argument, NULL, 'o' },
-  { "type",      no_argument,       NULL, 't' },
-  { NULL,        0,                 NULL,  0  }
+  { "details",     required_argument, NULL, 'd' },
+  { "output",      required_argument, NULL, 'o' },
+  { "type",        no_argument,       NULL, 't' },
+  { "min-overlap", required_argument, NULL, 'm' },
+  { NULL,          0,                 NULL,  0  }
 };
-
-
-
 
 
 void usage(char *prog, int retval) {
@@ -131,6 +130,12 @@ void usage(char *prog, int retval) {
     case 'o':
       help = "Write output to FILE rather than stdout.";
       arg  = "FILE";
+      break;
+
+    case 'm':
+      help = buf;
+      snprintf(help, sizeof(buf), "Minimum overlap for junction hit, default %d", DEFAULT_MIN_OVERLAP);
+      arg  = "BASES";
       break;
 
     case 't':
@@ -159,17 +164,19 @@ void usage(char *prog, int retval) {
 }
 
 void parse_args(struct Args *args, int argc, char **argv) {
+  
   args->sam_filename = NULL;
   args->gtf_filename = NULL;
   args->out_filename = NULL;
   args->details_filename = NULL;
   args->index_filename = NULL;
+  args->min_overlap = DEFAULT_MIN_OVERLAP;
 
   int ch;
   args->types_specified = 0;
   int i;
   
-  while ((ch = getopt_long(argc, argv, "d:o:x:t:", longopts, NULL)) != -1) {
+  while ((ch = getopt_long(argc, argv, "d:o:x:t:m:", longopts, NULL)) != -1) {
     switch(ch) {
     case 'd':
       args->details_filename = optarg;
@@ -181,6 +188,10 @@ void parse_args(struct Args *args, int argc, char **argv) {
 
     case 'x':
       args->index_filename = optarg;
+      break;
+
+    case 'm':
+      args->min_overlap = atoi(optarg);
       break;
 
     case 't':
@@ -222,6 +233,7 @@ void parse_args(struct Args *args, int argc, char **argv) {
   fprintf(stderr, "GTF input file: %s\n", args->gtf_filename);
   fprintf(stderr, "SAM input file: %s\n", args->sam_filename);
   fprintf(stderr, "Output file: %s\n", args->out_filename ? args->out_filename : "(stdout)");
+  fprintf(stderr, "Min overlap: %d\n", args->min_overlap);
 }
 
 FILE *open_details_file(char *filename) {
@@ -286,7 +298,7 @@ void print_match_details(FILE *file, bam1_t **reads, int num_reads,
 }
 
 void accumulate_counts(ExonDB *db, samfile_t *samfile, FILE *details_file, 
-                       unsigned int types) {
+                       unsigned int types, int min_overlap) {
   struct Span read_spans[MAX_SPANS_PER_READ];
 
   bam1_t *reads[] = { bam_init1(), bam_init1() };
@@ -346,7 +358,7 @@ void accumulate_counts(ExonDB *db, samfile_t *samfile, FILE *details_file,
 
 
       if (do_junctions &&
-          matches_junction(exon, read_spans, num_fwd_spans, num_rev_spans, MIN_OVERLAP)) {
+          matches_junction(exon, read_spans, num_fwd_spans, num_rev_spans, min_overlap)) {
         incr_quant(&exon->junction_quant, num_alns == 1);
       }
     }
@@ -389,7 +401,7 @@ int main(int argc, char **argv) {
     dump_index(args.index_filename, &db);
 
   samfile_t *samfile = samopen(args.sam_filename, "r", NULL);
-  accumulate_counts(&db, samfile, details_file, args.do_types);
+  accumulate_counts(&db, samfile, details_file, args.do_types, args.min_overlap);
  
   print_exon_quants(out, &db);
   LOG_INFO("Cleaning up %s\n", "");

@@ -5,8 +5,6 @@
 #include "samutils.h"
 #include "geneindex.h"
 
-
-
 void print_exon(Exon *exon) {
   printf("%s:%d-%d\n", exon->chrom, exon->start, exon->end);
 }
@@ -592,7 +590,7 @@ int cmp_index_entry(ExonIndexEntry *key,
 
 
 int matches_junction(Exon *left, Span *spans, int num_fwd_spans, int num_rev_spans, int min_overlap) {
-
+  
   Exon *right = next_exon_in_transcript(left);
 
   Span *last_fwd_span = spans + num_fwd_spans - 1;
@@ -634,9 +632,13 @@ int matches_junction(Exon *left, Span *spans, int num_fwd_spans, int num_rev_spa
     // exon. If the left edge of the next span matches the left edge
     // of the next exon, and both this span and the next are at least
     // as long as the min_overlap, then we have a hit. Otherwise we don't.
-    return ((span+1)->start == right->start &&
-            span->end - span->start >= min_overlap &&
-            (span+1)->end - (span+1)->start >= min_overlap);
+    const int matches_right = (span+1)->start == right->start;
+    const int left_overlap  = span->end       - span->start;
+    const int right_overlap = (span + 1)->end - (span + 1)->start;
+
+    return matches_right && 
+      left_overlap  >= min_overlap &&
+      right_overlap >= min_overlap;
   }
 
   return 0;
