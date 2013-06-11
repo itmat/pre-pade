@@ -26,16 +26,16 @@ endif
 %.o : src/%.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-bin/dumptranscripts : geneindex.o dumptranscripts.o $(SAM_LIB)
+bin/dumptranscripts : quant.o dumptranscripts.o $(SAM_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
-bin/findexons : findexons.o geneindex.o $(SAM_LIB)
+bin/findexons : findexons.o quant.o $(SAM_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
-bin/testgeneindex : testgeneindex.o geneindex.o testutils.o $(SAM_LIB)
+bin/testgeneindex : testgeneindex.o quant.o testutils.o $(SAM_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
-bin/testsamutils : testsamutils.o geneindex.o testutils.o $(SAM_LIB)
+bin/testsamutils : testsamutils.o quant.o testutils.o $(SAM_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 test_geneindex : bin/testgeneindex
