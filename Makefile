@@ -10,7 +10,7 @@ CFLAGS=-Iinclude -I$(SAM_DIR) -Wall
 SAM_LIB=$(SAM_DIR)/libbam.a
 
 # SAM requires libz
-LDFLAGS=-lz
+LDFLAGS=-lz -lpthread
 
 bins=bin/quantify bin/dumptranscripts
 
