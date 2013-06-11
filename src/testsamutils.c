@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include "samutils.h"
 #include "geneindex.h"
 #include "sam.h"
 #include "testutils.h"

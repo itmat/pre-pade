@@ -1,28 +1,42 @@
-PERF_MAX_LOG_N=8
+SAM_DIR=
 
-OPTIONS=-Iinclude -I../samtools-0.1.19/ -Wall
+CC=gcc
 
-SAM_LIB=../samtools-0.1.19/libbam.a
-SAM_OPTS=-lz
+# Our headers are in include/, and we also need the SAM headers, which
+# are in the root directory of the samtools distribution.
+CFLAGS=-Iinclude -I$(SAM_DIR) -Wall
+
+# The location of the compiled sam library
+SAM_LIB=$(SAM_DIR)/libbam.a
+
+# SAM requires libz
+LDFLAGS=-lz
 
 bins=bin/findexons bin/dumptranscripts
 
-all : $(bins)
+all : check_sam $(bins) 
+
+.PHONY : check_sam
+
+check_sam :
+ifndef SAM_DIR
+	$(error Pre-pade requires the samtools library. Please add SAM_DIR=DIR to your command, where DIR is the directory containing the samtool headers and compiled libraries.)
+endif
 
 %.o : src/%.c
-	gcc $(OPTIONS) -o $@ -c $<
+	$(CC) $(CFLAGS) -o $@ -c $<
 
-bin/dumptranscripts : geneindex.o src/dumptranscripts.c
-	gcc $(OPTIONS) -o $@ $^
+bin/dumptranscripts : geneindex.o src/dumptranscripts.o $(SAM_LIB)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
-bin/findexons : samutils.o src/findexons.c geneindex.o $(SAM_LIB)
-	gcc $(OPTIONS) -g $(SAM_OPTS) -o $@ $^
+bin/findexons : src/findexons.o geneindex.o $(SAM_LIB)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
-bin/testgeneindex : src/testgeneindex.c geneindex.o testutils.o
-	gcc $(OPTIONS) -o $@ $^
+bin/testgeneindex : src/testgeneindex.o geneindex.o testutils.o $(SAM_LIB)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
-bin/testsamutils : src/testsamutils.c samutils.o testutils.o $(SAM_LIB)
-	gcc $(OPTIONS) $(SAM_OPTS) -o $@ $^
+bin/testsamutils : src/testsamutils.o geneindex.o testutils.o $(SAM_LIB)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 test_geneindex : bin/testgeneindex
 	bin/testgeneindex
@@ -30,25 +44,8 @@ test_geneindex : bin/testgeneindex
 test : bin/testgeneindex bin/testsamutils
 	bin/testgeneindex
 	bin/testsamutils
-#	nosetests --with-doctest
 
 clean :
 	rm -f *.o $(bins)
 	rm -f `find . -name \*~`
-
-site :
-	rm -rf doc/generated
-	sphinx-apidoc pade -o doc/generated
-	cd doc; make clean html
-
-deploy_site:
-
-	cd doc; make html
-	cd doc/_build/html; tar cf ../../../site.tar *
-	git checkout gh-pages
-	tar xf site.tar
-	git add `tar tf site.tar`
-	git commit -m 'Updating site'
-	git push origin gh-pages
-	git checkout master
 

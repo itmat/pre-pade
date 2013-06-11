@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <getopt.h>
 
-#include "samutils.h"
-#include "geneindex.h"
 #include "sam.h"
+#include "geneindex.h"
+
 
 #define DEFAULT_MIN_OVERLAP 8
 
