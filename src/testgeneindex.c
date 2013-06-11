@@ -4,6 +4,7 @@
 
 void test_create_index() {
   struct ExonDB db;
+
   parse_gtf_file(&db, "testdata/arabidopsis.gtf");
   index_exons(&db);  
   add_transcripts(&db);
@@ -12,7 +13,7 @@ void test_create_index() {
 
   struct Exon *exon = db.exons.items;
   assert_str_equals("1", exon->chrom, "First exon chromosome");
-  assert_equals(28692193, exon->start, "First exon start");
+  assert_equals(28692192, exon->start, "First exon start");
   assert_equals(28692362, exon->end, "First exon end");
   assert_str_equals("protein_coding", exon->source, "First exon source");
   assert_str_equals("exon", exon->feature, "First exon feature");
@@ -36,6 +37,7 @@ void test_create_index() {
       chroms_decrease++;
   }
 
+
   assert_equals(0, chroms_decrease, "Chromosomes decrease");
   assert_equals(0, start_gte_end, "Entries with start greater than end");
   assert_equals(0, entries_decrease, "Entries decrease");
@@ -49,9 +51,10 @@ void test_create_index() {
   //assert_exon_ptr_equals(NULL, next_exon(&cursor, &flags), 
   //                         "Not found");
 
-  search_exons(&cursor, &db, "1", 28692193, 28692362, 0);
+  search_exons(&cursor, &db, "1", 28692192, 28692362, 0);
+
   exon = next_exon(&cursor, &flags);
-  
+
   assert_str_equals("1", exon->chrom, "Chromosome");
 
   assert_str_equals("AT1G76510.1", db.transcripts[3].id, "Transcript id");
@@ -212,7 +215,7 @@ void test_matches_junction() {
   add_transcripts(&db);
 
   const int j_start = 28696939;
-  const int j_end   = 28697165;
+  const int j_end   = 28697164;
 
   assert_str_equals("AT1G76490.1", db.transcripts[1].id, "Transcript id\n");
   assert_equals(j_start, db.transcripts[1].exons[0]->end, "Intron start\n");
