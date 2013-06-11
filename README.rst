@@ -10,18 +10,38 @@ high-throughput genomics data, such as BED files or SAM/BAM files.
 Installing
 ==========
 
-If you want to install pre-pade tools into a development environment
-(a local directory, not a system install) do:
+You will need to compile the main pre-pade program, which is called
+"quantify". It depends on the samtools library and header files. If
+you don't already have a copy of samtools, please download it from
+here: http://samtools.sourceforge.net/. Pre-pade has been tested with
+samtools 0.1.19. Once you download samtools, please compile it. You
+should be able to do that simply by typing "make" in the samtools
+directory.
 
-  python setup.py develop
+Once you've compiled samtools, you're ready to compile prepade. In the
+root directory of the pre-pade distribution, type::
+
+  make SAM_DIR=DIR
+
+where DIR is the path to the samtools directory.
+
+This should create a program called "quantify" in the bin
+directory. You can thin run it by doing::
+
+  bin/quantify
 
 Running
 =======
 
-Currently the prepade tools are available as runnable python modules,
-not as executable scripts. We might make executable wrappers for them
-at some point.
+quantify requires two input files: the gene model as a GTF file, and a
+SAM file containing the aligned reads.
 
-Please run:
+The GTF file should have the "gene_id", "transcript_id", and
+"exon_number" tags set in the last field. We use these values to
+determine the structure of the gene model.
 
-  python -m prepade.quantify
+The SAM file must be sorted by read id, not by chromosomal
+coordinates.
+
+To get help on running quantify, just run "bin/quantify" without any
+options.
