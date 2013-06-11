@@ -26,7 +26,7 @@ void assert_not_null(void *x, char *name) {
   add_assertion(x != NULL, msg);
 }
 
-void assert_exon_ptr_equals(struct Exon *a, struct Exon *b, char *name) {
+void assert_exon_ptr_equals(struct Region *a, struct Region *b, char *name) {
   add_assertion(a == b, name);
 }
 

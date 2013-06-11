@@ -4,7 +4,7 @@
 #include <regex.h>
 #include "quant.h"
 
-void print_exon(Exon *exon) {
+void print_exon(Region *exon) {
   printf("%s:%d-%d\n", exon->chrom, exon->start, exon->end);
 }
 
@@ -78,7 +78,7 @@ void parse_gtf_file(GeneModel *gm, char *filename) {
 
   int exons_len = 0;
   int exons_cap = 1000;
-  Exon *exons = calloc(exons_cap, sizeof(Exon));
+  Region *exons = calloc(exons_cap, sizeof(Region));
 
   char *line = NULL;
   size_t linecap = 0;
@@ -91,14 +91,14 @@ void parse_gtf_file(GeneModel *gm, char *filename) {
     }
 
     if (exons_len == exons_cap) {
-      Exon *old_exons = exons;
+      Region *old_exons = exons;
       int old_exons_cap = exons_cap;
       LOG_DEBUG("Growing exons to %d\n", exons_cap);
 
       exons_cap *= 2;
 
-      exons = calloc(exons_cap, sizeof(Exon));
-      memcpy(exons, old_exons, old_exons_cap * sizeof(Exon));
+      exons = calloc(exons_cap, sizeof(Region));
+      memcpy(exons, old_exons, old_exons_cap * sizeof(Region));
       free(old_exons);
     }
 
@@ -106,7 +106,7 @@ void parse_gtf_file(GeneModel *gm, char *filename) {
 
     char *tok = line;    
     int i;
-    Exon *exon = exons + exons_len;
+    Region *exon = exons + exons_len;
 
     for (i = 0; i < num_fields; i++) {
       char *end = index(tok, i == num_fields - 1 ? 0 : '\t');
@@ -169,7 +169,7 @@ void parse_gtf_file(GeneModel *gm, char *filename) {
   gm->exons.items = exons;
 }
 
-int cmp_exons_by_end(Exon *a, Exon *b) {
+int cmp_exons_by_end(Region *a, Region *b) {
   int str = strcmp(a->chrom, b->chrom);
   if (str) {
     return str;
@@ -185,7 +185,7 @@ int cmp_id_to_transcript(char *id, Transcript *b) {
   return strcmp(id, b->id);
 }
 
-int cmp_exon_ptr_end(Exon **a, Exon **b) {
+int cmp_exon_ptr_end(Region **a, Region **b) {
   int str = strcmp((*a)->chrom, (*b)->chrom);
   if (str) {
     return str;
@@ -197,7 +197,7 @@ int cmp_exon_ptr_end(Exon **a, Exon **b) {
 void add_transcripts(GeneModel *gm) {
   LOG_DEBUG("Adding transcripts%s\n", "");
 
-  Exon *exons = gm->exons.items;
+  Region *exons = gm->exons.items;
   int i, n = gm->exons.len;
   Transcript *p, *q;
 
@@ -230,14 +230,14 @@ void add_transcripts(GeneModel *gm) {
   LOG_DEBUG("Found %d transcripts\n", num_transcripts);
   // Allocate space for the exon pointers in each transcript
   for (i = 0; i < num_transcripts; i++) {
-    transcripts[i].exons = calloc(transcripts[i].exons_cap, sizeof(Exon*));
+    transcripts[i].exons = calloc(transcripts[i].exons_cap, sizeof(Region*));
   }
 
   // Now for each exon, find its transcript, set its pointer to that
   // transcript, and add the exon to that transcript's list.
   for (i = 0; i < n; i++) {
 
-    Exon *e = exons + i;
+    Region *e = exons + i;
 
     Transcript *t = bsearch(e->transcript_id, transcripts, num_transcripts, 
                             sizeof(Transcript), 
@@ -247,7 +247,7 @@ void add_transcripts(GeneModel *gm) {
   }
 
   for (i = 0; i < num_transcripts; i++) {
-    qsort(transcripts[i].exons, transcripts[i].exons_cap, sizeof(Exon*), ( int (*)(const void *, const void*) ) cmp_exon_ptr_end);
+    qsort(transcripts[i].exons, transcripts[i].exons_cap, sizeof(Region*), ( int (*)(const void *, const void*) ) cmp_exon_ptr_end);
   }
 
   gm->num_transcripts = num_transcripts;
@@ -255,18 +255,18 @@ void add_transcripts(GeneModel *gm) {
 }
 
 
-void index_exons(ExonList *exons) {
+void index_exons(RegionList *exons) {
   LOG_INFO("Indexing %d exons\n", exons->len);
   int n = exons->len;
 
-  qsort(exons->items, n, sizeof(Exon), ( int (*)(const void *, const void*) ) cmp_exons_by_end);
+  qsort(exons->items, n, sizeof(Region), ( int (*)(const void *, const void*) ) cmp_exons_by_end);
 
   int min_start = 0;
   char *chrom = NULL;
 
   LOG_INFO("Finding minimum start positions for %d exons\n", exons->len);
 
-  Exon *exon;
+  Region *exon;
 
   for (exon = exons->items + n - 1; exon >= exons->items; exon--) {
 
@@ -312,7 +312,7 @@ void index_exons(ExonList *exons) {
   exons->index = index;
 }
 
-int cmp_exon_end(Exon *exon, char *chrom, int pos) {
+int cmp_exon_end(Region *exon, char *chrom, int pos) {
   int str = strcmp(exon->chrom, chrom);
   if (str) {
     return str;
@@ -320,34 +320,34 @@ int cmp_exon_end(Exon *exon, char *chrom, int pos) {
   return exon->end - pos;
 }
 
-void init_exon_matches(ExonMatches *matches) {
+void init_exon_matches(RegionMatches *matches) {
   matches->cap = 1;
   matches->len = 0;
-  matches->items = calloc(matches->cap, sizeof(ExonMatch));
+  matches->items = calloc(matches->cap, sizeof(RegionMatch));
 }
 
-void add_match(ExonMatches *matches, Exon *exon, int overlap, int conflict) {
+void add_match(RegionMatches *matches, Region *exon, int overlap, int conflict) {
 
   if (matches->len == matches->cap) {
 
-    ExonMatch *old = matches->items;
+    RegionMatch *old = matches->items;
     int old_cap = matches->cap;
     
     matches->cap *= 2;
     
-    matches->items = calloc(matches->cap, sizeof(ExonMatch));
-    memcpy(matches->items, old, old_cap * sizeof(ExonMatch));
+    matches->items = calloc(matches->cap, sizeof(RegionMatch));
+    memcpy(matches->items, old, old_cap * sizeof(RegionMatch));
     free(old);
   }
 
-  ExonMatch *m = matches->items + matches->len++;
+  RegionMatch *m = matches->items + matches->len++;
   m->exon = exon;
   m->overlap = overlap;
   m->conflict = conflict;
 
 };
 
-Exon *next_exon_in_transcript(Exon *e) {
+Region *next_exon_in_transcript(Region *e) {
 
   Transcript *t = e->transcript;
 
@@ -363,7 +363,7 @@ Exon *next_exon_in_transcript(Exon *e) {
 
 
 
-void find_candidates(ExonMatches *matches, GeneModel *gm, char *ref,
+void find_candidates(RegionMatches *matches, GeneModel *gm, char *ref,
                     Span *spans, int num_fwd_spans, int num_rev_spans) {
 
   matches->len = 0;
@@ -379,8 +379,8 @@ void find_candidates(ExonMatches *matches, GeneModel *gm, char *ref,
 
     LOG_TRACE("  Looking at span %d-%d\n", span->start, span->end);
 
-    struct Exon *exon;
-    ExonCursor exon_curs;
+    struct Region *exon;
+    RegionCursor exon_curs;
     search_exons(&exon_curs, &gm->exons, ref, span->start, span->end, ALLOW_ALL);
 
     int flags = 0;
@@ -416,16 +416,16 @@ void find_candidates(ExonMatches *matches, GeneModel *gm, char *ref,
   consolidate_exon_matches(matches);
 }
 
-int cmp_match_by_exon(ExonMatch *a, ExonMatch *b) {
+int cmp_match_by_exon(RegionMatch *a, RegionMatch *b) {
   return b->exon - a->exon;
 }
 
-void consolidate_exon_matches(ExonMatches *matches) {
-  qsort(matches->items, matches->len, sizeof(ExonMatch), ( int (*)(const void *, const void*) ) cmp_match_by_exon);  
+void consolidate_exon_matches(RegionMatches *matches) {
+  qsort(matches->items, matches->len, sizeof(RegionMatch), ( int (*)(const void *, const void*) ) cmp_match_by_exon);  
 
-  ExonMatch *p   = matches->items;
-  ExonMatch *q   = matches->items + 1;
-  ExonMatch *end = matches->items + matches->len;
+  RegionMatch *p   = matches->items;
+  RegionMatch *q   = matches->items + 1;
+  RegionMatch *end = matches->items + matches->len;
 
   while (q < end) {
     if (cmp_match_by_exon(p, q)) {
@@ -448,8 +448,8 @@ void consolidate_exon_matches(ExonMatches *matches) {
  * Returns a pointer to the first exon whose end is greater than my
  * start.
  */
-int search_exons(ExonCursor *cursor,
-                 ExonList *list, char *chrom, int start, int end, int allow) {
+int search_exons(RegionCursor *cursor,
+                 RegionList *list, char *chrom, int start, int end, int allow) {
   IndexEntry key;
   key.chrom = chrom;
   key.start = key.end = start;
@@ -476,7 +476,7 @@ int search_exons(ExonCursor *cursor,
 /* Compare the given exon to the specified range and return flags
  * indicating if and how it overlaps. 0 means it matches exactly.
  */
-int cmp_exon(Exon *e, char *chrom, int start, int end) {
+int cmp_exon(Region *e, char *chrom, int start, int end) {
 
   int result = 0;
 
@@ -516,22 +516,22 @@ int cmp_exon(Exon *e, char *chrom, int start, int end) {
   return result;
 }
 
-Exon *finish_cursor(ExonCursor *cursor) {
+Region *finish_cursor(RegionCursor *cursor) {
   cursor->next = NULL;
   cursor->allow = 0;
   return NULL;
 }
 
-Exon *next_exon(ExonCursor *cursor, int *flags) {
+Region *next_exon(RegionCursor *cursor, int *flags) {
 
-  ExonList *list = cursor->list;
-  Exon *last_exon = list->items + list->len;
+  RegionList *list = cursor->list;
+  Region *last_exon = list->items + list->len;
 
   int allow = cursor->allow;
   int disallow = ~allow;
 
   while (cursor->next != NULL && cursor->next <= last_exon) {
-    Exon *exon = cursor->next++;
+    Region *exon = cursor->next++;
     int cmp = cmp_exon(exon, cursor->chrom, cursor->start, cursor->end);
 
     if ( cmp & WRONG_CHROMOSOME ) {
@@ -588,9 +588,9 @@ int cmp_index_entry(IndexEntry *key,
 }
 
 
-int matches_junction(Exon *left, Span *spans, int num_fwd_spans, int num_rev_spans, int min_overlap) {
+int matches_junction(Region *left, Span *spans, int num_fwd_spans, int num_rev_spans, int min_overlap) {
   
-  Exon *right = next_exon_in_transcript(left);
+  Region *right = next_exon_in_transcript(left);
 
   Span *last_fwd_span = spans + num_fwd_spans - 1;
   Span *last_rev_span = spans + num_fwd_spans + num_rev_spans - 1;

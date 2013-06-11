@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
     printf("  num_exons: %d\n", t->exons_len);
     printf("  exons:\n");
     for (j = 0; j < t->exons_len; j++) {
-      Exon *e = t->exons[j];
+      Region *e = t->exons[j];
       printf("  - exon_number: %d\n", e->exon_number);
       printf("    chrom: %s\n", e->chrom);
       printf("    strand: %c\n", e->strand);

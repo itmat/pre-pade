@@ -61,7 +61,7 @@ void print_exon_quants(FILE *file, GeneModel *gm) {
   int i;
   for (i = 0; i < gm->exons.len; i++) {
     
-    Exon *exon = gm->exons.items + i;
+    Region *exon = gm->exons.items + i;
     
     if (exon->exon_quant.min) {
       fprintf(file, "%s\t", "exon");
@@ -80,7 +80,7 @@ void print_exon_quants(FILE *file, GeneModel *gm) {
     
     Transcript *t = gm->transcripts + i;
     
-    Exon *left, *right;
+    Region *left, *right;
     for (left = t->exons[0]; (right = next_exon_in_transcript(left)); left = right) {
       if (left->junction_quant.min) {
         fprintf(file, "%s\t",    "junction");
@@ -280,13 +280,13 @@ void dump_index(char *filename, GeneModel *gm) {
 
 
 void print_match_details(FILE *file, bam1_t **reads, int num_reads, 
-                         ExonMatches *matches) {
+                         RegionMatches *matches) {
   int i;
   for (i = 0; i < matches->len; i++) {
 
     int hi = bam_aux2i(bam_aux_get(reads[0], "HI"));
     char *qname = bam1_qname(reads[0]);
-    Exon *exon = matches->items[i].exon;
+    Region *exon = matches->items[i].exon;
 
     fprintf(file, "%s\t", exon->gene_id);
     fprintf(file, "%s\t", exon->transcript_id);
@@ -307,7 +307,7 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
   bam1_t *reads[] = { bam_init1(), bam_init1() };
   int num_reads;
 
-  ExonMatches matches;
+  RegionMatches matches;
   init_exon_matches(&matches);  
 
   const int do_exons       = types & (1 << QUANT_TYPE_EXON);
@@ -353,7 +353,7 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
     for (i = 0; i < matches.len; i++) {
 
       int consistent = !matches.items[i].conflict;
-      Exon *exon = matches.items[i].exon;
+      Region *exon = matches.items[i].exon;
 
       if (do_exons && consistent) {
         incr_quant(&exon->exon_quant, num_alns == 1);

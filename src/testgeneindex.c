@@ -9,7 +9,7 @@ void test_create_index() {
 
   assert_equals(13214, gm.exons.len, "Number of exons loaded");
   
-  struct Exon *exon = gm.exons.items;
+  struct Region *exon = gm.exons.items;
   assert_str_equals("1", exon->chrom, "First exon chromosome");
   assert_equals(28692192, exon->start, "First exon start");
   assert_equals(28692362, exon->end, "First exon end");
@@ -40,7 +40,7 @@ void test_create_index() {
   assert_equals(0, start_gte_end, "Entries with start greater than end");
   assert_equals(0, entries_decrease, "Entries decrease");
 
-  struct ExonCursor cursor;
+  struct RegionCursor cursor;
   int flags;
   //  search_exons(&cursor, &gm, "chrfoobar", 0, 0, 0);
   // assert_exon_ptr_equals(NULL, next_exon(&cursor, &flags), "Unknown chrom");
@@ -57,8 +57,8 @@ void test_create_index() {
 
   assert_str_equals("AT1G76510.1", gm.transcripts[3].id, "Transcript id");
   assert_equals(14, gm.transcripts[3].exons_len, "Num exons");
-  assert_equals(3, gm.transcripts[3].exons[11]->exon_number, "Exon number");
-  assert_equals((size_t)(gm.transcripts + 3), (size_t)(gm.transcripts[3].exons[11]->transcript), "Exon's pointer to transcript");
+  assert_equals(3, gm.transcripts[3].exons[11]->exon_number, "Region number");
+  assert_equals((size_t)(gm.transcripts + 3), (size_t)(gm.transcripts[3].exons[11]->transcript), "Region's pointer to transcript");
 
 }
 
@@ -80,12 +80,12 @@ void test_compare_index_entry() {
 }
 
 void test_compare_exon() {
-  struct Exon e;
+  struct Region e;
   e.chrom = "chr1";
   e.start = 100;
   e.end   = 200;
 
-  struct ExonCompTestCase {
+  struct RegionCompTestCase {
     int expected;
     char *chrom;
     int start;
@@ -106,11 +106,11 @@ void test_compare_exon() {
       CROSS_EXON_END,   "chr1", 50, 250, "Cross exon start and end" }
   };
 
-  int n = sizeof(cases) / sizeof(struct ExonCompTestCase);
+  int n = sizeof(cases) / sizeof(struct RegionCompTestCase);
   int i;
 
   for (i = 0; i < n; i++) {
-    struct ExonCompTestCase *tc = cases + i;
+    struct RegionCompTestCase *tc = cases + i;
     int got = cmp_exon(&e, tc->chrom, tc->start, tc->end);
     assert_equals(tc->expected, got, cases[i].name);
   }
@@ -149,14 +149,14 @@ void test_parse_gtf_attr() {
   int exon_number;
   int status = parse_gtf_attr_int(in, "exon_number", &exon_number);
   assert_equals(1, status, "Status");
-  assert_equals(17, exon_number, "Exon number");
+  assert_equals(17, exon_number, "Region number");
 }
 
 void test_exon_matches() {
-  ExonMatches ms;
-  Exon a;
-  Exon b;
-  Exon c;
+  RegionMatches ms;
+  Region a;
+  Region b;
+  Region c;
   a.chrom = "a";
   b.chrom = "b";
   c.chrom = "c";
@@ -181,11 +181,11 @@ void test_exon_matches() {
   consolidate_exon_matches(&ms);
   assert_equals(3, ms.len, "Len");
 
-  ExonMatch *ma = NULL, *mb = NULL, *mc = NULL;
+  RegionMatch *ma = NULL, *mb = NULL, *mc = NULL;
   int i;
 
   for (i = 0; i < 3; i++) {
-    ExonMatch *m = ms.items + i;
+    RegionMatch *m = ms.items + i;
     char *chrom = m->exon->chrom;
     
     if      (!strcmp(chrom, "a")) ma = m;
@@ -216,15 +216,15 @@ void test_matches_junction() {
   assert_str_equals("AT1G76490.1", gm.transcripts[1].id, "Transcript id\n");
   assert_equals(j_start, gm.transcripts[1].exons[0]->end, "Intron start\n");
   assert_equals(j_end, gm.transcripts[1].exons[1]->start, "Intron end\n");
-  Exon *exon = gm.transcripts[1].exons[0];
+  Region *exon = gm.transcripts[1].exons[0];
 
-  Exon *e2 = next_exon_in_transcript(exon);
-  assert_equals(2, e2->exon_number, "Exon number 2");
-  Exon *e3 = next_exon_in_transcript(e2);
-  assert_equals(3, e3->exon_number, "Exon number 3");
-  Exon *e4 = next_exon_in_transcript(e3);
-  assert_equals(4, e4->exon_number, "Exon number 4");
-  Exon *e5 = next_exon_in_transcript(e4);
+  Region *e2 = next_exon_in_transcript(exon);
+  assert_equals(2, e2->exon_number, "Region number 2");
+  Region *e3 = next_exon_in_transcript(e2);
+  assert_equals(3, e3->exon_number, "Region number 3");
+  Region *e4 = next_exon_in_transcript(e3);
+  assert_equals(4, e4->exon_number, "Region number 4");
+  Region *e5 = next_exon_in_transcript(e4);
   assert_equals(0, e5, "No exon 5");
 
   Span min_match[] = { { j_start - 10, j_start },

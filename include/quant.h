@@ -65,15 +65,15 @@
 /* Just so we don't have to type "struct" all over the place. I don't
    do any typedefs to pointers. */
 typedef struct Span Span;
-typedef struct Exon Exon;
-typedef struct ExonList ExonList;
+typedef struct Region Region;
+typedef struct RegionList RegionList;
 typedef struct GeneModel GeneModel;
 typedef struct Transcript Transcript;
-typedef struct ExonCursor ExonCursor;
+typedef struct RegionCursor RegionCursor;
 typedef struct Quant Quant;
 typedef struct IndexEntry IndexEntry;
-typedef struct ExonMatch ExonMatch;
-typedef struct ExonMatches ExonMatches;
+typedef struct RegionMatch RegionMatch;
+typedef struct RegionMatches RegionMatches;
 typedef struct CigarCursor CigarCursor;
 
 enum Strand {
@@ -98,7 +98,7 @@ struct Quant {
 // Represents an exon, read from the GTF file, with some additional
 // information that allows us to index it for searching, and some
 // fields for storing quantification counts.
-struct Exon {
+struct Region {
 
   char *gene_id;
   char *transcript_id;
@@ -127,8 +127,8 @@ struct Exon {
 
 
 // List of exons. 
-struct ExonList {
-  struct Exon *items;
+struct RegionList {
+  struct Region *items;
   int len; // Current length of items
   int cap; // Current capacity (number of allocated items). len <= cap.
 
@@ -142,7 +142,7 @@ struct ExonList {
    model. It has a list of exons, sorted by end coordinate, which
    allows searching based on coordinate.  */
 struct GeneModel {
-  ExonList exons;
+  RegionList exons;
 
   Transcript *transcripts;
   int num_transcripts;
@@ -152,7 +152,7 @@ struct GeneModel {
 /* A transcript is just a list of pointers to the exons that it is
    made of, along with a transcript id. */
 struct Transcript {
-  Exon **exons;
+  Region **exons;
   int exons_len;
   int exons_cap;
   char *id;
@@ -160,10 +160,10 @@ struct Transcript {
 
 
 /* Used to store the state of a query in an GeneModel. */
-struct ExonCursor {
+struct RegionCursor {
 
   // The database we searched in
-  struct ExonList *list;
+  struct RegionList *list;
   
   // The search coordinates
   char *chrom;
@@ -173,7 +173,7 @@ struct ExonCursor {
   int allow;
 
  // Next match to be returned
-  struct Exon *next;
+  struct Region *next;
 };
 
 /* The index is made up of a list of IndexEntry structs, which
@@ -192,14 +192,14 @@ struct IndexEntry {
   // doing exon++ since they're stored in sorted order) until we get
   // to the first one where exon->min_start is greater than the end
   // point of the query.
-  struct Exon *exon;
+  struct Region *exon;
 };
 
 // Represents a match (or mismatch) of an exon for a particular read span. 
-struct ExonMatch {
+struct RegionMatch {
 
   // The exon we found
-  Exon *exon;
+  Region *exon;
 
   // Does the exon overlap the read span?
   int overlap;
@@ -208,9 +208,9 @@ struct ExonMatch {
   int conflict;
 };
 
-// A list of ExonMatch structs.
-struct ExonMatches {
-  ExonMatch *items;
+// A list of RegionMatch structs.
+struct RegionMatches {
+  RegionMatch *items;
   int len;
   int cap;
 };
@@ -230,28 +230,28 @@ struct CigarCursor {
 
 int cmp_index_entry(struct IndexEntry *key,
                     struct IndexEntry *entry);
-int search_exons(struct ExonCursor *cursor,
-                 struct ExonList *list, char *chrom, int start, int end, int allow);
-struct Exon *next_exon(struct ExonCursor *cursor, int *flags);
+int search_exons(struct RegionCursor *cursor,
+                 struct RegionList *list, char *chrom, int start, int end, int allow);
+struct Region *next_exon(struct RegionCursor *cursor, int *flags);
 int parse_gtf_attr_str(char *str, char *name, char **dest);
 int parse_gtf_attr_int(char *str, char *name, int *value);
-void consolidate_exon_matches(ExonMatches *matches);
-int cmp_match_by_exon(ExonMatch *a, ExonMatch *b);
+void consolidate_exon_matches(RegionMatches *matches);
+int cmp_match_by_exon(RegionMatch *a, RegionMatch *b);
 void parse_gtf_file(GeneModel *gm, char *filename);
-void index_exons(ExonList *exons);
-void init_exon_matches(ExonMatches *matches);
-void find_candidates(ExonMatches *matches, GeneModel *gm, char *ref,
+void index_exons(RegionList *exons);
+void init_exon_matches(RegionMatches *matches);
+void find_candidates(RegionMatches *matches, GeneModel *gm, char *ref,
                      Span *spans, int num_fwd_spans, int num_rev_spans);
 int next_fragment(bam1_t **reads, samfile_t *samfile, int n);
 void init_cigar_cursor(struct CigarCursor *c, bam1_t *read);
 int next_span(struct CigarCursor *c);
 int extract_spans(Span *spans, bam1_t *read, int n);
-int cmp_exon(Exon *e, char *chrom, int start, int end);
-void add_match(ExonMatches *matches, Exon *exon, int overlap, int conflict);
-Exon *next_exon_in_transcript(Exon *e);
+int cmp_exon(Region *e, char *chrom, int start, int end);
+void add_match(RegionMatches *matches, Region *exon, int overlap, int conflict);
+Region *next_exon_in_transcript(Region *e);
 void add_transcripts(GeneModel *gm);
 void incr_quant(Quant *q, int unique);
-int matches_junction(Exon *left, Span *spans, int num_fwd_spans, int num_rev_spans, int min_overlap);
+int matches_junction(Region *left, Span *spans, int num_fwd_spans, int num_rev_spans, int min_overlap);
 int load_model(GeneModel *gm, char *filename);
 
 #endif
