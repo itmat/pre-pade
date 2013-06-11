@@ -12,7 +12,7 @@ SAM_LIB=$(SAM_DIR)/libbam.a
 # SAM requires libz
 LDFLAGS=-lz
 
-bins=bin/findexons bin/dumptranscripts
+bins=bin/quantify bin/dumptranscripts
 
 all : check_sam $(bins) 
 
@@ -29,7 +29,7 @@ endif
 bin/dumptranscripts : quant.o dumptranscripts.o $(SAM_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
-bin/findexons : findexons.o quant.o $(SAM_LIB)
+bin/quantify : main.o quant.o $(SAM_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 bin/testgeneindex : testgeneindex.o quant.o testutils.o $(SAM_LIB)
