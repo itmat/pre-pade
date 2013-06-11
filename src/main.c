@@ -138,18 +138,21 @@ void usage(char *prog, int retval) {
       arg  = "BASES";
       break;
 
-    case 't':
+    case 't': {
+      // TODO: This is really goofy, but I'm trying to avoid a possible buffer overflow.
+      int cap = size;
       help = buf;
       help[0] = 0;
-      strlcat(help, "Quantify the given type of structure. Will quantify all if no type is\n    specified. Can be specified multiple times with different types. The\n    following are valid types:\n", size);
+      cap -= snprintf(help, cap, "Quantify the given type of structure. Will quantify all if no type is\n    specified. Can be specified multiple times with different types. The\n    following are valid types:\n");
       int i;
       for (i = 0; i < NUM_QUANT_TYPES; i++) {
-        strlcat(help, "      ", size);
-        strlcat(help, QUANT_TYPE_NAMES[i], size);
-        strlcat(help, "\n", size);
+        char *tmp = strdup(help);
+        cap -= snprintf(help, cap, "%s      %s\n", tmp, QUANT_TYPE_NAMES[i]);
+        free(tmp);
       }
       arg = "TYPE";
       break;
+    }
     default: break;
     }
 
