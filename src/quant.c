@@ -67,7 +67,7 @@ int parse_gtf_attr_int(char *str, char *name, int *value) {
   }
 }
 
-void parse_gtf_file(ExonDB *exondb, char *filename) {
+void parse_gtf_file(GeneModel *gm, char *filename) {
 
   LOG_INFO("Loading GTF file %s\n", filename);
 
@@ -164,9 +164,9 @@ void parse_gtf_file(ExonDB *exondb, char *filename) {
   if (line) 
     free(line);
 
-  exondb->exons.len = exons_len;
-  exondb->exons.cap = exons_cap;
-  exondb->exons.items = exons;
+  gm->exons.len = exons_len;
+  gm->exons.cap = exons_cap;
+  gm->exons.items = exons;
 }
 
 int cmp_exons_by_end(Exon *a, Exon *b) {
@@ -193,11 +193,12 @@ int cmp_exon_ptr_end(Exon **a, Exon **b) {
   return (*a)->end - (*b)->end;
 }
 
-void add_transcripts(ExonDB *db) {
+
+void add_transcripts(GeneModel *gm) {
   LOG_DEBUG("Adding transcripts%s\n", "");
 
-  Exon *exons = db->exons.items;
-  int i, n = db->exons.len;
+  Exon *exons = gm->exons.items;
+  int i, n = gm->exons.len;
   Transcript *p, *q;
 
   // First make a list of all the transcript IDs from our exons  
@@ -249,8 +250,8 @@ void add_transcripts(ExonDB *db) {
     qsort(transcripts[i].exons, transcripts[i].exons_cap, sizeof(Exon*), ( int (*)(const void *, const void*) ) cmp_exon_ptr_end);
   }
 
-  db->num_transcripts = num_transcripts;
-  db->transcripts = transcripts;
+  gm->num_transcripts = num_transcripts;
+  gm->transcripts = transcripts;
 }
 
 
@@ -362,7 +363,7 @@ Exon *next_exon_in_transcript(Exon *e) {
 
 
 
-void find_candidates(ExonMatches *matches, ExonDB *db, char *ref,
+void find_candidates(ExonMatches *matches, GeneModel *gm, char *ref,
                     Span *spans, int num_fwd_spans, int num_rev_spans) {
 
   matches->len = 0;
@@ -380,7 +381,7 @@ void find_candidates(ExonMatches *matches, ExonDB *db, char *ref,
 
     struct Exon *exon;
     ExonCursor exon_curs;
-    search_exons(&exon_curs, db, ref, span->start, span->end, ALLOW_ALL);
+    search_exons(&exon_curs, &gm->exons, ref, span->start, span->end, ALLOW_ALL);
 
     int flags = 0;
 
@@ -448,12 +449,12 @@ void consolidate_exon_matches(ExonMatches *matches) {
  * start.
  */
 int search_exons(ExonCursor *cursor,
-                 ExonDB *exondb, char *chrom, int start, int end, int allow) {
+                 ExonList *list, char *chrom, int start, int end, int allow) {
   IndexEntry key;
   key.chrom = chrom;
   key.start = key.end = start;
   IndexEntry *entry = 
-    bsearch(&key, exondb->exons.index, exondb->exons.index_len, 
+    bsearch(&key, list->index, list->index_len, 
             sizeof(IndexEntry), 
             (int (*) (const void *, const void *))cmp_index_entry);
   LOG_TRACE("  Bsearch came back with %s:%d-%d\n",
@@ -461,7 +462,7 @@ int search_exons(ExonCursor *cursor,
             entry ? entry->exon->start : 0,
             entry ? entry->exon->end : 0);
             
-  cursor->exondb = exondb;
+  cursor->list = list;
   cursor->chrom = chrom;
   cursor->start = start;
   cursor->end = end;
@@ -523,8 +524,8 @@ Exon *finish_cursor(ExonCursor *cursor) {
 
 Exon *next_exon(ExonCursor *cursor, int *flags) {
 
-  ExonDB *db = cursor->exondb;
-  Exon *last_exon = db->exons.items + db->exons.len;
+  ExonList *list = cursor->list;
+  Exon *last_exon = list->items + list->len;
 
   int allow = cursor->allow;
   int disallow = ~allow;
@@ -643,10 +644,10 @@ int matches_junction(Exon *left, Span *spans, int num_fwd_spans, int num_rev_spa
 }
 
 
-int load_model(ExonDB *db, char *filename) {
-  parse_gtf_file(db, filename);
-  index_exons(&db->exons);
-  add_transcripts(db);
+int load_model(GeneModel *gm, char *filename) {
+  parse_gtf_file(gm, filename);
+  index_exons(&gm->exons);
+  add_transcripts(gm);
   return 0;
 }
 

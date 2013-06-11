@@ -8,18 +8,16 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Usage: %s GTF_FILE\n", argv[0]);
     return 1;
   }
-  ExonDB db;
-  parse_gtf_file(&db, argv[1]);
-  index_exons(&db);
-  add_transcripts(&db);
+  GeneModel gm;
+  load_model(&gm, argv[1]);
 
   int i, j;
 
-  printf("num_transcripts: %d\n", db.num_transcripts);
+  printf("num_transcripts: %d\n", gm.num_transcripts);
   printf("transcripts:\n");
 
-  for (i = 0; i < db.num_transcripts; i++) {
-    Transcript *t = db.transcripts + i;
+  for (i = 0; i < gm.num_transcripts; i++) {
+    Transcript *t = gm.transcripts + i;
     printf("- id: '%s'\n", t->id);
     printf("  num_exons: %d\n", t->exons_len);
     printf("  exons:\n");

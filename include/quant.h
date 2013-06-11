@@ -67,7 +67,7 @@
 typedef struct Span Span;
 typedef struct Exon Exon;
 typedef struct ExonList ExonList;
-typedef struct ExonDB ExonDB;
+typedef struct GeneModel GeneModel;
 typedef struct Transcript Transcript;
 typedef struct ExonCursor ExonCursor;
 typedef struct Quant Quant;
@@ -141,7 +141,7 @@ struct ExonList {
 /* This is the main data structure used to store our transcript
    model. It has a list of exons, sorted by end coordinate, which
    allows searching based on coordinate.  */
-struct ExonDB {
+struct GeneModel {
   ExonList exons;
 
   Transcript *transcripts;
@@ -159,11 +159,11 @@ struct Transcript {
 };
 
 
-/* Used to store the state of a query in an ExonDB. */
+/* Used to store the state of a query in an GeneModel. */
 struct ExonCursor {
 
   // The database we searched in
-  struct ExonDB *exondb;
+  struct ExonList *list;
   
   // The search coordinates
   char *chrom;
@@ -231,16 +231,16 @@ struct CigarCursor {
 int cmp_index_entry(struct IndexEntry *key,
                     struct IndexEntry *entry);
 int search_exons(struct ExonCursor *cursor,
-                 struct ExonDB *exondb, char *chrom, int start, int end, int allow);
+                 struct ExonList *list, char *chrom, int start, int end, int allow);
 struct Exon *next_exon(struct ExonCursor *cursor, int *flags);
 int parse_gtf_attr_str(char *str, char *name, char **dest);
 int parse_gtf_attr_int(char *str, char *name, int *value);
 void consolidate_exon_matches(ExonMatches *matches);
 int cmp_match_by_exon(ExonMatch *a, ExonMatch *b);
-void parse_gtf_file(ExonDB *exondb, char *filename);
+void parse_gtf_file(GeneModel *gm, char *filename);
 void index_exons(ExonList *exons);
 void init_exon_matches(ExonMatches *matches);
-void find_candidates(ExonMatches *matches, ExonDB *db, char *ref,
+void find_candidates(ExonMatches *matches, GeneModel *gm, char *ref,
                      Span *spans, int num_fwd_spans, int num_rev_spans);
 int next_fragment(bam1_t **reads, samfile_t *samfile, int n);
 void init_cigar_cursor(struct CigarCursor *c, bam1_t *read);
@@ -249,10 +249,10 @@ int extract_spans(Span *spans, bam1_t *read, int n);
 int cmp_exon(Exon *e, char *chrom, int start, int end);
 void add_match(ExonMatches *matches, Exon *exon, int overlap, int conflict);
 Exon *next_exon_in_transcript(Exon *e);
-void add_transcripts(ExonDB *db);
+void add_transcripts(GeneModel *gm);
 void incr_quant(Quant *q, int unique);
 int matches_junction(Exon *left, Span *spans, int num_fwd_spans, int num_rev_spans, int min_overlap);
-int load_model(ExonDB *db, char *filename);
+int load_model(GeneModel *gm, char *filename);
 
 #endif
 

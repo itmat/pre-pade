@@ -3,15 +3,13 @@
 #include "testutils.h"
 
 void test_create_index() {
-  struct ExonDB db;
+  struct GeneModel gm;
 
-  parse_gtf_file(&db, "testdata/arabidopsis.gtf");
-  index_exons(&db);  
-  add_transcripts(&db);
+  load_model(&gm, "testdata/arabidopsis.gtf");
 
-  assert_equals(13214, db.exons.len, "Number of exons loaded");
-
-  struct Exon *exon = db.exons.items;
+  assert_equals(13214, gm.exons.len, "Number of exons loaded");
+  
+  struct Exon *exon = gm.exons.items;
   assert_str_equals("1", exon->chrom, "First exon chromosome");
   assert_equals(28692192, exon->start, "First exon start");
   assert_equals(28692362, exon->end, "First exon end");
@@ -22,9 +20,9 @@ void test_create_index() {
   int start_gte_end = 0;
   int entries_decrease = 0;
   
-  struct IndexEntry *entry = db.exons.index;
+  struct IndexEntry *entry = gm.exons.index;
 
-  for (entry = db.exons.index + 1; entry < db.exons.index + db.exons.index_len; entry++) {
+  for (entry = gm.exons.index + 1; entry < gm.exons.index + gm.exons.index_len; entry++) {
     if (entry->start >= entry->end)
       start_gte_end++;
 
@@ -44,23 +42,23 @@ void test_create_index() {
 
   struct ExonCursor cursor;
   int flags;
-  //  search_exons(&cursor, &db, "chrfoobar", 0, 0, 0);
+  //  search_exons(&cursor, &gm, "chrfoobar", 0, 0, 0);
   // assert_exon_ptr_equals(NULL, next_exon(&cursor, &flags), "Unknown chrom");
 
-  //search_exons(&cursor, &db, "1", 0, 10, 0);
+  //search_exons(&cursor, &gm, "1", 0, 10, 0);
   //assert_exon_ptr_equals(NULL, next_exon(&cursor, &flags), 
   //                         "Not found");
 
-  search_exons(&cursor, &db, "1", 28692192, 28692362, 0);
+  search_exons(&cursor, &gm.exons, "1", 28692192, 28692362, 0);
 
   exon = next_exon(&cursor, &flags);
 
   assert_str_equals("1", exon->chrom, "Chromosome");
 
-  assert_str_equals("AT1G76510.1", db.transcripts[3].id, "Transcript id");
-  assert_equals(14, db.transcripts[3].exons_len, "Num exons");
-  assert_equals(3, db.transcripts[3].exons[11]->exon_number, "Exon number");
-  assert_equals((size_t)(db.transcripts + 3), (size_t)(db.transcripts[3].exons[11]->transcript), "Exon's pointer to transcript");
+  assert_str_equals("AT1G76510.1", gm.transcripts[3].id, "Transcript id");
+  assert_equals(14, gm.transcripts[3].exons_len, "Num exons");
+  assert_equals(3, gm.transcripts[3].exons[11]->exon_number, "Exon number");
+  assert_equals((size_t)(gm.transcripts + 3), (size_t)(gm.transcripts[3].exons[11]->transcript), "Exon's pointer to transcript");
 
 }
 
@@ -209,18 +207,16 @@ void test_exon_matches() {
 }
 
 void test_matches_junction() {
-  ExonDB db;
-  parse_gtf_file(&db, "testdata/arabidopsis.gtf");
-  index_exons(&db);  
-  add_transcripts(&db);
+  GeneModel gm;
+  load_model(&gm, "testdata/arabidopsis.gtf");
 
   const int j_start = 28696939;
   const int j_end   = 28697164;
 
-  assert_str_equals("AT1G76490.1", db.transcripts[1].id, "Transcript id\n");
-  assert_equals(j_start, db.transcripts[1].exons[0]->end, "Intron start\n");
-  assert_equals(j_end, db.transcripts[1].exons[1]->start, "Intron end\n");
-  Exon *exon = db.transcripts[1].exons[0];
+  assert_str_equals("AT1G76490.1", gm.transcripts[1].id, "Transcript id\n");
+  assert_equals(j_start, gm.transcripts[1].exons[0]->end, "Intron start\n");
+  assert_equals(j_end, gm.transcripts[1].exons[1]->start, "Intron end\n");
+  Exon *exon = gm.transcripts[1].exons[0];
 
   Exon *e2 = next_exon_in_transcript(exon);
   assert_equals(2, e2->exon_number, "Exon number 2");

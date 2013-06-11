@@ -46,7 +46,7 @@ void incr_quant(Quant *q, int unique) {
     q->min++;
 }
 
-void print_exon_quants(FILE *file, ExonDB *db) {
+void print_exon_quants(FILE *file, GeneModel *gm) {
 
   fprintf(file, "%s\t", "type");
   fprintf(file, "%s\t", "gene_id");
@@ -59,9 +59,9 @@ void print_exon_quants(FILE *file, ExonDB *db) {
   fprintf(file, "%s\n", "max_count");
 
   int i;
-  for (i = 0; i < db->exons.len; i++) {
+  for (i = 0; i < gm->exons.len; i++) {
     
-    Exon *exon = db->exons.items + i;
+    Exon *exon = gm->exons.items + i;
     
     if (exon->exon_quant.min) {
       fprintf(file, "%s\t", "exon");
@@ -76,9 +76,9 @@ void print_exon_quants(FILE *file, ExonDB *db) {
     }
   }
 
-  for (i = 0; i < db->num_transcripts; i++) {
+  for (i = 0; i < gm->num_transcripts; i++) {
     
-    Transcript *t = db->transcripts + i;
+    Transcript *t = gm->transcripts + i;
     
     Exon *left, *right;
     for (left = t->exons[0]; (right = next_exon_in_transcript(left)); left = right) {
@@ -259,7 +259,7 @@ FILE *open_details_file(char *filename) {
   exit(1);
 }
 
-void dump_index(char *filename, ExonDB *db) {
+void dump_index(char *filename, GeneModel *gm) {
   
   fprintf(stderr, "Dumping index to %s\n", filename);
   
@@ -269,7 +269,7 @@ void dump_index(char *filename, ExonDB *db) {
     exit(1);
   }
   IndexEntry *e;
-  for (e = db->exons.index; e < db->exons.index + db->exons.index_len; e++) {
+  for (e = gm->exons.index; e < gm->exons.index + gm->exons.index_len; e++) {
     fprintf(index_file,  "%s:%d-%d\t%s:%d-%d\n",
             e->chrom, e->start, e->end, 
             e->exon->chrom, e->exon->start, e->exon->end);
@@ -300,7 +300,7 @@ void print_match_details(FILE *file, bam1_t **reads, int num_reads,
   }
 }
 
-void accumulate_counts(ExonDB *db, samfile_t *samfile, FILE *details_file, 
+void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file, 
                        unsigned int types, int min_overlap) {
   struct Span read_spans[MAX_SPANS_PER_READ];
 
@@ -344,7 +344,7 @@ void accumulate_counts(ExonDB *db, samfile_t *samfile, FILE *details_file,
 
     ref = ref ? ref : "";
 
-    find_candidates(&matches, db, ref, read_spans, num_fwd_spans, num_rev_spans);
+    find_candidates(&matches, gm, ref, read_spans, num_fwd_spans, num_rev_spans);
 
     if (details_file) {
       print_match_details(details_file, reads, num_reads, &matches);
@@ -387,8 +387,8 @@ int main(int argc, char **argv) {
   else 
     out = stdout;
 
-  struct ExonDB db;
-  load_model(&db, args.gtf_filename);
+  struct GeneModel gm;
+  load_model(&gm, args.gtf_filename);
 
   FILE *details_file;
   if (args.details_filename) {
@@ -401,12 +401,12 @@ int main(int argc, char **argv) {
   }
 
   if (args.index_filename)
-    dump_index(args.index_filename, &db);
+    dump_index(args.index_filename, &gm);
 
   samfile_t *samfile = samopen(args.sam_filename, "r", NULL);
-  accumulate_counts(&db, samfile, details_file, args.do_types, args.min_overlap);
+  accumulate_counts(&gm, samfile, details_file, args.do_types, args.min_overlap);
  
-  print_exon_quants(out, &db);
+  print_exon_quants(out, &gm);
   LOG_INFO("Cleaning up %s\n", "");
 
 
