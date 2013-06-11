@@ -238,7 +238,7 @@ int parse_gtf_attr_int(char *str, char *name, int *value);
 void consolidate_exon_matches(RegionMatches *matches);
 int cmp_match_by_exon(RegionMatch *a, RegionMatch *b);
 void parse_gtf_file(GeneModel *gm, char *filename);
-void index_exons(RegionList *exons);
+void index_regions(RegionList *exons);
 void init_exon_matches(RegionMatches *matches);
 void find_candidates(RegionMatches *matches, GeneModel *gm, char *ref,
                      Span *spans, int num_fwd_spans, int num_rev_spans);

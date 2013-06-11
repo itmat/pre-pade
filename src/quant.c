@@ -254,8 +254,31 @@ void add_transcripts(GeneModel *gm) {
   gm->transcripts = transcripts;
 }
 
+void add_introns(GeneModel *gm) {
+  Transcript *t;
+  int num_introns = 0;
+  for (t = gm->transcripts; t < gm->transcripts + gm->num_transcripts; t++) {
+    if (t->exons_len) {
+      num_introns += t->exons_len - 1;
+    }
+  }
 
-void index_exons(RegionList *exons) {
+  Region *introns = calloc(num_introns, sizeof(Region));
+  Region *intron = introns;
+  for (t = gm->transcripts; t < gm->transcripts + gm->num_transcripts; t++) {
+    int i;
+    for (i = 1; i + 1 < t->exons_len; i++) {
+      intron->start = t->exons[i]->end;
+      intron->end   = t->exons[i+1]->start;
+      intron->chrom = t->exons[i]->chrom;
+    }
+  }
+
+  qsort(introns, num_introns, sizeof(Region), ( int (*)(const void *, const void*) ) cmp_exons_by_end);
+
+}
+
+void index_regions(RegionList *exons) {
   LOG_INFO("Indexing %d exons\n", exons->len);
   int n = exons->len;
 
@@ -646,7 +669,7 @@ int matches_junction(Region *left, Span *spans, int num_fwd_spans, int num_rev_s
 
 int load_model(GeneModel *gm, char *filename) {
   parse_gtf_file(gm, filename);
-  index_exons(&gm->exons);
+  index_regions(&gm->exons);
   add_transcripts(gm);
   return 0;
 }
