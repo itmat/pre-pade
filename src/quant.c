@@ -273,9 +273,12 @@ void add_introns(GeneModel *gm) {
   for (t = gm->transcripts; t < gm->transcripts + gm->num_transcripts; t++) {
     int i;
     for (i = 1; i < t->exons_len; i++) {
-      introns[j].start = t->exons[i-1]->end;
-      introns[j].end   = t->exons[i]->start;
-      introns[j].chrom = t->exons[i]->chrom;
+      introns[j].start   = t->exons[i-1]->end;
+      introns[j].end     = t->exons[i]->start;
+      introns[j].chrom   = t->exons[i]->chrom;
+      introns[j].gene_id = t->exons[i]->gene_id;
+      introns[j].transcript_id = t->exons[i]->transcript_id;
+      introns[j].exon_number = t->exons[i-1]->exon_number;
       j++;
     }
   }
@@ -330,7 +333,7 @@ void index_regions(RegionList *exons) {
       entry->chrom = exon->chrom;
       entry->start = 0;
       entry->end   = exon->end;
-      entry->exon = exon;
+      entry->region = exon;
       entry++;
     }
 
@@ -339,7 +342,7 @@ void index_regions(RegionList *exons) {
       entry->chrom = exon->chrom;
       entry->start = (entry - 1)->end;
       entry->end   = exon->end;
-      entry->exon  = exon;
+      entry->region  = exon;
       entry++;
     }
     
@@ -364,7 +367,7 @@ void init_exon_matches(RegionMatches *matches) {
 }
 
 void add_match(RegionMatches *matches, Region *exon, int overlap, int conflict) {
-
+  LOG_TRACE("Adding match %s\n", "");
   if (matches->len == matches->cap) {
 
     RegionMatch *old = matches->items;
@@ -381,7 +384,7 @@ void add_match(RegionMatches *matches, Region *exon, int overlap, int conflict) 
   m->region = exon;
   m->overlap = overlap;
   m->conflict = conflict;
-
+  LOG_TRACE("Done adding match %s\n", "");
 };
 
 Region *next_exon_in_transcript(Region *e) {
@@ -400,7 +403,7 @@ Region *next_exon_in_transcript(Region *e) {
 
 
 
-void find_candidates(RegionMatches *matches, GeneModel *gm, char *ref,
+void find_candidates(RegionMatches *matches, RegionList *list, char *ref,
                     Span *spans, int num_fwd_spans, int num_rev_spans) {
 
   matches->len = 0;
@@ -418,7 +421,7 @@ void find_candidates(RegionMatches *matches, GeneModel *gm, char *ref,
 
     struct Region *exon;
     RegionCursor exon_curs;
-    search_exons(&exon_curs, &gm->exons, ref, span->start, span->end, ALLOW_ALL);
+    search_exons(&exon_curs, list, ref, span->start, span->end, ALLOW_ALL);
 
     int flags = 0;
 
@@ -495,9 +498,9 @@ int search_exons(RegionCursor *cursor,
             sizeof(IndexEntry), 
             (int (*) (const void *, const void *))cmp_index_entry);
   LOG_TRACE("  Bsearch came back with %s:%d-%d\n",
-            entry ? entry->exon->chrom : "",
-            entry ? entry->exon->start : 0,
-            entry ? entry->exon->end : 0);
+            entry ? entry->region->chrom : "",
+            entry ? entry->region->start : 0,
+            entry ? entry->region->end : 0);
             
   cursor->list = list;
   cursor->chrom = chrom;
@@ -505,7 +508,7 @@ int search_exons(RegionCursor *cursor,
   cursor->end = end;
   cursor->allow = allow;
 
-  cursor->next = entry ? entry->exon : NULL;
+  cursor->next = entry ? entry->region : NULL;
   
   return 0;
 }
@@ -567,9 +570,9 @@ Region *next_exon(RegionCursor *cursor, int *flags) {
   int allow = cursor->allow;
   int disallow = ~allow;
 
-  while (cursor->next != NULL && cursor->next <= last_exon) {
-    Region *exon = cursor->next++;
-    int cmp = cmp_exon(exon, cursor->chrom, cursor->start, cursor->end);
+  while (cursor->next != NULL && cursor->next < last_exon) {
+    Region *r = cursor->next++;
+    int cmp = cmp_exon(r, cursor->chrom, cursor->start, cursor->end);
 
     if ( cmp & WRONG_CHROMOSOME ) {
       // fprintf(stderr, "  wrong chrom\n");   
@@ -577,7 +580,7 @@ Region *next_exon(RegionCursor *cursor, int *flags) {
       return finish_cursor(cursor);
     }
 
-    else if (exon->min_start > cursor->end) {
+    else if (r->min_start > cursor->end) {
       // At this point all subsequent exons will start after me, so
       // we're done.
       //      fprintf(stderr, "  past\n");   
@@ -595,7 +598,7 @@ Region *next_exon(RegionCursor *cursor, int *flags) {
       //      fprintf(stderr, "Match\n");
       // Otherwise it's a match
       *flags = cmp;
-      return exon;
+      return r;
     }
 
   }

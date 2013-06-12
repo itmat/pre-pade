@@ -193,7 +193,7 @@ struct IndexEntry {
   // doing exon++ since they're stored in sorted order) until we get
   // to the first one where exon->min_start is greater than the end
   // point of the query.
-  struct Region *exon;
+  struct Region *region;
 };
 
 // Represents a match (or mismatch) of an exon for a particular read span. 
@@ -241,7 +241,7 @@ int cmp_match_by_exon(RegionMatch *a, RegionMatch *b);
 void parse_gtf_file(GeneModel *gm, char *filename);
 void index_regions(RegionList *exons);
 void init_exon_matches(RegionMatches *matches);
-void find_candidates(RegionMatches *matches, GeneModel *gm, char *ref,
+void find_candidates(RegionMatches *matches, RegionList *list, char *ref,
                      Span *spans, int num_fwd_spans, int num_rev_spans);
 int next_fragment(bam1_t **reads, samfile_t *samfile, int n);
 void init_cigar_cursor(struct CigarCursor *c, bam1_t *read);

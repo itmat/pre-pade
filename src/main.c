@@ -19,7 +19,6 @@ struct Args {
   char *sam_filename;
   char *out_filename;
   char *details_filename;
-  char *index_filename;
   int   exons;
   int   junctions;
   unsigned int  types_specified;
@@ -76,6 +75,23 @@ void print_exon_quants(FILE *file, GeneModel *gm) {
     }
   }
 
+  for (i = 0; i < gm->introns.len; i++) {
+    
+    Region *intron = gm->introns.items + i;
+    
+    if (intron->exon_quant.min) {
+      fprintf(file, "%s\t", "intron");
+      fprintf(file, "%s\t", intron->gene_id);
+      fprintf(file, "%s\t", intron->transcript_id);
+      fprintf(file, "%d\t", intron->exon_number);
+      fprintf(file, "%s\t", intron->chrom);
+      fprintf(file, "%d\t", intron->start);
+      fprintf(file, "%d\t", intron->end);
+      fprintf(file, "%d\t", intron->exon_quant.min);
+      fprintf(file, "%d\n", intron->exon_quant.max);
+    }
+  }
+
   for (i = 0; i < gm->num_transcripts; i++) {
     
     Transcript *t = gm->transcripts + i;
@@ -95,6 +111,8 @@ void print_exon_quants(FILE *file, GeneModel *gm) {
       }      
     }
   }
+
+
 }
 
 
@@ -172,14 +190,13 @@ void parse_args(struct Args *args, int argc, char **argv) {
   args->gtf_filename = NULL;
   args->out_filename = NULL;
   args->details_filename = NULL;
-  args->index_filename = NULL;
   args->min_overlap = DEFAULT_MIN_OVERLAP;
 
   int ch;
   args->types_specified = 0;
   int i;
   
-  while ((ch = getopt_long(argc, argv, "d:o:x:t:m:", longopts, NULL)) != -1) {
+  while ((ch = getopt_long(argc, argv, "d:o:t:m:", longopts, NULL)) != -1) {
     switch(ch) {
     case 'd':
       args->details_filename = optarg;
@@ -187,10 +204,6 @@ void parse_args(struct Args *args, int argc, char **argv) {
 
     case 'o':
       args->out_filename = optarg;
-      break;
-
-    case 'x':
-      args->index_filename = optarg;
       break;
 
     case 'm':
@@ -259,25 +272,6 @@ FILE *open_details_file(char *filename) {
   exit(1);
 }
 
-void dump_index(char *filename, GeneModel *gm) {
-  
-  fprintf(stderr, "Dumping index to %s\n", filename);
-  
-  FILE *index_file = fopen(filename, "w");
-  if (!index_file) {
-    perror(filename);
-    exit(1);
-  }
-  IndexEntry *e;
-  for (e = gm->exons.index; e < gm->exons.index + gm->exons.index_len; e++) {
-    fprintf(index_file,  "%s:%d-%d\t%s:%d-%d\n",
-            e->chrom, e->start, e->end, 
-            e->exon->chrom, e->exon->start, e->exon->end);
-  }
-  fclose(index_file);
-
-}
-
 
 void print_match_details(FILE *file, bam1_t **reads, int num_reads, 
                          RegionMatches *matches) {
@@ -344,7 +338,8 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
 
     ref = ref ? ref : "";
 
-    find_candidates(&matches, gm, ref, read_spans, num_fwd_spans, num_rev_spans);
+    LOG_TRACE("Finding exons%s\n", "");
+    find_candidates(&matches, &gm->exons, ref, read_spans, num_fwd_spans, num_rev_spans);
 
     if (details_file) {
       print_match_details(details_file, reads, num_reads, &matches);
@@ -364,6 +359,23 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
         incr_quant(&exon->junction_quant, num_alns == 1);
       }
     }
+
+    if (do_introns) {
+      LOG_TRACE("Finding introns%s\n", "");      
+      find_candidates(&matches, &gm->introns, ref, read_spans, num_fwd_spans, num_rev_spans);
+
+
+      for (i = 0; i < matches.len; i++) {
+        
+        int consistent = !matches.items[i].conflict;
+        Region *intron = matches.items[i].region;
+        
+        incr_quant(&intron->exon_quant, num_alns == 1);
+        
+      }
+
+    }
+
   }
   bam_destroy1(reads[0]);
   bam_destroy1(reads[1]);
@@ -398,9 +410,6 @@ int main(int argc, char **argv) {
     details_file = NULL;
     fprintf(stderr, "Not producing debugging output\n");
   }
-
-  if (args.index_filename)
-    dump_index(args.index_filename, &gm);
 
   samfile_t *samfile = samopen(args.sam_filename, "r", NULL);
   accumulate_counts(&gm, samfile, details_file, args.do_types, args.min_overlap);
