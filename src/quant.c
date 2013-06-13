@@ -597,27 +597,22 @@ Region *next_exon(RegionCursor *cursor, int *flags) {
     int cmp = cmp_exon(r, cursor->chrom, cursor->start, cursor->end);
 
     if ( cmp & WRONG_CHROMOSOME ) {
-      // fprintf(stderr, "  wrong chrom\n");   
-      // If it's on the wrong chromosome, we're definitely done.
       return finish_cursor(cursor);
     }
 
     else if (r->min_start > cursor->end) {
       // At this point all subsequent exons will start after me, so
       // we're done.
-      //      fprintf(stderr, "  past\n");   
       return finish_cursor(cursor);
     }
 
     else if (cmp & disallow) {
-      // fprintf(stderr, "  miss\n");   
       // If this match would be disallowed according to the flags the
       // user passed in, just skip it.
       continue;
     }
 
     else {
-      //      fprintf(stderr, "Match\n");
       // Otherwise it's a match
       *flags = cmp;
       return r;
@@ -835,7 +830,7 @@ int next_span(struct CigarCursor *c) {
 int find_contiguous_exons(int *match_start,
                           Transcript *t, int start_exon,
                           Span *spans, int num_spans) {
-  printf("In find contig, start exon is %d\n", start_exon);
+
   Span *s = spans;
   int flags;
   int i = start_exon;
@@ -850,14 +845,11 @@ int find_contiguous_exons(int *match_start,
     else
       break;
   }
-  printf("I is %d, n is %d\n", i, n);
 
   // If no such exon exists, then we can't call a match for the
   // transcript.
   if ( i == n || (flags & END_BEFORE_EXON ) )
     return 0;
-
-  printf("Checking left edge\n");
 
   *match_start = i;
 
@@ -865,8 +857,6 @@ int find_contiguous_exons(int *match_start,
   // first exon in the transcript, then we can't call a match.
   if (i > 0 && (flags & CROSS_EXON_START ) )
     return 0;
-
-  printf("Checking intermediate spans of %d\n", num_spans);
 
   // Now we know the first span overlaps an exon in the transcript and
   // doesn't conflict with its left edge.
@@ -892,8 +882,6 @@ int find_contiguous_exons(int *match_start,
       return 0;
   }
 
-  printf("Done checking intermediate\n");
-
   flags = cmp_exon(t->exons[i], t->exons[i]->chrom, s->start, s->end);
 
   int is_last_exon = i + 1 == n;
@@ -917,8 +905,6 @@ int matches_transcript(Transcript *transcript,
     int len = find_contiguous_exons(&match_start, 
                                     transcript, start_exon,
                                     spans, num_fwd_spans);
-    if (len)
-      fprintf(stderr, "Found %d fwd\n", len);
     if (!len)
       return 0;
 

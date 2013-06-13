@@ -112,6 +112,25 @@ void print_exon_quants(FILE *file, GeneModel *gm) {
     }
   }
 
+  for (i = 0; i < gm->num_transcripts; i++) {
+    
+    Transcript *t = gm->transcripts + i;
+    
+    if (t->quant.min) {
+      Region *e = t->exons[0];
+      fprintf(file, "%s\t",    "transcript");
+      fprintf(file, "%s\t",    e->gene_id);
+      fprintf(file, "%s\t",    t->id);
+      fprintf(file, "\t");
+      fprintf(file, "%s\t",    e->chrom);
+      fprintf(file, "\t");
+      fprintf(file, "\t");
+      fprintf(file, "%d\t",    t->quant.min);
+      fprintf(file, "%d\n",    t->quant.max);
+    }      
+
+  }
+
 
 }
 
