@@ -1,31 +1,37 @@
 #include <stdio.h>
 #include <getopt.h>
-
 #include "sam.h"
 #include "quant.h"
-
 
 #define DEFAULT_MIN_OVERLAP 8
 
 // Maximum number of spans that are allowed to appear in 
 #define MAX_SPANS_PER_READ 1000
 
-// Transcript counts
-// Intron counts
-// Gene counts
-
 struct Args {
+
+  // File names for GTF and SAM files. Should always be provided.
   char *gtf_filename;
   char *sam_filename;
+
+  // Optional name of output file. May be NULL, in which case we use stdout.
   char *out_filename;
+
+  // Optional name for file to write debugging output. If not given,
+  // we won't write debugging output.
   char *details_filename;
-  int   exons;
-  int   junctions;
+
   unsigned int  types_specified;
   unsigned int  do_types;
   int min_overlap;
 };
 
+
+/*
+ * Some static structures to represent the types of quantification we
+ * can do. We use this in parse_args to determine the valid values for
+ * the -t/--type argument. 
+ */
 
 #define QUANT_TYPE_EXON       0
 #define QUANT_TYPE_INTRON     1
@@ -35,15 +41,56 @@ struct Args {
 const char *QUANT_TYPE_NAMES[] = { "exon", "intron", "junction", "transcript" };
 const int NUM_QUANT_TYPES = sizeof(QUANT_TYPE_NAMES) / sizeof(char*);
 
-
+/*
+ * Increment the max counter in the given Quant, and increment the min
+ * counter if unique is true.
+ */
 void incr_quant(Quant *q, int unique) {
   q->max++;
   if (unique)
     q->min++;
 }
+typedef struct OutRow OutRow;
+struct OutRow {
+  char *type;
+  char *gene_id;
+  char *transcript_id;
+  char *chrom;
+  int  exon_number[2];
+  int  start[2];
+  int  end[2];
+  Quant *quant;
+  int num_regions;
+};
 
-void print_exon_quants(FILE *file, GeneModel *gm) {
+void print_row(FILE *file, OutRow *row) {
+  int i;
+  const int n = row->num_regions;
 
+  fprintf(file, "%s\t%s\t%s\t%s\t", 
+          row->type, row->gene_id, row->transcript_id, row->chrom);
+
+  // Print region numbers, starts, and ends. Exons and introns should
+  // have 1 region, start, and end. Junctions should have two regions,
+  // starts, and ends (the values for the exons on either side of the
+  // junction). Right now transcripts have 0, but we might want to add
+  // the coordinates for all the exons in the transcript.
+  for (i = 0; i < n; i++) 
+    fprintf(file, i == 0 ? "%d" : ",%d", row->exon_number[i]);
+  fprintf(file, "\t");
+  for (i = 0; i < n; i++) 
+    fprintf(file, i == 0 ? "%d" : ",%d", row->start[i]);
+  fprintf(file, "\t");
+  for (i = 0; i < n; i++) 
+    fprintf(file, i == 0 ? "%d" : ",%d", row->end[i]);
+
+  fprintf(file, "%d\t%d\n", row->quant->min, row->quant->max);
+
+}
+
+void print_quants(FILE *file, GeneModel *gm) {
+
+  // Header row
   fprintf(file, "%s\t", "type");
   fprintf(file, "%s\t", "gene_id");
   fprintf(file, "%s\t", "transcript_id");
@@ -54,38 +101,41 @@ void print_exon_quants(FILE *file, GeneModel *gm) {
   fprintf(file, "%s\t", "min_count");
   fprintf(file, "%s\n", "max_count");
 
+  OutRow r;
+
   int i;
+
+  // Exon counts
+  r.num_regions = 1;
+  r.type        = "exon";
   for (i = 0; i < gm->exons.len; i++) {
-    
-    Region *exon = gm->exons.items + i;
-    
-    if (exon->exon_quant.min) {
-      fprintf(file, "%s\t", "exon");
-      fprintf(file, "%s\t", exon->gene_id);
-      fprintf(file, "%s\t", exon->transcript_id);
-      fprintf(file, "%d\t", exon->exon_number);
-      fprintf(file, "%s\t", exon->chrom);
-      fprintf(file, "%d\t", exon->start);
-      fprintf(file, "%d\t", exon->end);
-      fprintf(file, "%d\t", exon->exon_quant.min);
-      fprintf(file, "%d\n", exon->exon_quant.max);
+     Region *e = gm->exons.items + i;
+     if (e->exon_quant.min) {
+       r.gene_id        =  e->gene_id;
+       r.transcript_id  =  e->transcript_id;
+       r.chrom          =  e->chrom;
+       r.exon_number[0] =  e->exon_number;
+       r.start[0]       =  e->start;
+       r.end[0]         =  e->end;
+       r.quant          = &e->exon_quant;
+       print_row(file, &r);
     }
   }
 
+  // Intron quants
+  r.num_regions = 1;
+  r.type        = "intron";
   for (i = 0; i < gm->introns.len; i++) {
-    
     Region *intron = gm->introns.items + i;
-    
     if (intron->exon_quant.min) {
-      fprintf(file, "%s\t", "intron");
-      fprintf(file, "%s\t", intron->gene_id);
-      fprintf(file, "%s\t", intron->transcript_id);
-      fprintf(file, "%d\t", intron->exon_number);
-      fprintf(file, "%s\t", intron->chrom);
-      fprintf(file, "%d\t", intron->start);
-      fprintf(file, "%d\t", intron->end);
-      fprintf(file, "%d\t", intron->exon_quant.min);
-      fprintf(file, "%d\n", intron->exon_quant.max);
+      r.gene_id        =  intron->gene_id;
+      r.transcript_id  =  intron->transcript_id;
+      r.chrom          =  intron->chrom;
+      r.exon_number[0] =  intron->exon_number; 
+      r.start[0]       =  intron->start;
+      r.end[0]         =  intron->end;
+      r.quant          = &intron->exon_quant;
+      print_row(file, &r);
     }
   }
 
@@ -486,9 +536,8 @@ int main(int argc, char **argv) {
 
   accumulate_counts(&gm, samfile, details_file, args.do_types, args.min_overlap);
  
-  print_exon_quants(out, &gm);
+  print_quants(out, &gm);
   LOG_INFO("Cleaning up %s\n", "");
-
 
   samclose(samfile);
 
