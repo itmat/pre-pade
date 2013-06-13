@@ -257,7 +257,7 @@ void add_transcripts(GeneModel *gm) {
 void add_introns(GeneModel *gm) {
   Transcript *t;
   int num_introns = 0;
-  fprintf(stderr, "Adding introns\n");
+
   for (t = gm->transcripts; t < gm->transcripts + gm->num_transcripts; t++) {
     int introns_in_this_transcript = t->exons_len - 1;
     if (introns_in_this_transcript > 0) {
@@ -282,7 +282,6 @@ void add_introns(GeneModel *gm) {
       j++;
     }
   }
-  fprintf(stderr, "J is %d\n", j);
   LOG_DEBUG("Sorting %d introns\n", num_introns);
   qsort(introns, num_introns, sizeof(Region), ( int (*)(const void *, const void*) ) cmp_exons_by_end);
 

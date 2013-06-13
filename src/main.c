@@ -36,8 +36,6 @@ const char *QUANT_TYPE_NAMES[] = { "exon", "intron", "junction", "transcript" };
 const int NUM_QUANT_TYPES = sizeof(QUANT_TYPE_NAMES) / sizeof(char*);
 
 
-
-
 void incr_quant(Quant *q, int unique) {
   q->max++;
   if (unique)
