@@ -835,7 +835,7 @@ int next_span(struct CigarCursor *c) {
 int find_contiguous_exons(int *match_start,
                           Transcript *t, int start_exon,
                           Span *spans, int num_spans) {
-  
+  printf("In find contig, start exon is %d\n", start_exon);
   Span *s = spans;
   int flags;
   int i = start_exon;
@@ -843,17 +843,21 @@ int find_contiguous_exons(int *match_start,
 
   // Advance to the first exon that overlaps the first span
   while (i < n) {
+    
     flags = cmp_exon(t->exons[i], t->exons[i]->chrom, s->start, s->end);
     if (flags & START_AFTER_EXON) 
       i++;
     else
       break;
   }
+  printf("I is %d, n is %d\n", i, n);
 
   // If no such exon exists, then we can't call a match for the
   // transcript.
   if ( i == n || (flags & END_BEFORE_EXON ) )
     return 0;
+
+  printf("Checking left edge\n");
 
   *match_start = i;
 
@@ -862,6 +866,8 @@ int find_contiguous_exons(int *match_start,
   if (i > 0 && (flags & CROSS_EXON_START ) )
     return 0;
 
+  printf("Checking intermediate spans of %d\n", num_spans);
+
   // Now we know the first span overlaps an exon in the transcript and
   // doesn't conflict with its left edge.
 
@@ -869,7 +875,7 @@ int find_contiguous_exons(int *match_start,
   // each one except the last, the end should line up with the exons
   // end, and for each one except the first, the start should line up
   // with the exon's start.
-  while ( s < spans + num_spans ) {
+  while ( s + 1 < spans + num_spans ) {
     if (s->end != t->exons[i]->end) 
       return 0;
     
@@ -885,6 +891,8 @@ int find_contiguous_exons(int *match_start,
     if (s->start != t->exons[i]->start)
       return 0;
   }
+
+  printf("Done checking intermediate\n");
 
   flags = cmp_exon(t->exons[i], t->exons[i]->chrom, s->start, s->end);
 
@@ -909,6 +917,8 @@ int matches_transcript(Transcript *transcript,
     int len = find_contiguous_exons(&match_start, 
                                     transcript, start_exon,
                                     spans, num_fwd_spans);
+    if (len)
+      fprintf(stderr, "Found %d fwd\n", len);
     if (!len)
       return 0;
 

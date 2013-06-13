@@ -338,7 +338,6 @@ void get_distinct_transcripts(TranscriptMatches *transcript_matches,
       transcript_matches->len--;
     }
   }
-  fprintf(stderr, "Found %d\n", transcript_matches->len);
 } 
 
 void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file, 
@@ -411,7 +410,6 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
       for (i = 0; i < n; i++) {
         Transcript *t = ts[i];
         if (matches_transcript(t, read_spans, num_fwd_spans, num_rev_spans)) {
-          fprintf(stderr, "It matched\n");
           incr_quant(&t->quant, num_alns == 1);
         }
       }
