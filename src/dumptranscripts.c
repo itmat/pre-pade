@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include "quant.h"
 
-
-
 void dump_transcripts(FILE *file, GeneModel *gm) {
   fprintf(file, "num_transcripts: %d\n", gm->num_transcripts);
   fprintf(file, "transcripts:\n");
@@ -51,7 +49,6 @@ void dump_regions(FILE *file, RegionList *list, char *type) {
     fprintf(file, "    start: %d\n", r->start);
     fprintf(file, "    end: %d\n", r->end);
   }
-  
 }
 
 void dump_exons(FILE *file, GeneModel *gm) {
@@ -63,7 +60,7 @@ void dump_introns(FILE *file, GeneModel *gm) {
 }
 
 
-void dump(char *filename, GeneModel *gm, int (*dumper_fn)(FILE *, GeneModel *), char *type) {
+void dump(char *filename, GeneModel *gm, void (*dumper_fn)(FILE *, GeneModel *), char *type) {
 
   fprintf(stderr, "Dumping %s to %s\n", type, filename);
 
@@ -88,8 +85,8 @@ int main(int argc, char **argv) {
 
   load_model(&gm, argv[1]);
   dump("transcripts.yaml", &gm, dump_transcripts, "transcripts");
-  dump("exons.yaml",       &gm, dump_exons, "exons");
-  dump("introns.yaml",     &gm, dump_introns, "introns");
+  dump("exons.yaml",       &gm, dump_exons,       "exons");
+  dump("introns.yaml",     &gm, dump_introns,     "introns");
 
   return 0;
 }
