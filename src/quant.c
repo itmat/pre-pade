@@ -366,21 +366,25 @@ void init_exon_matches(RegionMatches *matches) {
   matches->items = calloc(matches->cap, sizeof(RegionMatch));
 }
 
-void add_transcript(Transcript **transcripts, int *cap, int *len, 
-                   Transcript *transcript) {
+void init_transcript_matches(TranscriptMatches *matches) {
+  matches->cap = 1;
+  matches->len = 0;
+  matches->transcripts = calloc(matches->cap, sizeof(Transcript*));
+}
 
-  if (*len == *cap) {
-    Transcript **old = transcripts;
-    int old_cap = *cap;
+void add_transcript(TranscriptMatches *matches, Transcript *transcript) {
+
+  if (matches->len == matches->cap) {
+    Transcript **old = matches->transcripts;
+    int old_cap = matches->cap;
     
-    (*cap) *= 2;
-    transcripts = calloc(*cap, sizeof(Transcript*));
-    memcpy(old, transcripts, old_cap * sizeof(Transcript*));
+    matches->cap *= 2;
+    matches->transcripts = calloc(matches->cap, sizeof(Transcript*));
+    memcpy(matches->transcripts, old, old_cap * sizeof(Transcript*));
     free(old);
   }
 
-
-  transcripts[(*len)++] = transcript;
+  matches->transcripts[matches->len++] = transcript;
 }
 
 

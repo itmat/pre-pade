@@ -309,26 +309,36 @@ int cmp_transcript_ptr(Transcript **a, Transcript **b) {
   return strcmp((*a)->id, (*b)->id);
 }
 
-void get_distinct_transcripts(Transcript **transcripts,
-                              int *transcripts_cap, 
-                              int *transcripts_len,
+void get_distinct_transcripts(TranscriptMatches *transcript_matches,
                               RegionMatches *matches) {
-  printf("In get distinct transcripts\n");
+  transcript_matches->len = 0;
+
   int i, j;
   for (i = 0; i < matches->len; i++) {
     RegionMatch *m = matches->items + i;
     Region *exon = m->region;
     Transcript *t = exon->transcript;
-    add_transcript(transcripts, transcripts_cap, transcripts_len, t);
+    add_transcript(transcript_matches, t);
   }  
 
-  qsort(transcripts, *transcripts_len, sizeof(Transcript*), cmp_transcript_ptr);
+  qsort(transcript_matches->transcripts, 
+        transcript_matches->len, 
+        sizeof(Transcript*), 
+        cmp_transcript_ptr);
 
-  for (i = 0, j = 1; j < *transcripts_len; j++)
-    if ( strcmp(transcripts[i]->id, transcripts[j]->id) )
-      transcripts[++i] = transcripts[j];
+  int n = transcript_matches->len;
 
-  *transcripts_len = i + 1;
+  Transcript **ts = transcript_matches->transcripts;
+
+  for (i = 0, j = 1; j < n; j++) {
+    if ( strcmp(ts[i]->id, ts[j]->id) ) {
+      ts[++i] = ts[j];
+    }
+    else {
+      transcript_matches->len--;
+    }
+  }
+  fprintf(stderr, "Found %d\n", transcript_matches->len);
 } 
 
 void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file, 
@@ -346,11 +356,10 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
   print_types_quantified(types);
 
   RegionMatches matches;
-  init_exon_matches(&matches);  
+  TranscriptMatches transcript_matches;
+  init_exon_matches(&matches);
+  init_transcript_matches(&transcript_matches);
 
-  int transcripts_cap = 1;
-  int transcripts_len = 0;
-  Transcript **transcripts = calloc(transcripts_cap, sizeof(Transcript*));
 
   while ((num_reads = next_fragment(reads, samfile, 2))) {
 
@@ -396,11 +405,13 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
 
     if (do_transcripts) {
 
-      get_distinct_transcripts(transcripts, &transcripts_cap, &transcripts_len,
-                               &matches);
-      for (i = 0; i < transcripts_len; i++) {
-        Transcript *t = transcripts[i];
+      get_distinct_transcripts(&transcript_matches, &matches);
+      Transcript **ts = transcript_matches.transcripts;
+      int n = transcript_matches.len;
+      for (i = 0; i < n; i++) {
+        Transcript *t = ts[i];
         if (matches_transcript(t, read_spans, num_fwd_spans, num_rev_spans)) {
+          fprintf(stderr, "It matched\n");
           incr_quant(&t->quant, num_alns == 1);
         }
       }

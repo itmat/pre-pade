@@ -160,6 +160,12 @@ struct Transcript {
   Quant quant;
 };
 
+typedef struct TranscriptMatches TranscriptMatches;
+struct TranscriptMatches {
+  Transcript **transcripts;
+  int len;
+  int cap;
+};
 
 /* Used to store the state of a query in an GeneModel. */
 struct RegionCursor {
@@ -242,6 +248,7 @@ int cmp_match_by_exon(RegionMatch *a, RegionMatch *b);
 void parse_gtf_file(GeneModel *gm, char *filename);
 void index_regions(RegionList *exons);
 void init_exon_matches(RegionMatches *matches);
+void init_transcript_matches(TranscriptMatches *tms);
 void find_candidates(RegionMatches *matches, RegionList *list, char *ref,
                      Span *spans, int num_fwd_spans, int num_rev_spans);
 int next_fragment(bam1_t **reads, samfile_t *samfile, int n);
@@ -255,8 +262,7 @@ void add_transcripts(GeneModel *gm);
 void incr_quant(Quant *q, int unique);
 int matches_junction(Region *left, Span *spans, int num_fwd_spans, int num_rev_spans, int min_overlap);
 int load_model(GeneModel *gm, char *filename);
-void add_transcript(Transcript **transcripts, int *cap, int *len, 
-                    Transcript *transcript);
+void add_transcript(TranscriptMatches *tms, Transcript *transcript);
 int matches_transcript(Transcript *transcript, Span *spans, int num_fwd_spans, int num_rev_spans);
 #endif
 
