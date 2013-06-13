@@ -393,8 +393,9 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
       }
     }
 
+
     if (do_transcripts) {
-      printf("Here I am\n");
+
       get_distinct_transcripts(transcripts, &transcripts_cap, &transcripts_len,
                                &matches);
       for (i = 0; i < transcripts_len; i++) {
@@ -456,7 +457,13 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Not producing debugging output\n");
   }
 
+
   samfile_t *samfile = samopen(args.sam_filename, "r", NULL);
+  if (!samfile) {
+    perror(args.sam_filename);
+    exit(1);
+  }
+
   accumulate_counts(&gm, samfile, details_file, args.do_types, args.min_overlap);
  
   print_exon_quants(out, &gm);
