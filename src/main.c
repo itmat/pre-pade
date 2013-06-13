@@ -31,9 +31,8 @@ struct Args {
 #define QUANT_TYPE_INTRON     1
 #define QUANT_TYPE_JUNCTION   2
 #define QUANT_TYPE_TRANSCRIPT 3
-#define QUANT_TYPE_GENE       4
 
-const char *QUANT_TYPE_NAMES[] = { "exon", "intron", "junction", "transcript", "gene" };
+const char *QUANT_TYPE_NAMES[] = { "exon", "intron", "junction", "transcript" };
 const int NUM_QUANT_TYPES = sizeof(QUANT_TYPE_NAMES) / sizeof(char*);
 
 
@@ -343,7 +342,7 @@ void get_distinct_transcripts(TranscriptMatches *transcript_matches,
   qsort(transcript_matches->transcripts, 
         transcript_matches->len, 
         sizeof(Transcript*), 
-        cmp_transcript_ptr);
+        ( int (*)(const void *, const void*) ) cmp_transcript_ptr);
 
   int n = transcript_matches->len;
 
@@ -370,7 +369,6 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
   const int do_introns     = types & (1 << QUANT_TYPE_INTRON);
   const int do_junctions   = types & (1 << QUANT_TYPE_JUNCTION);
   const int do_transcripts = types & (1 << QUANT_TYPE_TRANSCRIPT);
-  const int do_genes       = types & (1 << QUANT_TYPE_GENE);
   print_types_quantified(types);
 
   RegionMatches matches;
@@ -436,16 +434,12 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
 
     if (do_introns) {
       LOG_TRACE("Finding introns%s\n", "");      
-      find_candidates(&matches, &gm->introns, ref, read_spans, num_fwd_spans, num_rev_spans);
-
+      find_candidates(&matches, &gm->introns, ref, read_spans, 
+                      num_fwd_spans, num_rev_spans);
 
       for (i = 0; i < matches.len; i++) {
-        
-        int consistent = !matches.items[i].conflict;
         Region *intron = matches.items[i].region;
-        
         incr_quant(&intron->exon_quant, num_alns == 1);
-        
       }
 
     }
