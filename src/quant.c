@@ -808,3 +808,93 @@ int next_span(struct CigarCursor *c) {
 
   return found_match;
 }
+
+
+int find_contiguous_exons(Region **match_start, Region **match_end,
+                          Region *start_exon, Span *spans, int num_spans) {
+
+  Region *e = start_exon;
+  Span *s = spans;
+  int flags;
+
+
+  // Advance to the first exon that overlaps the first span
+  while (e) {
+    flags = cmp_exon(e, e->chrom, s->start, s->end);
+    if (flags & START_AFTER_EXON) 
+      e = next_exon_in_transcript(e);
+    else
+      break;
+  }
+
+  int is_first_exon = e == *(e->transcript->exons);
+
+  // If no such exon exists, then we can't call a match for the
+  // transcript.
+  if ( !e || (flags & END_BEFORE_EXON ) )
+    return 0;
+
+  // If the span crosses the left edge of the exon and it isn't the
+  // first exon in the transcript, then we can't call a match.
+  if (!is_first_exon && (flags & CROSS_EXON_START ) )
+    return 0;
+
+  // Now we know the first span overlaps an exon in the transcript and
+  // doesn't conflict with its left edge.
+
+  // Now the sequence of spans should match the sequence of exons. For
+  // each one except the last, the end should line up with the exons
+  // end, and for each one except the first, the start should line up
+  // with the exon's start.
+  while ( s < spans + num_spans ) {
+    if (s->end != e->end) 
+      return 0;
+    
+    // Advance to the next span and next exon. If there's no next
+    // exon, we have a mismatch
+    s++;
+    e = next_exon_in_transcript(e);
+    
+    if (!e)
+      return 0;
+
+    // Make sure the start of all exons except the first line up.
+    if (s->start != e->start)
+      return 0;
+  }
+
+  flags = cmp_exon(e, e->chrom, s->start, s->end);
+  
+  Region *next_exon = next_exon_in_transcript(e);
+
+  if (next_exon && (flags & CROSS_EXON_END) ) {
+    return 0;
+  }
+
+  *match_start = start_exon;
+  *match_end   = e;
+  return 1;
+}
+
+int matches_transcript(Region *exon, Span *spans, int num_fwd_spans, int num_rev_spans) {
+
+  if (num_fwd_spans) {
+    Region *match_start, *match_end;
+    int len = find_contiguous_exons(&match_start, &match_end, exon, spans, num_fwd_spans);
+    
+    if (!len)
+      return 0;
+
+    exon = match_end;
+  }
+  
+  if (num_rev_spans) {
+    Region *match_start, *match_end;
+    int len = find_contiguous_exons(&match_start, &match_end, exon, spans + num_fwd_spans, num_rev_spans);
+    
+    if (!len)
+      return 0;
+  }
+  
+  return 1;
+}

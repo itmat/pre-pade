@@ -338,6 +338,7 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
 
     ref = ref ? ref : "";
 
+
     LOG_TRACE("Finding exons%s\n", "");
     find_candidates(&matches, &gm->exons, ref, read_spans, num_fwd_spans, num_rev_spans);
 
@@ -359,6 +360,8 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
         incr_quant(&exon->junction_quant, num_alns == 1);
       }
     }
+
+
 
     if (do_introns) {
       LOG_TRACE("Finding introns%s\n", "");      
