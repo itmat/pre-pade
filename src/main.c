@@ -294,22 +294,7 @@ void print_match_details(FILE *file, bam1_t **reads, int num_reads,
   }
 }
 
-void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file, 
-                       unsigned int types, int min_overlap) {
-  struct Span read_spans[MAX_SPANS_PER_READ];
-
-  bam1_t *reads[] = { bam_init1(), bam_init1() };
-  int num_reads;
-
-  RegionMatches matches;
-  init_exon_matches(&matches);  
-
-  const int do_exons       = types & (1 << QUANT_TYPE_EXON);
-  const int do_introns     = types & (1 << QUANT_TYPE_INTRON);
-  const int do_junctions   = types & (1 << QUANT_TYPE_JUNCTION);
-  const int do_transcripts = types & (1 << QUANT_TYPE_TRANSCRIPT);
-  const int do_genes       = types & (1 << QUANT_TYPE_GENE);
-
+void print_types_quantified(unsigned int types) {
   int i;
 
   fprintf(stderr, "Types quantified:\n");
@@ -318,6 +303,54 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
             QUANT_TYPE_NAMES[i],
             (types & (1 << i)) ? "yes" : "no");
   }
+}
+
+int cmp_transcript_ptr(Transcript **a, Transcript **b) {
+  return strcmp((*a)->id, (*b)->id);
+}
+
+void get_distinct_transcripts(Transcript **transcripts,
+                              int *transcripts_cap, 
+                              int *transcripts_len,
+                              RegionMatches *matches) {
+  printf("In get distinct transcripts\n");
+  int i, j;
+  for (i = 0; i < matches->len; i++) {
+    RegionMatch *m = matches->items + i;
+    Region *exon = m->region;
+    Transcript *t = exon->transcript;
+    add_transcript(transcripts, transcripts_cap, transcripts_len, t);
+  }  
+
+  qsort(transcripts, *transcripts_len, sizeof(Transcript*), cmp_transcript_ptr);
+
+  for (i = 0, j = 1; j < *transcripts_len; j++)
+    if ( strcmp(transcripts[i]->id, transcripts[j]->id) )
+      transcripts[++i] = transcripts[j];
+
+  *transcripts_len = i + 1;
+} 
+
+void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file, 
+                       unsigned int types, int min_overlap) {
+  struct Span read_spans[MAX_SPANS_PER_READ];
+
+  bam1_t *reads[] = { bam_init1(), bam_init1() };
+  int num_reads;
+
+  const int do_exons       = types & (1 << QUANT_TYPE_EXON);
+  const int do_introns     = types & (1 << QUANT_TYPE_INTRON);
+  const int do_junctions   = types & (1 << QUANT_TYPE_JUNCTION);
+  const int do_transcripts = types & (1 << QUANT_TYPE_TRANSCRIPT);
+  const int do_genes       = types & (1 << QUANT_TYPE_GENE);
+  print_types_quantified(types);
+
+  RegionMatches matches;
+  init_exon_matches(&matches);  
+
+  int transcripts_cap = 1;
+  int transcripts_len = 0;
+  Transcript **transcripts = calloc(transcripts_cap, sizeof(Transcript*));
 
   while ((num_reads = next_fragment(reads, samfile, 2))) {
 
@@ -337,7 +370,6 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
     }
 
     ref = ref ? ref : "";
-
 
     LOG_TRACE("Finding exons%s\n", "");
     find_candidates(&matches, &gm->exons, ref, read_spans, num_fwd_spans, num_rev_spans);
@@ -361,7 +393,17 @@ void accumulate_counts(GeneModel *gm, samfile_t *samfile, FILE *details_file,
       }
     }
 
-
+    if (do_transcripts) {
+      printf("Here I am\n");
+      get_distinct_transcripts(transcripts, &transcripts_cap, &transcripts_len,
+                               &matches);
+      for (i = 0; i < transcripts_len; i++) {
+        Transcript *t = transcripts[i];
+        if (matches_transcript(t, read_spans, num_fwd_spans, num_rev_spans)) {
+          incr_quant(&t->quant, num_alns == 1);
+        }
+      }
+    }
 
     if (do_introns) {
       LOG_TRACE("Finding introns%s\n", "");      

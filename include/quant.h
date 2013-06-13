@@ -157,6 +157,7 @@ struct Transcript {
   int exons_len;
   int exons_cap;
   char *id;
+  Quant quant;
 };
 
 
@@ -254,6 +255,8 @@ void add_transcripts(GeneModel *gm);
 void incr_quant(Quant *q, int unique);
 int matches_junction(Region *left, Span *spans, int num_fwd_spans, int num_rev_spans, int min_overlap);
 int load_model(GeneModel *gm, char *filename);
-
+void add_transcript(Transcript **transcripts, int *cap, int *len, 
+                    Transcript *transcript);
+int matches_transcript(Transcript *transcript, Span *spans, int num_fwd_spans, int num_rev_spans);
 #endif
 

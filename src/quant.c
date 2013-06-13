@@ -366,6 +366,24 @@ void init_exon_matches(RegionMatches *matches) {
   matches->items = calloc(matches->cap, sizeof(RegionMatch));
 }
 
+void add_transcript(Transcript **transcripts, int *cap, int *len, 
+                   Transcript *transcript) {
+
+  if (*len == *cap) {
+    Transcript **old = transcripts;
+    int old_cap = *cap;
+    
+    (*cap) *= 2;
+    transcripts = calloc(*cap, sizeof(Transcript*));
+    memcpy(old, transcripts, old_cap * sizeof(Transcript*));
+    free(old);
+  }
+
+
+  transcripts[(*len)++] = transcript;
+}
+
+
 void add_match(RegionMatches *matches, Region *exon, int overlap, int conflict) {
   LOG_TRACE("Adding match %s\n", "");
   if (matches->len == matches->cap) {
@@ -810,33 +828,34 @@ int next_span(struct CigarCursor *c) {
 }
 
 
-int find_contiguous_exons(Region **match_start, Region **match_end,
-                          Region *start_exon, Span *spans, int num_spans) {
-
-  Region *e = start_exon;
+int find_contiguous_exons(int *match_start,
+                          Transcript *t, int start_exon,
+                          Span *spans, int num_spans) {
+  
   Span *s = spans;
   int flags;
-
+  int i = start_exon;
+  int n = t->exons_len;
 
   // Advance to the first exon that overlaps the first span
-  while (e) {
-    flags = cmp_exon(e, e->chrom, s->start, s->end);
+  while (i < n) {
+    flags = cmp_exon(t->exons[i], t->exons[i]->chrom, s->start, s->end);
     if (flags & START_AFTER_EXON) 
-      e = next_exon_in_transcript(e);
+      i++;
     else
       break;
   }
 
-  int is_first_exon = e == *(e->transcript->exons);
-
   // If no such exon exists, then we can't call a match for the
   // transcript.
-  if ( !e || (flags & END_BEFORE_EXON ) )
+  if ( i == n || (flags & END_BEFORE_EXON ) )
     return 0;
+
+  *match_start = i;
 
   // If the span crosses the left edge of the exon and it isn't the
   // first exon in the transcript, then we can't call a match.
-  if (!is_first_exon && (flags & CROSS_EXON_START ) )
+  if (i > 0 && (flags & CROSS_EXON_START ) )
     return 0;
 
   // Now we know the first span overlaps an exon in the transcript and
@@ -847,50 +866,56 @@ int find_contiguous_exons(Region **match_start, Region **match_end,
   // end, and for each one except the first, the start should line up
   // with the exon's start.
   while ( s < spans + num_spans ) {
-    if (s->end != e->end) 
+    if (s->end != t->exons[i]->end) 
       return 0;
     
     // Advance to the next span and next exon. If there's no next
     // exon, we have a mismatch
     s++;
-    e = next_exon_in_transcript(e);
+    i++;
     
-    if (!e)
+    if (i == n)
       return 0;
 
     // Make sure the start of all exons except the first line up.
-    if (s->start != e->start)
+    if (s->start != t->exons[i]->start)
       return 0;
   }
 
-  flags = cmp_exon(e, e->chrom, s->start, s->end);
-  
-  Region *next_exon = next_exon_in_transcript(e);
+  flags = cmp_exon(t->exons[i], t->exons[i]->chrom, s->start, s->end);
 
-  if (next_exon && (flags & CROSS_EXON_END) ) {
+  int is_last_exon = i + 1 == n;
+
+  if ( !is_last_exon && (flags & CROSS_EXON_END) ) {
     return 0;
   }
 
-  *match_start = start_exon;
-  *match_end   = e;
-  return 1;
+  return i - (*match_start) + 1;
 }
 
-int matches_transcript(Region *exon, Span *spans, int num_fwd_spans, int num_rev_spans) {
+int matches_transcript(Transcript *transcript, 
+                       Span *spans, 
+                       int num_fwd_spans, 
+                       int num_rev_spans) {
+
+  int start_exon = 0;
 
   if (num_fwd_spans) {
-    Region *match_start, *match_end;
-    int len = find_contiguous_exons(&match_start, &match_end, exon, spans, num_fwd_spans);
-    
+    int match_start;
+    int len = find_contiguous_exons(&match_start, 
+                                    transcript, start_exon,
+                                    spans, num_fwd_spans);
     if (!len)
       return 0;
 
-    exon = match_end;
+    start_exon = match_start + len - 1;
   }
   
   if (num_rev_spans) {
-    Region *match_start, *match_end;
-    int len = find_contiguous_exons(&match_start, &match_end, exon, spans + num_fwd_spans, num_rev_spans);
+    int match_start;
+    int len = find_contiguous_exons(&match_start, 
+                                    transcript, start_exon,
+                                    spans + num_fwd_spans, num_rev_spans);
     
     if (!len)
       return 0;
