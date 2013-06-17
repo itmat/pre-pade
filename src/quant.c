@@ -4,11 +4,26 @@
 #include <regex.h>
 #include "quant.h"
 
-void print_exon(Region *exon) {
-  printf("%s:%d-%d\n", exon->chrom, exon->start, exon->end);
-}
+/*****************************************************************************
+ **
+ ** Functions for parsing GTF file
+ **
+ **/
 
-
+/*
+ * Parse the attribute with the given field name from a
+ * string. Returns the length of the match and modifies start and len
+ * to indicate the location and length of the match.
+ *
+ * str - the string that contains the attributes.
+ *
+ * field_name - the name of the attribute to find
+ *
+ * start - this pointer will be modified to point to the start of the
+ *         attribute value.
+ *
+ * len - will be modified to contain the length of the match.
+ */
 int parse_gtf_attr(char *str, char *field_name, char **start, int *len) {
   char *p = strstr(str, field_name);
 
@@ -42,6 +57,20 @@ int parse_gtf_attr(char *str, char *field_name, char **start, int *len) {
   return *len;
 }
 
+/*
+ * parse a string-typed attribute from a string. If the attribute is
+ * found, modify dest to contain a newly-allocated copy of the value
+ * and returns a true value. Otherwise, dest is populated with a
+ * newly-allocated empty string and we return 0. The caller is
+ * responsible for freeing dest.
+ *
+ * str - The string containing the attribute.
+ *
+ * name - Name of the attribute.
+ *
+ * dest - Attribute value or empty string will be allocated and stored
+ *        here.
+ */
 int parse_gtf_attr_str(char *str, char *name, char **dest) {
   char *start;
   int len;
@@ -55,6 +84,16 @@ int parse_gtf_attr_str(char *str, char *name, char **dest) {
   }
 }
 
+/*
+ * parse an int-typed attribute from a string. If we find it, we
+ * modify value to contain the value and return 1. Otherwise return 0.
+ *
+ * str - The string containing the attribute.
+ *
+ * name - Name of the attribute to find.
+ *
+ * value - Modified to point to the integer value.
+ */
 int parse_gtf_attr_int(char *str, char *name, int *value) {
   char *start;
   int len;
@@ -67,6 +106,12 @@ int parse_gtf_attr_int(char *str, char *name, int *value) {
   }
 }
 
+/*
+ * Parse a GTF file and populate a GeneModel struct. The resulting
+ * gene model will contain many dynamically allocated structures. The
+ * caller is responsible for calling free_gene_model to free the
+ * GeneModel structures.
+ */
 void parse_gtf_file(GeneModel *gm, char *filename) {
 
   LOG_INFO("Loading GTF file %s\n", filename);
@@ -168,6 +213,42 @@ void parse_gtf_file(GeneModel *gm, char *filename) {
   gm->exons.cap = exons_cap;
   gm->exons.items = exons;
 }
+
+
+void free_gene_model(GeneModel *gm) {
+  int i;
+
+  // There are no dynamically allocated structures inside the introns
+  // that are "owned" by an intron. gene_id and transcript_id of each
+  // intron is owned by an exon. So to free the introns, we just need
+  // to free the array containing the Region structs and the array
+  // containing the IndexEntry structs.
+  free(gm->introns.items);
+  free(gm->introns.index);
+
+  // Free the gene_id and transcript_id field of each exon.
+  for (i = 0; i < gm->exons.len; i++) {
+    Region *e = gm->exons.items + i;
+    if (e->source)        free(e->source);
+    if (e->feature)       free(e->feature);
+    if (e->chrom)         free(e->chrom);
+    if (e->gene_id)       free(e->gene_id);
+    if (e->transcript_id) free(e->transcript_id);
+
+  }
+
+  free(gm->exons.items);
+  free(gm->exons.index);
+
+  for (i = 0; i < gm->num_transcripts; i++) {
+    free(gm->transcripts[i].exons);
+  }
+  free(gm->transcripts);
+}
+
+
+// stop
+
 
 int cmp_exons_by_end(Region *a, Region *b) {
   int str = strcmp(a->chrom, b->chrom);

@@ -502,7 +502,7 @@ int main(int argc, char **argv) {
   LOG_INFO("Cleaning up %s\n", "");
 
   samclose(samfile);
-
+  free_gene_model(&gm);
   return 0;
 }
 
