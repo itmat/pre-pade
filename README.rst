@@ -45,3 +45,44 @@ coordinates.
 
 To get help on running quantify, just run "bin/quantify" without any
 options.
+
+Output File
+===========
+
+quantify produces a tab-delimited output file, with one row for each
+feature that was covered by at least one read.
+
+* type - The type of the feature. Either "exon", "intron", "junction",
+  or "transcript".
+
+* gene_id - The gene id, taken from the gene_id attribute of the GTF
+  file.
+
+* transcript_id - The transcript id, taken from the transcript_id
+  attribute of the GTF file.
+
+* chrom - The chromosome.
+
+* exon_number - Taken from the exon_number attribute in the GTF
+  file. The value of this field is interpreted differently depending
+  on the value in the "type" field. When type is "exon", exon_number
+  is a single number that identifies the exon. When type is "intron"
+  or "junction", it is two numbers separated by a comma, identifying
+  the exons on the left and right side of the intron. When type is
+  "transcript", exon_number is blank.
+
+* start, end - The start and end coordinates of the feature. Like
+  exon_number, these fields are also interpreted differently depending
+  on the value in the "type" field. When type is "exon", these fields
+  simply contain the start and end coordinates of the exon. When type
+  is "intron", they are the start and end coordinates of the
+  intron. When type is "junction", start is the coordinate of the
+  rightmost base in the left exon, and end is the leftmost base in the
+  right exon. When type is "transcript", start and end contain
+  comma-separated lists of the start and end points of the exons.
+
+* min - The number of uniquely aligned reads that hit this feature.
+
+* max - The total number of reads that hit this feature, including
+  reads that have a unique alignment as well as reads that have
+  multiple alignments.
