@@ -90,7 +90,7 @@ void print_row(FILE *file, int type, Region **rs, int n, Quant *quant) {
       fprintf(file, i == 0 ? "%d" : ",%d", rs[i]->end);
   }
   
-  fprintf(file, "%d\t%d\n", quant->min, quant->max);
+  fprintf(file, "\t%d\t%d\n", quant->min, quant->max);
 
 }
 
