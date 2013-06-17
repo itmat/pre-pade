@@ -52,7 +52,7 @@ void incr_quant(Quant *q, int unique) {
 }
 typedef struct OutRow OutRow;
 struct OutRow {
-  char *type;
+  int  type;
   char *gene_id;
   char *transcript_id;
   char *chrom;
@@ -60,31 +60,46 @@ struct OutRow {
   int  start[2];
   int  end[2];
   Quant *quant;
+
   int num_regions;
 };
 
-void print_row(FILE *file, OutRow *row) {
+void print_row(FILE *file, int type, Region **rs, int n, Quant *quant) {
   int i;
-  const int n = row->num_regions;
 
+  Region *r = rs[0];
   fprintf(file, "%s\t%s\t%s\t%s\t", 
-          row->type, row->gene_id, row->transcript_id, row->chrom);
+          QUANT_TYPE_NAMES[type], r->gene_id, r->transcript_id, r->chrom);
 
   // Print region numbers, starts, and ends. Exons and introns should
   // have 1 region, start, and end. Junctions should have two regions,
   // starts, and ends (the values for the exons on either side of the
   // junction). Right now transcripts have 0, but we might want to add
   // the coordinates for all the exons in the transcript.
-  for (i = 0; i < n; i++) 
-    fprintf(file, i == 0 ? "%d" : ",%d", row->exon_number[i]);
-  fprintf(file, "\t");
-  for (i = 0; i < n; i++) 
-    fprintf(file, i == 0 ? "%d" : ",%d", row->start[i]);
-  fprintf(file, "\t");
-  for (i = 0; i < n; i++) 
-    fprintf(file, i == 0 ? "%d" : ",%d", row->end[i]);
 
-  fprintf(file, "%d\t%d\n", row->quant->min, row->quant->max);
+  switch (type) {
+  case QUANT_TYPE_EXON:
+  case QUANT_TYPE_INTRON:
+    fprintf(file, "%d\t%d\t%d", r->exon_number, r->start, r->end);
+    break;
+
+  case QUANT_TYPE_JUNCTION: 
+    fprintf(file, "%d\t%d\t%d",
+            rs[0]->exon_number, 
+            rs[0]->end - 1,
+            rs[1]->start);
+    break;
+
+  case QUANT_TYPE_TRANSCRIPT:
+    fprintf(file, "\t");
+    for (i = 0; i < n; i++) 
+      fprintf(file, i == 0 ? "%d" : ",%d", rs[i]->start);
+    fprintf(file, "\t");
+    for (i = 0; i < n; i++) 
+      fprintf(file, i == 0 ? "%d" : ",%d", rs[i]->end);
+  }
+  
+  fprintf(file, "%d\t%d\n", quant->min, quant->max);
 
 }
 
@@ -106,76 +121,34 @@ void print_quants(FILE *file, GeneModel *gm) {
   int i;
 
   // Exon counts
-  r.num_regions = 1;
-  r.type        = "exon";
+  LOG_INFO("Printing exons%s\n", "");
   for (i = 0; i < gm->exons.len; i++) {
-     Region *e = gm->exons.items + i;
-     if (e->exon_quant.min) {
-       r.gene_id        =  e->gene_id;
-       r.transcript_id  =  e->transcript_id;
-       r.chrom          =  e->chrom;
-       r.exon_number[0] =  e->exon_number;
-       r.start[0]       =  e->start;
-       r.end[0]         =  e->end;
-       r.quant          = &e->exon_quant;
-       print_row(file, &r);
-    }
+     Region *exon = gm->exons.items + i;
+     print_row(file, QUANT_TYPE_EXON, &exon, 1, &exon->exon_quant);
   }
 
   // Intron quants
-  r.num_regions = 1;
-  r.type        = "intron";
+  LOG_INFO("Printing introns%s\n", "");
   for (i = 0; i < gm->introns.len; i++) {
     Region *intron = gm->introns.items + i;
-    if (intron->exon_quant.min) {
-      r.gene_id        =  intron->gene_id;
-      r.transcript_id  =  intron->transcript_id;
-      r.chrom          =  intron->chrom;
-      r.exon_number[0] =  intron->exon_number; 
-      r.start[0]       =  intron->start;
-      r.end[0]         =  intron->end;
-      r.quant          = &intron->exon_quant;
-      print_row(file, &r);
+    print_row(file, QUANT_TYPE_INTRON, &intron, 1, &intron->exon_quant);
+  }
+
+  // Junction quants
+  LOG_INFO("Printing junctions%s\n", "");
+  for (i = 0; i < gm->num_transcripts; i++) {
+    Transcript *t = gm->transcripts + i;
+    int j;
+    for (j = 0; j + 1 < t->exons_len; j++) {
+      print_row(file, QUANT_TYPE_JUNCTION, t->exons + j, 2,
+                &t->exons[j]->junction_quant);
     }
   }
 
+  LOG_INFO("Printing transcripts%s\n", "");
   for (i = 0; i < gm->num_transcripts; i++) {
-    
     Transcript *t = gm->transcripts + i;
-    
-    Region *left, *right;
-    for (left = t->exons[0]; (right = next_exon_in_transcript(left)); left = right) {
-      if (left->junction_quant.min) {
-        fprintf(file, "%s\t",    "junction");
-        fprintf(file, "%s\t",    left->gene_id);
-        fprintf(file, "%s\t",    left->transcript_id);
-        fprintf(file, "%d,%d\t", left->exon_number, right->exon_number);
-        fprintf(file, "%s\t",    left->chrom);
-        fprintf(file, "%d\t",    left->end - 1);
-        fprintf(file, "%d\t",    right->start);
-        fprintf(file, "%d\t",    left->junction_quant.min);
-        fprintf(file, "%d\n",    left->junction_quant.max);
-      }      
-    }
-  }
-
-  for (i = 0; i < gm->num_transcripts; i++) {
-    
-    Transcript *t = gm->transcripts + i;
-    
-    if (t->quant.min) {
-      Region *e = t->exons[0];
-      fprintf(file, "%s\t",    "transcript");
-      fprintf(file, "%s\t",    e->gene_id);
-      fprintf(file, "%s\t",    t->id);
-      fprintf(file, "\t");
-      fprintf(file, "%s\t",    e->chrom);
-      fprintf(file, "\t");
-      fprintf(file, "\t");
-      fprintf(file, "%d\t",    t->quant.min);
-      fprintf(file, "%d\n",    t->quant.max);
-    }      
-
+    print_row(file, QUANT_TYPE_TRANSCRIPT, t->exons, t->exons_len, &t->quant);
   }
 
 
