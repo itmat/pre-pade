@@ -50,21 +50,12 @@ void incr_quant(Quant *q, int unique) {
   if (unique)
     q->min++;
 }
-typedef struct OutRow OutRow;
-struct OutRow {
-  int  type;
-  char *gene_id;
-  char *transcript_id;
-  char *chrom;
-  int  exon_number[2];
-  int  start[2];
-  int  end[2];
-  Quant *quant;
-
-  int num_regions;
-};
 
 void print_row(FILE *file, int type, Region **rs, int n, Quant *quant) {
+
+  if (!quant->min)
+    return;
+
   int i;
 
   Region *r = rs[0];
@@ -115,8 +106,6 @@ void print_quants(FILE *file, GeneModel *gm) {
   fprintf(file, "%s\t", "end");
   fprintf(file, "%s\t", "min_count");
   fprintf(file, "%s\n", "max_count");
-
-  OutRow r;
 
   int i;
 
