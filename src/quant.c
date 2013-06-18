@@ -214,7 +214,11 @@ void parse_gtf_file(GeneModel *gm, char *filename) {
   gm->exons.items = exons;
 }
 
-
+/*
+ * Free the dynamically-allocated structures in the gene model. Note
+ * that this does not free the GeneModel struct itself, so if it was
+ * dynamically allocated, the caller is responsible for freeing it.
+ */
 void free_gene_model(GeneModel *gm) {
   int i;
 
@@ -247,8 +251,12 @@ void free_gene_model(GeneModel *gm) {
 }
 
 
-// stop
-
+/*****************************************************************************
+ **
+ ** Functions for comparing things, useful for passing into qsort and
+ ** bsearch.
+ **
+ **/
 
 int cmp_exons_by_end(Region *a, Region *b) {
   int str = strcmp(a->chrom, b->chrom);
