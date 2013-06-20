@@ -119,6 +119,7 @@ void parse_gtf_file(GeneModel *gm, char *filename) {
   FILE *file = fopen(filename, "r");
   if (!file) {
     perror(filename);
+    exit(1);
   }
 
   int exons_len = 0;
