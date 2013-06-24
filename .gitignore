@@ -7,7 +7,7 @@
 *.egg
 *.egg-info
 dist
-build
+# build # taken care of in the dir itself.
 eggs
 parts
 bin
@@ -34,7 +34,7 @@ nosetests.xml
 .project
 .pydevproject
 
-#********** osx template********** 
+#********** osx template**********
 
 .DS_Store
 
@@ -44,17 +44,17 @@ nosetests.xml
 # Files that might appear on external disk
 .Spotlight-V100
 .Trashes
- 
+
 *~
 *.pyc
 \#*\#
 .\#*
 
-#********** cmake template********** 
+#********** cmake template**********
 
 CMakeCache.txt
 CMakeFiles
 Makefile
 cmake_install.cmake
 install_manifest.txt
- 
+
