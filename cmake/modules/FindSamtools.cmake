@@ -8,7 +8,9 @@
 set(SAMTOOLS_SEARCH_DIRS
     ${SAMTOOLS_SEARCH_DIRS}
     $ENV{SAMTOOLS_ROOT}
+    ${PROJECT_SOURCE_DIR}/vendor/samtools
     /usr
+    /usr/local
 )
 
 set(_samtools_ver_path "samtools-${Samtools_FIND_VERSION}")
