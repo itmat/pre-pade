@@ -38,7 +38,6 @@ follow these steps:
 
         make install
 
-
 Running
 =======
 

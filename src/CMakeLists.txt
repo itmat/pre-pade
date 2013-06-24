@@ -30,10 +30,19 @@ target_link_libraries(quantify ${PT})
 target_link_libraries(quantify samtools)
 # target_link_libraries(quantify Samtools_LIBRARIES)
 # target_include_directories(quantify INTERFACE ${Samtools_INCLUDE_DIR})
+
 set(dumptranscripts_SOURCES quant.c dumptranscripts.c)
 add_executable(dumptranscripts ${dumptranscripts_SOURCES})
 target_link_libraries(dumptranscripts ${Z})
 target_link_libraries(dumptranscripts ${PT})
 target_link_libraries(dumptranscripts samtools)
 
+set(testgeneindex_SOURCES quant.c testutils.c testgeneindex.c)
+add_executable(testgeneindex ${testgeneindex_SOURCES})
+target_link_libraries(testgeneindex ${Z})
+target_link_libraries(testgeneindex ${PT})
+target_link_libraries(testgeneindex samtools)
+
 install (TARGETS quantify DESTINATION bin)
+
+add_test(GeneIndexBottom testgeneindex)
