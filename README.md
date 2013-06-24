@@ -14,12 +14,18 @@ Pre-PADE is built using CMake. To download and install it, please
 follow these steps:
 
 1. Clone the repository
-2. git submodule init
-3. git submodule update
-4. Install cmake
-5. mkdir build; cd build
-6. cmake ..
-7. make
+
+        git clone git@github.com:itmat/pre-pade.git
+
+2. Acquire samtools
+
+        git submodule init
+        git submodule update
+
+3. Install cmake
+4. mkdir build; cd build
+5. cmake ..
+6. make
 
 This should create the main program, build/bin/quantify.
 
