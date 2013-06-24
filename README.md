@@ -30,14 +30,14 @@ follow these steps:
         cmake ..
         make
 
-5. (optional) Run the tests
+5. (optional) Run the tests:
 
-6. (optional) Install the executable
+        make test
 
-This should create the main program, build/bin/quantify.
+6. (optional) Install the executable. If you want the quantify program to be installed in a system location, run:
 
-Pre-pade has been tested with samtools 0.1.19. Once you download
-samtools, please compile it.
+        make install
+
 
 Running
 =======
