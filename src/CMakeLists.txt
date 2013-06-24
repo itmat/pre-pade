@@ -43,6 +43,12 @@ target_link_libraries(testgeneindex ${Z})
 target_link_libraries(testgeneindex ${PT})
 target_link_libraries(testgeneindex samtools)
 
+set(testsamutils_SOURCES quant.c testutils.c testsamutils.c)
+add_executable(testsamutils ${testsamutils_SOURCES})
+target_link_libraries(testsamutils ${Z})
+target_link_libraries(testsamutils ${PT})
+target_link_libraries(testsamutils samtools)
+
 install (TARGETS quantify DESTINATION bin)
 
-add_test(GeneIndexBottom testgeneindex)
+

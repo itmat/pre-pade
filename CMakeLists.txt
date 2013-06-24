@@ -18,11 +18,14 @@ enable_testing()
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/testdata/arabidopsis.gtf
           DESTINATION testdata)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/testdata/RUM.sam
+          DESTINATION testdata)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/testdata/cigar_bug.sam
+          DESTINATION testdata)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/testdata/test_next_fragment_paired.sam
+          DESTINATION testdata)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/testdata/test_next_fragment_single.sam
+          DESTINATION testdata)
 
-add_test(GeneIndex bin/testgeneindex)
-
-
-
-
-
-
+add_test(GeneIndex ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/testgeneindex)
+add_test(SamUtils ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/testsamutils)
