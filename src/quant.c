@@ -284,6 +284,10 @@ int cmp_exon_ptr_end(Region **a, Region **b) {
 }
 
 
+/*
+ * Take a GeneModel that has been populated with exons from a GTF
+ * file, and add a transcript model to it.
+ */
 void add_transcripts(GeneModel *gm) {
   LOG_DEBUG("Adding transcripts%s\n", "");
 
@@ -291,16 +295,17 @@ void add_transcripts(GeneModel *gm) {
   int i, n = gm->exons.len;
   Transcript *p, *q;
 
-  // First make a list of all the transcript IDs from our exons  
+  // First make a list of all the transcript IDs from our exons
   Transcript *transcripts = calloc(n, sizeof(Transcript));
   for (i = 0; i < n; i++) {
     transcripts[i].id = exons[i].transcript_id;
     transcripts[i].exons_cap = 1;
   }
 
-  // Now sort the transcripts and go through them removing all duplicates and accumulating the exon counts
-
-  qsort(transcripts, n, sizeof(Transcript), ( int (*)(const void *, const void*) ) cmp_transcript);
+  // Now sort the transcripts and go through them removing all
+  // duplicates and accumulating the exon counts
+  qsort(transcripts, n, sizeof(Transcript),
+        ( int (*)(const void *, const void*) ) cmp_transcript);
 
   for (p = transcripts, q = p + 1; q < transcripts + n; q++) {
     // If p and q have the same transcript id, just increment the
@@ -309,14 +314,17 @@ void add_transcripts(GeneModel *gm) {
       p->exons_cap++;
     }
 
-    // Otherwise we've found a new transcript. Advance p, and set its values to q's.
+    // Otherwise we've found a new transcript. Advance p, and set its
+    // values to q's.
     else {
       memcpy(++p, q, sizeof(Transcript));
     }
   }
 
-  // p is now the end of the real list of transcripts, so set the count appropriately
+  // p is now the end of the real list of transcripts, so set the
+  // count appropriately
   int num_transcripts = p + 1 - transcripts;
+
   LOG_DEBUG("Found %d transcripts\n", num_transcripts);
   // Allocate space for the exon pointers in each transcript
   for (i = 0; i < num_transcripts; i++) {
@@ -326,24 +334,29 @@ void add_transcripts(GeneModel *gm) {
   // Now for each exon, find its transcript, set its pointer to that
   // transcript, and add the exon to that transcript's list.
   for (i = 0; i < n; i++) {
-
     Region *e = exons + i;
-
     Transcript *t = bsearch(e->transcript_id, transcripts, num_transcripts, 
                             sizeof(Transcript), 
-                            (int (*) (const void *, const void *))cmp_id_to_transcript);
+                            (int (*) (const void *, const void *))
+                            cmp_id_to_transcript);
     e->transcript = t;
     t->exons[t->exons_len++] = e;
   }
 
+  // Sort the exons in the transcript by location
   for (i = 0; i < num_transcripts; i++) {
-    qsort(transcripts[i].exons, transcripts[i].exons_cap, sizeof(Region*), ( int (*)(const void *, const void*) ) cmp_exon_ptr_end);
+    qsort(transcripts[i].exons, transcripts[i].exons_cap, sizeof(Region*),
+          ( int (*)(const void *, const void*) ) cmp_exon_ptr_end);
   }
 
   gm->num_transcripts = num_transcripts;
   gm->transcripts = transcripts;
 }
 
+/*
+ * Take a GeneModel that has been populated with exons and
+ * transcripts, and add introns to it.
+ */
 void add_introns(GeneModel *gm) {
   Transcript *t;
   int num_introns = 0;
