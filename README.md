@@ -17,15 +17,22 @@ follow these steps:
 
         git clone git@github.com:itmat/pre-pade.git
 
-2. Acquire samtools
+2. Acquire samtools. It's linked as a git submodule, and you can pull it into the project by running:
 
         git submodule init
         git submodule update
 
-3. Install cmake
-4. mkdir build; cd build
-5. cmake ..
-6. make
+3. Install cmake. You can download it here: http://www.cmake.org/cmake/resources/software.html.
+
+4. Build the software
+
+        cd build
+        cmake ..
+        make
+
+5. (optional) Run the tests
+
+6. (optional) Install the executable
 
 This should create the main program, build/bin/quantify.
 
