@@ -35,3 +35,5 @@ add_executable(dumptranscripts ${dumptranscripts_SOURCES})
 target_link_libraries(dumptranscripts ${Z})
 target_link_libraries(dumptranscripts ${PT})
 target_link_libraries(dumptranscripts samtools)
+
+install (TARGETS quantify DESTINATION bin)
