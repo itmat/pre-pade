@@ -10,25 +10,21 @@ high-throughput genomics data, such as BED files or SAM/BAM files.
 Installing
 ==========
 
-You will need to compile the main pre-pade program, which is called
-"quantify". It depends on the samtools library and header files. If
-you don't already have a copy of samtools, please download it from
-here: http://samtools.sourceforge.net/. Pre-pade has been tested with
-samtools 0.1.19. Once you download samtools, please compile it. You
-should be able to do that simply by typing "make" in the samtools
-directory.
+Pre-PADE is built using CMake. To download and install it, please
+follow these steps:
 
-Once you've compiled samtools, you're ready to compile prepade. In the
-root directory of the pre-pade distribution, type::
+# Clone the repository
+# git submodule init
+# git submodule update
+# Install cmake
+# mkdir build; cd build
+# cmake ..
+# make
 
-  make SAM_DIR=DIR
+This should create the main program, build/bin/quantify.
 
-where DIR is the path to the samtools directory.
-
-This should create a program called "quantify" in the bin
-directory. You can thin run it by doing::
-
-  bin/quantify
+Pre-pade has been tested with samtools 0.1.19. Once you download
+samtools, please compile it.
 
 Running
 =======
