@@ -16,16 +16,17 @@ macro_ensure_out_of_source_build("Please build ${PROJECT_NAME} out-of-source")
 
 enable_testing()
 
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/testdata/arabidopsis.gtf
-          DESTINATION testdata)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/testdata/RUM.sam
-          DESTINATION testdata)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/testdata/cigar_bug.sam
-          DESTINATION testdata)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/testdata/test_next_fragment_paired.sam
-          DESTINATION testdata)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/testdata/test_next_fragment_single.sam
-          DESTINATION testdata)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/testdata/arabidopsis.gtf
+    ${CMAKE_BINARY_DIR}/testdata/arabidopsis.gtf COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/testdata/RUM.sam
+    ${CMAKE_BINARY_DIR}/testdata/RUM.sam COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/testdata/cigar_bug.sam
+    ${CMAKE_BINARY_DIR}/testdata/cigar_bug.sam COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/testdata/test_next_fragment_paired.sam
+    ${CMAKE_BINARY_DIR}/testdata/test_next_fragment_paired.sam COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/testdata/test_next_fragment_single.sam
+    ${CMAKE_BINARY_DIR}/testdata/test_next_fragment_single.sam COPYONLY)
+
 
 add_test(GeneIndex ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/testgeneindex)
 add_test(SamUtils ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/testsamutils)
