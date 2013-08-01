@@ -10,8 +10,9 @@ high-throughput genomics data, such as BED files or SAM/BAM files.
 Installing
 ==========
 
-Pre-PADE is built using CMake. To download and install it, please
-follow these steps:
+Pre-PADE is built using CMake version 2.8.x.
+
+To download and install it, please follow these steps:
 
 1. Clone the repository
 
