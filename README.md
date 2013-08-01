@@ -26,9 +26,9 @@ follow these steps:
 
 4. Build the software
 
-        cd build
-        cmake ..
         make
+
+__Note:__ The above actually executes on a Makefile, which is a wrapper on the CMake files and build process, which itself creates it's own Makefiles for the actual build. A little wacky, we know, but it works for us.
 
 5. (optional) Run the tests:
 
