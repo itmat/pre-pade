@@ -47,19 +47,22 @@ class FeatureReadCounter(object):
 
 class ExonReadCounter(FeatureReadCounter):
 
-    def __init__(self, exon_index):
+    def __init__(self, exon_index, min_overlap, strand_specific):
         self.exon_index = exon_index
         self.unique_counts = defaultdict(lambda: 0)
         self.multi_counts = defaultdict(lambda: 0)
+        self.min_overlap = min_overlap
+        self.strand_specific = strand_specific
 
-    def add(self, ref, alns):
+    def add(self, ref, alns, candidates=None):
         pair = alns
 
         spans = []
         for aln in pair:
             spans.extend(cigar_to_spans(aln.cigar, aln.pos))
 
-        seen = set()
+        aln_strand = -1 if pair[0].is_reverse else 1
+        lookup_strand = aln_strand if self.strand_specific else 0
 
         # Go through all the spans and find all the exons overlapped
         # by any span. For each of those exons, check to see if it
@@ -67,28 +70,28 @@ class ExonReadCounter(FeatureReadCounter):
         # or multi depending on how many alignments there are for this
         # read). Since we might come across the same exon more than
         # once, keep a set of 'seen' exons so we don't double-count.
-        for span in spans:
-            for exon in self.exon_index.get_exons(ref, span.start, span.end):
-                key = (exon.id, exon.ref, exon.location.start, exon.location.end)
 
-                if key not in seen:
-                    if matches_exon(exon, pair):
-                        if self.count_towards_min(alns[0]):
-                            self.unique_counts[key] += 1                        
-                        else:
-                            self.multi_counts[key] += 1
+        if candidates is None:
+            candidates = set()
+            for span in spans:
+                candidates.update(self.exon_index.get_exons(ref, lookup_strand, span.start, span.end))
 
-                        seen.add(key)
-        
+        for exon in candidates:
+
+            if matches_exon(exon.start, exon.end, pair, self.min_overlap):
+                if self.count_towards_min(alns[0]):
+                    self.unique_counts[exon] += 1                        
+                else:
+                    self.multi_counts[exon] += 1
+
 
     def __iter__(self):
         for key in self.unique_counts:
-            (exon_id, ref, start, end) = key
-            exon = SeqFeature(id=exon_id, ref=ref, location=FeatureLocation(start, end))
+            (exon_id, ref, strand, start, end) = key
+            exon = SeqFeature(id=exon_id, ref=ref, strand=strand, location=FeatureLocation(start, end))
             yield(exon, self.unique_counts[key], self.multi_counts[key])        
 
 class TranscriptReadCounter(FeatureReadCounter):
-
 
     def __init__(self, index):
         self.index = index
@@ -103,11 +106,13 @@ class TranscriptReadCounter(FeatureReadCounter):
 
         seen = set()
 
+        strand = -1 if pair[0].is_reverse else 1
+
         for spans in span_groups:
 
             for span in spans:
                 (start, end) = span
-                for t in self.index.get_transcripts(ref, start, end):
+                for t in self.index.get_transcripts(ref, strand, start, end):
                     key = t.id
                     self.key_to_transcript[key] = t
                     if key not in seen:
@@ -120,7 +125,6 @@ class TranscriptReadCounter(FeatureReadCounter):
                             else:
                                 self.multi_counts[key] += 1
 
-        
     def __iter__(self):
         for key in self.unique_counts:
             yield(self.key_to_transcript[key], self.unique_counts[key], self.multi_counts[key])
@@ -361,7 +365,7 @@ def compare_aln_to_transcript(transcript, spans):
                            first_exon_hit=first_exon_hit,
                            spans=spans, gaps=gaps, exons=exons, introns=introns, intron_hits=(first_intron_hit is not None))
  
-def matches_exon(exon, alns):
+def matches_exon(start, end, alns, min_overlap=1):
     """Returns True if the given alignments match the given exon.
 
     At least one segment from the alignments must overlap the exon,
@@ -392,7 +396,7 @@ def matches_exon(exon, alns):
         
     # Make sure at least one of the spans overlaps the exon
     for spans in span_groups:
-         overlap.extend(spans_overlap(exon.location, spans))
+        overlap.extend(spans_overlap(start, end, spans, min_overlap))
     if not any(overlap):
         return False
 
@@ -402,12 +406,12 @@ def matches_exon(exon, alns):
     # segments of each read.
 
     for spans in span_groups:
-        consistent.extend(spans_are_consistent(exon.location, spans))
+        consistent.extend(spans_are_consistent(start, end, spans))
 
     return all(consistent)
 
         
-def spans_overlap(exon, spans):
+def spans_overlap(start, end, spans, min_overlap=1):
     """Return bools indicating which spans overlap the exon.
 
     :param exon:
@@ -423,10 +427,10 @@ def spans_overlap(exon, spans):
 
     """
     for span in spans:
-        yield not (span.end <= exon.start or span.start >= exon.end) 
+        yield not (span.end < start + min_overlap or span.start > end - min_overlap) 
 
 
-def spans_are_consistent(exon, spans):
+def spans_are_consistent(start, end, spans):
 
     """Return bools indicating which read segments are consistent with exon.
 
@@ -452,7 +456,7 @@ def spans_are_consistent(exon, spans):
 
         # If the span doesn't overlap the exon at all, it certainly
         # isn't inconsistent with it.
-        if span.end <= exon.start or span.start >= exon.end:
+        if span.end <= start or span.start >= end:
             yield True
 
         else:
@@ -461,15 +465,15 @@ def spans_are_consistent(exon, spans):
             # then it must start at the exon start, indicating that an
             # intron was skipped.
             if i == 0:
-                l_ok = span.start >= exon.start
+                l_ok = span.start >= start
             else:
-                l_ok = span.start == exon.start
+                l_ok = span.start == start
 
             # And the opposite is true for right edge of the span
             if i == last_span:
-                r_ok = span.end <= exon.end
+                r_ok = span.end <= end
             else:
-                r_ok = span.end == exon.end
+                r_ok = span.end == end
 
             yield l_ok and r_ok
 
@@ -530,7 +534,7 @@ class BedFileWriter(object):
         exon_locs = [ sf.location for sf in transcript.sub_features ]
         blockCount = len(exon_locs)
         blockSizes  = [ el.end - el.start for el in exon_locs ]
-        blockStarts = [ el.start for el in exon_locs ]
+        blockStarts = [ el.start - chromStart for el in exon_locs ]
 
         blockSizes = ','.join(map(str, blockSizes))
         blockStarts = ','.join(map(str, blockStarts))
@@ -581,6 +585,22 @@ commands.""")
     parser.add_argument('alignments',
                         help="SAM or BAM file containing alignments")
 
+    parser.add_argument('--no-transcripts',
+                        action='store_true',
+                        help="Don't do transcripts, just exons")
+
+    parser.add_argument('--min-overlap',
+                        default=1,
+                        type=int,
+                        help="Minimum overlap required to count an exon")
+
+    parser.add_argument('--profile',
+                        action='store_true')
+
+    parser.add_argument('--strand-specific',
+                        action='store_true',
+                        help="Require that the strand on the read matches the strand on the feature, or that one side is unknown.")
+
     args = parser.parse_args()
     setup_logging(args)
 
@@ -596,11 +616,13 @@ commands.""")
         if input_file_type == 'rum_gene_info':
             logging.info("Loading transcript model from RUM index at " + args.model)
             genes = list(parse_rum_index_genes(infile))
+            logging.info("Extracting exons from genes")
             exons = list(genes_to_exons(genes))
     
         elif input_file_type == 'gtf':
             logging.info("Loading transcript model from GTF file at " + args.model)
             genes = list(parse_gtf_to_genes(infile))
+            logging.info("Extracting exons from genes")
             exons = list(genes_to_exons(genes))
         
         else:
@@ -610,21 +632,31 @@ commands.""")
 
     if ordering == AlignmentFileType.ORDERED_BY_READ_NAME:
 
-        if genes is None:
+        if genes is None or args.no_transcripts:
             logging.info('Building exon index')
             idx = ExonIndex(exons)
         else:
             logging.info('Building transcript index')
             idx = TranscriptIndex(genes)
 
-        exon_counter = ExonReadCounter(idx)
+        logging.info("For exon quantification, only counting reads that overlap the exon by " + str(args.min_overlap) + " bases or more")
+
+        exon_counter = ExonReadCounter(idx, args.min_overlap, args.strand_specific)
         transcript_counter = None
         counters = [ exon_counter ]
         if genes is not None:
-            transcript_counter = TranscriptReadCounter(idx)
-            counters.append(transcript_counter)
+            if args.no_transcripts:
+                logging.info("Ignoring transcripts, just doing exons")
+            else:
+                transcript_counter = TranscriptReadCounter(idx)
+                counters.append(transcript_counter)
             
-        iterate_over_sam(args.alignments, counters)
+        if args.profile:
+            import cProfile
+            cProfile.runctx('iterate_over_sam(args.alignments, counters)',
+                            globals(), locals(), filename='prof')
+        else:
+            iterate_over_sam(args.alignments, counters)
 
     else:
         exon_counter = iterate_over_exons(exons, args.alignments)
