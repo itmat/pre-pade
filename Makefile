@@ -1,32 +1,40 @@
-PERF_MAX_LOG_N=8
+##############################################################
+#               CMake Project Wrapper Makefile               #
+############################################################## 
 
-cover : 
-	nosetests --with-coverage --cover-html --cover-package pade
+SHELL := /bin/bash
+RM    := rm -rf
 
-test :
-	nosetests --with-doctest
+all: ./build/Makefile
+	@ $(MAKE) -C build
 
-clean :
-	rm -f *.log tests/*~ tests/*.pyc site.tar
-	cd doc; make clean
-	rm -rf doc/html/generated
-	rm -rf cover
-	rm -f `find . -name \*~`
-	rm -f `find . -name \*.pyc`
+./build/Makefile:
+	@ (cd build >/dev/null 2>&1 && cmake ..)
 
-site :
-	rm -rf doc/generated
-	sphinx-apidoc pade -o doc/generated
-	cd doc; make clean html
+distclean:
+	@- (cd build >/dev/null 2>&1 && cmake .. >/dev/null 2>&1)
+	@- $(MAKE) --silent -C build clean || true
+	@- $(RM) ./build/Makefile
+	@- $(RM) ./build/src
+	@- $(RM) ./build/test
+	@- $(RM) ./build/CMake*
+	@- $(RM) ./build/cmake.*
+	@- $(RM) ./build/*.cmake
+	@- $(RM) ./build/*.txt
+	@- $(RM) ./docs/*.html
+	@- $(RM) ./docs/*.css
+	@- $(RM) ./docs/*.png
+	@- $(RM) ./docs/*.jpg
+	@- $(RM) ./docs/*.gif
+	@- $(RM) ./docs/*.tiff
+	@- $(RM) ./docs/*.php
+	@- $(RM) ./docs/search
+	@- $(RM) ./docs/installdox
 
-deploy_site:
 
-	cd doc; make html
-	cd doc/_build/html; tar cf ../../../site.tar *
-	git checkout gh-pages
-	tar xf site.tar
-	git add `tar tf site.tar`
-	git commit -m 'Updating site'
-	git push origin gh-pages
-	git checkout master
+ifeq ($(findstring distclean,$(MAKECMDGOALS)),)
 
+    $(MAKECMDGOALS): ./build/Makefile
+	@ $(MAKE) -C build $(MAKECMDGOALS)
+
+endif
