@@ -59,9 +59,9 @@ def main():
           entry = src.next()
           logging.debug(entry.is_read1)
           if entry.is_read1:
-            logging.debug("I am read1 :" + entry)
+            logging.debug("I am read1 : " + str(entry))
           else:
-            logging.debug("I am read2 :" + entry)
+            logging.debug("I am read2 :" + str(entry))
       except StopIteration, e:
           break
 
