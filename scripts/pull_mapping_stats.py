@@ -145,7 +145,7 @@ def main():
         logging.debug(sample_name + ": total aligned num = " + str(total_aligned_num))
 
         logging.debug(sample_name + ": total aligned % = " + str(total_aligned_percentage))
-        
+
         total_unique, total_unique_percentage  = re.findall(r'At least one of forward or reverse mapped: (\S+) (\S+)',data[11])[0]
         total_unique = int(total_unique.replace(',',''))
         total_unique_percentage = total_unique / total_reads_num
@@ -156,7 +156,7 @@ def main():
         total_non_unique, total_non_unique_percentage  = re.findall(r'Total number consistent ambiguous: (\S+) (\S+)',data[18])[0]
         total_non_unique = int(total_non_unique.replace(',',''))
         total_non_unique_percentage = total_non_unique / total_reads_num
-        
+
         logging.debug(sample_name + ": total non unique = " + str(total_non_unique))
         logging.debug(sample_name + ": total non unique % = " + str(total_non_unique_percentage))
 
@@ -173,14 +173,14 @@ def main():
             if not m:
                 #no match to a Chr line
                 continue
-            elif m.group(1) == "M": 
+            elif m.group(1) == "M":
                 # This is the Mitochondrial
                 chrm_reads_num += int(m.group(2))
             else:
                 mm = re_chrreg.match(m.group(1))
                 if mm:
                     logging.debug(mm.groups())
-                    logging.debug("Matching chr num: " + l) 
+                    logging.debug("Matching chr num: " + l)
                     contig_reads_num += int(m.group(2))
         logging.debug(sample_name + ": chrM aligned num = " + str(chrm_reads_num))
         logging.debug(sample_name + ": contigs aligned num = " + str(contig_reads_num))
@@ -259,10 +259,24 @@ def main():
 
     report.writerow(['Minimums',
         min_reads_num,
-        min_aligned_percentage])
+        min_aligned_num,
+        min_aligned_percentage,
+        min_unique,
+        min_unique_per,
+        min_non_unique,
+        min_non_unique_per,
+        min_chrm_percentage,
+        min_contig_percentage])
     report.writerow(['Maximums',
         max_reads_num,
-        max_aligned_percentage])
+        max_aligned_num,
+        max_aligned_percentage,
+        max_unique,
+        max_unique_per,
+        max_non_unique,
+        max_non_unique_per,
+        max_chrm_percentage,
+        max_contig_percentage])
     logging.info("-" * 180 )
     logging.info("\t".join(['Minimums',
         format_integer(min_reads_num),
@@ -279,7 +293,7 @@ def main():
         format_integer(max_aligned_num),
         format_percentage(max_aligned_percentage),
         format_integer(max_unique),
-        format_percentage(max_unique_per),                    
+        format_percentage(max_unique_per),
         format_integer(max_non_unique),
         format_percentage(max_non_unique_per),
         format_percentage(max_chrm_percentage),
