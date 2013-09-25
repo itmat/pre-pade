@@ -13,7 +13,7 @@ def get_arguments():
 '**/Sample_*/RUM.separated.uniq_mapping_stats'"
     )
     args.add_argument(
-        '-m', '--mapping_stats',
+        '-m','--mapping_stats',
         required=True,
         type=str,
         help="mapping_stat_report.csv from pull_mapping_stats.py"
@@ -45,6 +45,8 @@ def main():
     setup_logging(args)
 
     logging.debug(args)
+
+
 
 
 if __name__ == '__main__':
