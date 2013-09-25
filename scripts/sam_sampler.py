@@ -4,7 +4,7 @@ import argparse
 import pysam
 import logging
 import os
-import sys 
+import sys
 import re
 from math import ceil
 import numpy as np
@@ -159,7 +159,7 @@ def main():
     # some handy vars for bookkeeping and workflow
     total_reads = args.total_reads
     output_limit = args.output_limit
-    output_ratio = output_limit /  total_reads 
+    output_ratio = output_limit /  total_reads
 
     # set up the counts for a entry bin size == 1e7
     bin_size = args.bin_num
@@ -222,9 +222,10 @@ def main():
                 add_last_tally = True
                 last_tally = target_tally - current_tally
             logging.debug("Output %d" % current_tally)
-    # output the number of 
+    # output the number of
     src.close()
     target.close()
     sys.stderr.write("Number of entries actually output %d\n" % total_output_tally)
+
 if __name__ == '__main__':
     main()
