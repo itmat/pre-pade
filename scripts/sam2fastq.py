@@ -54,8 +54,16 @@ def main():
     if re.search(r'\.bam$',args.sam_file):
         read_mode = 'rb'
     src =  pysam.Samfile(args.sam_file,read_mode)
-    for entry in src:
-      logging.debug(entry)
+    while True:
+      try:
+          entry = src.next()
+          if entry.is_read1():
+            logging.debug("I am read1 :" + entry)
+          else:
+            logging.debug("I am read2 :" + entry)
+      except StopIteration, e:
+          break
+
 
 if __name__ == '__main__':
     main()
