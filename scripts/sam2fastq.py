@@ -50,7 +50,7 @@ def main():
     # handle read and write modes, taking into account BAM files
     read_mode = 'r'
     write_mode = 'wh'
-    if args.input_bam or re.search(r'\.bam$',args.sam_file):
+    if re.search(r'\.bam$',args.sam_file):
         read_mode = 'rb'
     src =  pysam.Samfile(args.sam_file,read_mode)
     for entry in src:
