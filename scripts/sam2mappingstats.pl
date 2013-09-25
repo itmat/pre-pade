@@ -272,7 +272,7 @@ UNIQUE MAPPERS
 --------------
 Both forward and reverse mapped consistently: $bothmappedU_formatted ($bothmappedU_percent%)
 ";
-if($num_OL > 0) {
+if($num_OL >= 0) {
     print "   - do overlap: $num_OL_formatted
    - don't overlap: $num_NOL_formatted
 "
@@ -283,11 +283,13 @@ Number of forward total: $forwardU_total_formatted ($forwardU_total_percent%)
 Number of reverse total: $reverseU_total_formatted ($reverseU_total_percent%)
 At least one of forward or reverse mapped: $atleastoneforwardorreverse_formatted ($atleastoneforwardorreverse_percent%)
 
+
 NON-UNIQUE MAPPERS
 ------------------
 Total number forward only ambiguous: $forwardonlyNU_formatted ($forwardonlyNU_percent%)
 Total number reverse only ambiguous: $reverseonlyNU_formatted ($reverseonlyNU_percent%)
 Total number consistent ambiguous: $bothmappedNU_formatted ($bothmappedNU_percent%)
+
 
 TOTAL
 -----
@@ -301,16 +303,22 @@ At least one of forward or reverse mapped: $total_formatted ($total_percent%)
 if($covU =~ /\S/ || $covNU =~ /\S/) {
     $genome_size_formatted = format_large_int($genome_size);
     print "genome size: $genome_size_formatted\n"
+} else {
+    print "genime size: NA"
 }
 if($covU =~ /\S/) {
     $coverageU_formatted = format_large_int($bases_covered_U);
     $coverageU_percent = int($bases_covered_U / $genome_size * 1000) / 10;
     print "number of bases covered by unique mappers: $coverageU_formatted ($coverageU_percent%)\n";
+} else {
+    print "number of bases covered by unique mappers: NA"
 }
 if($covNU =~ /\S/) {
     $coverageNU_formatted = format_large_int($bases_covered_NU);
     $coverageNU_percent = int($bases_covered_NU / $genome_size * 1000) / 10;
     print "number of bases covered by non-unique mappers: $coverageNU_formatted ($coverageNU_percent%)\n\n";
+} else {
+    print "number of bases covered by non-unique mappers: NA"
 }
 
 print "Uniquely mapping reads per chromosome
@@ -401,7 +409,7 @@ sub cmpChrs () {
     	$b2_arabic = arabic($b2_roman);
 	if($a2_arabic > $b2_arabic) {
 	    return -1;
-	} 
+	}
 	if($a2_arabic < $b2_arabic) {
 	    return 1;
 	}
