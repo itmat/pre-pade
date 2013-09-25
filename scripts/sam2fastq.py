@@ -57,8 +57,8 @@ def main():
     while True:
       try:
           entry = src.next()
-          #logging.debug(entry.is_read1() == True)
-          if (entry.is_read1() == True):
+          logging.debug(entry.is_read1)
+          if entry.is_read1():
             logging.debug("I am read1 :" + entry)
           else:
             logging.debug("I am read2 :" + entry)
