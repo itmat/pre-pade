@@ -56,4 +56,5 @@ def main():
     for entry in src:
       logging.debug(entry)
 
-
+if __name__ == '__main__':
+    main()
