@@ -3,6 +3,7 @@ from __future__ import print_function
 import argparse
 import pysam
 import logging
+import re
 
 def get_arguments():
     '''Parses the CLI arguments'''
