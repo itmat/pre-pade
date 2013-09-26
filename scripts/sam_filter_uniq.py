@@ -74,6 +74,7 @@ def get_next_alignments(samfile,last_entry):
         entries.append(last_entry)
         last_entry = None
     return (entries,last_entry)
+
 def determine_entries_status(entries):
     count = 0
     status = 'unmapped'
