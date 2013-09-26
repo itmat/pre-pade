@@ -304,21 +304,21 @@ if($covU =~ /\S/ || $covNU =~ /\S/) {
     $genome_size_formatted = format_large_int($genome_size);
     print "genome size: $genome_size_formatted\n"
 } else {
-    print "genime size: NA"
+    print "genime size: NA\n"
 }
 if($covU =~ /\S/) {
     $coverageU_formatted = format_large_int($bases_covered_U);
     $coverageU_percent = int($bases_covered_U / $genome_size * 1000) / 10;
     print "number of bases covered by unique mappers: $coverageU_formatted ($coverageU_percent%)\n";
 } else {
-    print "number of bases covered by unique mappers: NA"
+    print "number of bases covered by unique mappers: NA\n"
 }
 if($covNU =~ /\S/) {
     $coverageNU_formatted = format_large_int($bases_covered_NU);
     $coverageNU_percent = int($bases_covered_NU / $genome_size * 1000) / 10;
     print "number of bases covered by non-unique mappers: $coverageNU_formatted ($coverageNU_percent%)\n\n";
 } else {
-    print "number of bases covered by non-unique mappers: NA"
+    print "number of bases covered by non-unique mappers: NA\n"
 }
 
 print "Uniquely mapping reads per chromosome

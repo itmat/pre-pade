@@ -2,6 +2,9 @@
 import argparse
 import logging
 import csv
+import glob
+import os
+import re
 
 def get_arguments():
     '''Parses the CLI arguments'''
@@ -13,16 +16,22 @@ def get_arguments():
 '**/Sample_*/RUM.separated.uniq.sam'"
     )
     args.add_argument(
-        '-m','--mapping_stats',
+        '-m','--mapping_stats_unique',
         required=True,
         type=argparse.FileType('r'),
         help="mapping_stat_report.csv from pull_mapping_stats.py"
     )
     args.add_argument(
-        '-n','--non_unique',
-        action='store_true',
-        help="Run in non_unique mode"
+        '-n','--mapping_stats_non_unique',
+        required=True,
+        type=argparse.FileType('r'),
+        help="mapping_stat_report.csv from pull_mapping_stats.py"
     )
+    #args.add_argument(
+    #    '-n','--non_unique',
+    #    action='store_true',
+    #    help="Run in non_unique mode"
+    #)
     args.add_argument(
         '-d','--debug',
         action='store_true',
@@ -67,19 +76,28 @@ def main():
     args = get_arguments()
     setup_logging(args)
     logging.debug(args)
+    
+    current_dir = os.getcwd()
 
-    # Take care of run mode
-    if args.non_unique:
-        field = "Total non unique"
-    else:
-        field = "Total unique"
-    my_dict = csv.DictReader(args.mapping_stats)
-    minimum = 0
-    for row in my_dict:
+    
+    field = "Total unique"
+    my_dict_unique = csv.DictReader(args.mapping_stats_unique)
+    minimum_unique = 0
+    for row in my_dict_unique:
         #logging.debug(row)
         if row['Sample Name'] == 'Minimums':
-            minimum = row[field]
-    logging.debug("The minimum is: " + minimum)
+            minimum_unique = row[field]
+    logging.debug("The minimum (unique) is: " + minimum_unique)
+    
+    field = "Total non unique"
+    my_dict_non_unique = csv.DictReader(args.mapping_stats_non_unique)
+    minimum_non_unique = 0
+    for row in my_dict_non_unique:
+        #logging.debug(row)
+        if row['Sample Name'] == 'Minimums':
+            minimum_non_unique = row[field]
+    logging.debug("The minimum (non_unique) is: " + minimum_non_unique)
+    
 
     rum_sam_files = []
     for fn in glob.glob(args.GLOB_PATTERN):
@@ -92,22 +110,51 @@ def main():
         job_name = sample_name + "_pipeline"
         LSF_header=("#!/bin/sh\n\n"
                     "#BSUB -J " + job_name  + "\n"
-                    "#BSUB -oo outfile.%J\n"
-                    "#BSUB -eo errorfile.%J\n")
+                    "#BSUB -oo " + base_dir + "/outfile.%J\n"
+                    "#BSUB -eo " + base_dir + "/errorfile.%J\n"
+                    "#BSUB -q max_mem30\n")
         settings=("module load python-2.7.5\n"
-                  "export PYTHONPATH=~/my_python2.7/lib/python2.7/site-packages/\n")
+                  "export PYTHONPATH=~/my_python2.7/lib/python2.7/site-packages/\n"
+                  "module load rum-2.0.5_05\n")
         read_number = 0
-        for row in my_dict:
-        #logging.debug(row)
-        if row['Sample Name'] == sample_name:
-            read_number = row[field]
-
+        args.mapping_stats_unique.seek(0)
+        field = "Total unique"
+        for row in my_dict_unique:
+            if row['Sample Name'] == sample_name:
+                read_number = row[field]
+                break
+        out_file = base_dir + "/down_sample_pipeline.sh"
         f = open(out_file,'w')
         f.write(LSF_header)
         f.write(settings)
-        f.write("sam_filter.py -i " + mn_fn + " -t " + read_number + " -l " + 
-                minimum + " > " + mn_fn.sampled.sam + "\n")
-        f.write(
+        uniq_name = ms_fn
+        f.write("sam_sampler.py -i " + ms_fn + " -t " + str(read_number) + 
+                " -l " + str(minimum_unique) + " -o " + ms_fn + ".sampled.sam" + "\n")
+        
+        read_number = 0
+        args.mapping_stats_non_unique.seek(0)
+        field = "Total non unique"
+        for row in my_dict_non_unique:
+            if row['Sample Name'] == sample_name:
+                read_number = row[field]
+                break
+        nonuniq_name = re.sub('uniq', 'nuniq',ms_fn)
+        logging.debug(nonuniq_name)
+        f.write("sam_sampler.py -i " + nonuniq_name + " -t " + str(read_number) +
+                " -l " + str(minimum_non_unique) + " -o " + nonuniq_name + ".sampled.sam" + "\n")
+        f.write("grep -v ^@ " + nonuniq_name + ".sampled.sam > " + nonuniq_name + ".sampled.sam_no_header\n")
+        f.write("cat " + ms_fn + ".sampled.sam " + nonuniq_name + ".sampled.sam_no_header > " + ms_fn + "_combined.sam\n")
+        f.write("sam2fasta.py -r 51 " + ms_fn + "_combined.sam\n")
+        f.write("rum_runner align --name " + sample_name + " -i /home/apps/RUM/indexes_2.x/drosophila/ --chunks 10 --platform LSF -o " + base_dir + "/rum_merged " + ms_fn + "_combined.sam_fwd.fa " + ms_fn + "_combined.sam_rev.fa\n") 
+        f.flush()
+        os.fsync(f.fileno())
+        f.close
+        #os.chdir(base_dir)
+        #logging.debug("Current work dir: " + os.getcwd())
+        commando = "bsub < " + out_file
+        logging.debug(commando)
+        logging.debug(os.system(commando))
+        #os.chdir(current_dir)
 
 if __name__ == '__main__':
     main()
