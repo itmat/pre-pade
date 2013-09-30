@@ -133,23 +133,60 @@ def main():
     rejected_output_tally = 0
     totally_rejected_tally = 0
     last_entry = None
+    valid_entries = []
+    multi_count = 0
+    entry_rejected = False
     try:
         while True:
             entry = src.next()
+            #logging.debug(entry.tags)
             if not last_entry:
                 last_entry = entry
             valid_written = False
             reject_written = False
             if valid_chrs.has_key(entry.rname):
-                target.write(entry)
+                valid_entries.append(entry)
+                #target.write(entry)
                 valid_written = True
             else:
+                logging.debug("I got rejected " + str(entry))
                 entry_rejected = True
+                multi_count += 1
                 if rejected:
                     rejected.write(entry)
                     reject_written = True
 
             if last_entry.qname != entry.qname:
+                valid_count = len(valid_entries)/2
+                logging.debug(valid_count)
+                first = True
+                for valid_entry in valid_entries:
+                    old_tags = valid_entry.tags
+                    valid_entry.tags = []
+                    logging.debug("NAME: " + valid_entry.qname)
+                    for tag in old_tags:
+                        if tag[0] == 'IH' and entry_rejected :
+                            logging.debug("Before " + str(tag))
+                            tag = list(tag)
+                            tag[1] = tag[1] - multi_count/2
+                            tag = (tag[0],int(tag[1]))
+                            logging.debug("After " + str(tag))
+                        if tag[0] == 'HI' and entry_rejected :
+                            logging.debug("yes")
+                            tag = list(tag)
+                            tag[1] = valid_count
+                            tag = (tag[0],int(tag[1]))
+                            logging.debug("HI: " + str(tag))
+                            if not first:
+                                valid_count -= 1
+                                first = True
+                            else:
+                                first = False
+                        valid_entry.tags = valid_entry.tags + [tag]
+                    target.write(valid_entry)
+                valid_entries = []
+                multi_count = 0
+                entry_rejected = False
                 if valid_written:
                     total_output_tally += 1
                 elif reject_written:
