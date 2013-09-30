@@ -123,6 +123,17 @@ def get_next_alignments(samfile,first_entry):
         return (entries,last_entry)
     return (entries,last_entry)
 
+def output_all_valid_entries(src,target):
+    k = 0 
+    while True:
+      try:
+          entry = src.next()
+          target.write(entry)
+          k = k+1
+      except StopIteration, e:
+          break
+    return k/2
+
 def main():
     args = get_arguments()
     setup_logging(args)
@@ -160,7 +171,8 @@ def main():
     total_reads = args.total_reads
     output_limit = args.output_limit
     output_ratio = output_limit /  total_reads
-
+    logging.debug("Output ratio : " + str(output_ratio))
+    exit
     # set up the counts for a entry bin size == 1e7
     bin_size = args.bin_num
     if total_reads < bin_size:
@@ -189,7 +201,7 @@ def main():
     last_tally = 0
     add_last_tally = False
     if output_ratio == 1.0:
-        total_output_tally =  output_all_valid_entries(src,target,valid_chrs)
+        total_output_tally =  output_all_valid_entries(src,target)
     else:
         for bin_index, bin_size in enumerate(bin_sizes):
             target_tally = int(ceil(bin_size * output_ratio))

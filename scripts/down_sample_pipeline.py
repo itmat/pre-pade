@@ -121,7 +121,7 @@ def main():
         field = "Total unique"
         for row in my_dict_unique:
             if row['Sample Name'] == sample_name:
-                read_number = row[field]
+                read_number = row['Total read pairs']
                 break
         out_file = base_dir + "/down_sample_pipeline.sh"
         f = open(out_file,'w')
@@ -136,7 +136,7 @@ def main():
         field = "Total non unique"
         for row in my_dict_non_unique:
             if row['Sample Name'] == sample_name:
-                read_number = row[field]
+                read_number = row['Total read pairs']
                 break
         nonuniq_name = re.sub('uniq', 'nuniq',ms_fn)
         logging.debug(nonuniq_name)
