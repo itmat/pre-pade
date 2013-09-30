@@ -145,25 +145,25 @@ def main():
 
             if last_entry.qname != entry.qname:
                 valid_count = len(valid_entries)/2
-                logging.debug(valid_count)
+                #logging.debug(valid_count)
                 first = True
                 for valid_entry in valid_entries:
                     old_tags = valid_entry.tags
                     valid_entry.tags = []
-                    logging.debug("NAME: " + valid_entry.qname)
+                    #logging.debug("NAME: " + valid_entry.qname)
                     for tag in old_tags:
                         if tag[0] == 'IH' and entry_rejected :
-                            logging.debug("Before " + str(tag))
+                            #logging.debug("Before " + str(tag))
                             tag = list(tag)
                             tag[1] = tag[1] - multi_count/2
                             tag = (tag[0],int(tag[1]))
-                            logging.debug("After " + str(tag))
+                            #logging.debug("After " + str(tag))
                         if tag[0] == 'HI' and entry_rejected :
-                            logging.debug("yes")
+                            #logging.debug("yes")
                             tag = list(tag)
                             tag[1] = valid_count
                             tag = (tag[0],int(tag[1]))
-                            logging.debug("HI: " + str(tag))
+                            #logging.debug("HI: " + str(tag))
                             if not first:
                                 valid_count -= 1
                                 first = True
@@ -190,7 +190,7 @@ def main():
                 #target.write(entry)
                 valid_written = True
             else:
-                logging.debug("I got rejected " + str(entry))
+                #logging.debug("I got rejected " + str(entry))
                 entry_rejected = True
                 multi_count += 1
                 if rejected:
