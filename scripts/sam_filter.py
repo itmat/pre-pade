@@ -3,7 +3,7 @@ from __future__ import division, print_function
 import argparse
 import logging
 import os
-import sys 
+import sys
 import re
 from math import ceil
 import numpy as np
@@ -34,7 +34,7 @@ def get_arguments():
         '-b','--input_bam',
         type=str,
         help="Optional: Input is a BAM file. Useful for STDIN/STDOUT streams. Otherwise this is taken from the filenames for input and output."
-    )    
+    )
     args.add_argument(
         '-B','--output_bam',
         type=str,
@@ -142,19 +142,6 @@ def main():
             #logging.debug(entry.tags)
             if not last_entry:
                 last_entry = entry
-            valid_written = False
-            reject_written = False
-            if valid_chrs.has_key(entry.rname):
-                valid_entries.append(entry)
-                #target.write(entry)
-                valid_written = True
-            else:
-                logging.debug("I got rejected " + str(entry))
-                entry_rejected = True
-                multi_count += 1
-                if rejected:
-                    rejected.write(entry)
-                    reject_written = True
 
             if last_entry.qname != entry.qname:
                 valid_count = len(valid_entries)/2
@@ -190,11 +177,27 @@ def main():
                 if valid_written:
                     total_output_tally += 1
                 elif reject_written:
-                    rejected_output_tally += 1 
+                    rejected_output_tally += 1
                     totally_rejected_tally += 1
                 elif entry_rejected and not valid_written and not reject_written:
                     totally_rejected_tally += 1
             last_entry = entry
+
+            valid_written = False
+            reject_written = False
+            if valid_chrs.has_key(entry.rname):
+                valid_entries.append(entry)
+                #target.write(entry)
+                valid_written = True
+            else:
+                logging.debug("I got rejected " + str(entry))
+                entry_rejected = True
+                multi_count += 1
+                if rejected:
+                    rejected.write(entry)
+                    reject_written = True
+
+
     except StopIteration,e:
         pass
 
