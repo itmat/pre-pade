@@ -206,6 +206,9 @@ foreach $key (keys %U) {
     }
 }
 $linecnt = 0;
+$forwardonlyNU = 0;
+$reverseonlyNU = 0;
+$bothmappedNU = 0;
 foreach $key (keys %NU) {
     $Nids++;
     $linecnt++;

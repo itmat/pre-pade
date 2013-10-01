@@ -89,18 +89,20 @@ def main():
         f = open(out_file,'w')
         f.write(LSF_header)
         f.write(settings)
-        f.write("sam_filter.py -i RUM.sam -r RUM.rejected.sam -v -s drosophila\n")
-        f.write("sam_filter_uniq.py RUM.filtered.sam RUM.separated\n")
-        f.write("sam2mappingstats.pl RUM.separated.nuniq.sam > RUM.separated.nuniq_mapping_stats\n")
+        #f.write("sam_filter.py -i RUM.sam -r RUM.rejected.sam -v -s drosophila\n")
+        #f.write("sam_filter_uniq.py RUM.filtered.sam RUM.separated\n")
+        #f.write("sam2mappingstats.pl RUM.separated.nuniq.sam > RUM.separated.nuniq_mapping_stats\n")
         f.write("sam2mappingstats.pl RUM.separated.uniq.sam > RUM.separated.uniq_mapping_stats\n")
         f.flush()
         os.fsync(f.fileno())
         f.close
+        old_dir = os.getcwd()
         os.chdir(base_dir)
         logging.debug("Current work dir: " + os.getcwd())
-        commando = "bsub < " + out_file
+        commando = "bsub < " + job_name + "_jobfile"
         logging.debug(commando)
         logging.debug(os.system(commando))
-    
+        os.chdir(old_dir)
+        
 if __name__ == '__main__':
     main()
