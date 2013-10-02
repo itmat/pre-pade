@@ -27,11 +27,18 @@ def get_arguments():
         type=argparse.FileType('r'),
         help="mapping_stat_report.csv from pull_mapping_stats.py"
     )
-    #args.add_argument(
-    #    '-n','--non_unique',
-    #    action='store_true',
-    #    help="Run in non_unique mode"
-    #)
+    args.add_argument(
+        '-g','--gtf_file',
+        required=True,
+        type=argparse.FileType('r'),
+        help="gtf file with gene annotations."
+    )
+    args.add_argument(
+        '-f','--fai_file',
+        required=True,
+        type=argparse.FileType('r'),
+        help="fai file with chromosome annotation (obtained from `samtools faidx *.fa`)."
+    )
     args.add_argument(
         '-d','--debug',
         action='store_true',
@@ -128,8 +135,9 @@ def main():
         f.write(LSF_header)
         f.write(settings)
         uniq_name = ms_fn
-        f.write("sam_sampler.py -i " + ms_fn + " -t " + str(read_number) + 
-                " -l " + str(minimum_unique) + " -o " + ms_fn + ".sampled.sam" + "\n")
+        
+        #f.write("sam_sampler.py -i " + ms_fn + " -t " + str(read_number) + 
+        #        " -l " + str(minimum_unique) + " -o " + ms_fn + ".sampled.sam" + "\n")
         
         read_number = 0
         args.mapping_stats_non_unique.seek(0)
@@ -140,12 +148,21 @@ def main():
                 break
         nonuniq_name = re.sub('uniq', 'nuniq',ms_fn)
         logging.debug(nonuniq_name)
-        f.write("sam_sampler.py -i " + nonuniq_name + " -t " + str(read_number) +
-                " -l " + str(minimum_non_unique) + " -o " + nonuniq_name + ".sampled.sam" + "\n")
-        f.write("grep -v ^@ " + nonuniq_name + ".sampled.sam > " + nonuniq_name + ".sampled.sam_no_header\n")
-        f.write("cat " + ms_fn + ".sampled.sam " + nonuniq_name + ".sampled.sam_no_header > " + ms_fn + "_combined.sam\n")
-        f.write("sam2fasta.py -r 51 " + ms_fn + "_combined.sam\n")
-        f.write("rum_runner align --name " + sample_name + " -i /home/apps/RUM/indexes_2.x/drosophila/ --chunks 10 --platform LSF -o " + base_dir + "/rum_merged " + ms_fn + "_combined.sam_fwd.fa " + ms_fn + "_combined.sam_rev.fa\n") 
+        #f.write("sam_sampler.py -i " + nonuniq_name + " -t " + str(read_number) +
+        #        " -l " + str(minimum_non_unique) + " -o " + nonuniq_name + ".sampled.sam" + "\n")
+        #f.write("grep -v ^@ " + nonuniq_name + ".sampled.sam > " + nonuniq_name + ".sampled.sam_no_header\n")
+        #f.write("cat " + ms_fn + ".sampled.sam " + nonuniq_name + ".sampled.sam_no_header > " + ms_fn + "_combined.sam\n")
+        
+        #f.write("sam2fasta.py -r 51 " + ms_fn + "_combined.sam\n")
+        #f.write("rum_runner align --name " + sample_name + " -i /home/apps/RUM/indexes_2.x/drosophila/ --chunks 10 --platform LSF -o " + base_dir + "/rum_merged " + ms_fn + "_combined.sam_fwd.fa " + ms_fn + "_combined.sam_rev.fa\n")
+        # COVERAGE FILES
+        #f.write("/home/hayer/tools/sam2cov/sam2cov -r 1 -p " + ms_fn + "_ " + str(args.fai_file.name) + " "  + ms_fn + "_combined.sam\n" )
+        # QUANTIFY
+        #f.write("/home/hayer/tools/pre-pade/build/bin/quantify -t exon -t junction -t transcript " + str(args.gtf_file.name) + " " +  ms_fn + "_combined.sam -o " + ms_fn + "_quantified\n")
+        f.write("htseq-count --stranded=no " + ms_fn + "_combined.sam " + str(args.gtf_file.name) + " > " + ms_fn + "_quantified_htseq\n")
+        # MAPPING STATS
+        #f.write("sam2mappingstats.pl " + ms_fn + "_combined.sam > " + ms_fn + "_mapping_stats.txt\n")
+        f.write
         f.flush()
         os.fsync(f.fileno())
         f.close
