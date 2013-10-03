@@ -35,7 +35,7 @@ def setup_logger(loglevel)
   when "warn"
     logger.level = Logger::WARN
   when "info"
-    logger.leve = Logger::INFO
+    logger.level = Logger::INFO
   else
     logger.level = Logger::ERROR
   end
@@ -46,9 +46,10 @@ def setup_options(args)
   options = {}
 
   opt_parser = OptionParser.new do |opts|
-    opts.banner = "Usage: anova.rb [options]"
+    opts.banner = "Usage: anova.rb [options] htseq_file*"
     opts.separator ""
-    opts.on("-g", "--gtf_file [GTF_FILE]",:REQUIRED,String,  "gtf_file with gene annotation") do |gtf_file|
+
+    opts.on("-a", "--gtf_file [GTF_FILE]",:REQUIRED,String,  "gtf_file with gene annotation") do |gtf_file|
       options[:gtf_file] = gtf_file
     end
 
@@ -59,10 +60,19 @@ def setup_options(args)
     opts.on("-d", "--debug", "Run in debug mode") do |v|
       options[:log_level] = "debug"
     end
+
+    opts.on("-g", "--groups [GROUPS]",:REQUIRED,
+      String,
+      "grouping, for example 3,3 for two groups with each 3 replicates") do |g|
+      options[:groups] = g
+    end
+
+
   end
 
+  args = ["-h"] if args.length == 0
   opt_parser.parse!(args)
-
+  raise "Please specify htseq_files" if args.length == 0
   options
 end
 
@@ -84,10 +94,40 @@ class HTSseq
 
   def initialize(filename)
     @filename = filename
+    # genename => count
+    @genes = {}
+    @number_of_fragments = 0
+    @no_feature = 0
+    @ambiguous = 0
+    @too_low_aQual = 0
+    @not_aligned = 0
+    @alignment_not_unique = 0
   end
 
-  attr_accessor :filename
+  attr_accessor :filename, :genes, :number_of_fragments, :no_feature, :ambiguous,
+    :too_low_aQual, :not_aligned, :alignment_not_unique
 
+  def read()
+    File.open(@filename).each do |line|
+      line.chomp!
+      fields = line.split("\t")
+      case fields[0]
+      when "no_feature"
+        @no_feature = fields[1].to_i
+      when "ambiguous"
+        @mbiguous = fields[1].to_i
+      when "too_low_aQual"
+        @too_low_aQual = fields[1].to_i
+      when "not_aligned"
+        @not_aligned = fields[1].to_i
+      when "alignment_not_unique"
+        @alignment_not_unique = fields[1].to_i
+      else
+        @genes[fields[0]] = fields[1].to_i
+        @number_of_fragments += fields[1].to_i
+      end
+    end
+  end
 
 
 end
@@ -98,6 +138,10 @@ def calc_length(starts,ends)
     length += ends[i] - start
   end
   length
+end
+
+def fpkm(num_fragment,length_transcript,number_mio_of_reads)
+  ((num_fragment.to_f/(length_transcript.to_f/1000))/number_mio_of_reads.to_f).to_f
 end
 
 def get_genes(gtf_file)
@@ -137,6 +181,20 @@ def get_genes(gtf_file)
   genes
 end
 
+def all_fpkm(filenames,genes)
+  all_fpkm_values = {}
+  filenames.each do |file|
+    hts_obj = HTSseq.new(file)
+    hts_obj.read
+    hts_obj.genes.each_pair do |gene_name, count|
+      gene_obj = genes.select { |e| e.name == gene_name }[0]
+      all_fpkm_values[gene_name] = [] if !all_fpkm_values.has_key?(gene_name)
+      all_fpkm_values[gene_name] << fpkm(count,gene_obj.length,hts_obj.number_of_fragments)
+    end
+  end
+  all_fpkm_values
+end
+
 def run(argv)
   options = setup_options(argv)
   logger = setup_logger(options[:log_level])
@@ -145,13 +203,13 @@ def run(argv)
 
   genes = get_genes(options[:gtf_file])
 
+  all_fpkm_values = all_fpkm(argv,genes)
 
-  argv.each do |file|
 
-  end
+
 end
 
-#run(ARGV)
+run(ARGV)
 
 
 

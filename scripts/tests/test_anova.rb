@@ -27,6 +27,12 @@ class TestAnova < Test::Unit::TestCase
     assert_equal(genes[1].length, 913)
   end
 
+  def test_HTSseq()
+    htseq_obj = HTSseq.new("test_data/short.htseq")
+    htseq_obj.read()
+    assert_equal(htseq_obj.number_of_fragments,2767)
+  end
+
   def test_run()
 
   end
