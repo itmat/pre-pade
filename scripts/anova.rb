@@ -195,6 +195,18 @@ def all_fpkm(filenames,genes)
   all_fpkm_values
 end
 
+def format_groups(groups)
+  groups = groups.split(",").map { |e| e.to_i  }
+  rep = []
+  factors = []
+  groups.each_with_index do |e,i|
+    rep[i] = e
+    feature[i] = "F#{i}"
+  end
+
+  [feature, rep]
+end
+
 def run(argv)
   options = setup_options(argv)
   logger = setup_logger(options[:log_level])
@@ -205,11 +217,12 @@ def run(argv)
 
   all_fpkm_values = all_fpkm(argv,genes)
 
+  [factors, rep ] = format_groups(options[:groups])
 
 
 end
 
-run(ARGV)
+#run(ARGV)
 
 
 
