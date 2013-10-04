@@ -8,6 +8,9 @@ require 'logger'
 ####################################################
 
 R = RSRuby.instance()
+#RSRuby.set_default_mode(RSRuby::CLASS_CONVERSION)
+
+
 R.eval_R("scaleData <- function(x) {
   k = (x-min(x))/(max(x)-min(x))*100
   k/100 * 90 + 5
@@ -24,9 +27,31 @@ R.eval_R("runAnovaTest <- function(info,csv_file) {
   info
 }")
 
-R.eval_R("runAnova <- function(numbers,groups) {
-  podwt <- data.frame(num=c(numbers),groups=factor(groups))
+R.eval_R("q_vals <- function(p) {
+  fxp = ecdf(p)
+  q = p/fxp(p)
 }")
+
+def run_anova(numbers,groups,val)
+  #R = RSRuby.instance()
+  R.eval_R(<<-RCOMMAND)
+    runAnova <- function(numbers) {
+    podwt <- data.frame(num=numbers,groups=factor(c(#{groups})))
+    fitpodwt <- lm(num~groups, data=podwt)
+    d_anova <- anova(fitpodwt)
+    d_anova[1,5]
+  }
+RCOMMAND
+  #  fitpodwt <- lm(num~groups, data=podwt)
+  #  d_anova <- anova(fitpodwt)
+  #  d_anova[1,5]
+  #}")
+
+  p_value = R.runAnova(numbers)
+  p_value
+end
+
+
 
 ####################################################
 
@@ -200,15 +225,41 @@ def all_fpkm(filenames,genes)
 end
 
 def format_groups(groups)
+  #run_anova("1,2,1,3,4,4,10,4,12","rep(\"L\",3),rep(\"I\",3),rep(\"K\",3)",9)
   groups = groups.split(",").map { |e| e.to_i  }
   rep = []
   feature = []
   groups.each_with_index do |e,i|
     rep[i] = e
-    feature[i] = "F#{i}"
+    feature[i] = "rep(\"F#{i}\",#{e})"
   end
+  val = groups.length
+  feature = feature.join(",")
+  puts "feature: #{feature}"
+  rep = rep.join(",")
+  [feature, rep, val]
+end
 
-  [feature, rep]
+def p_values(all_fpkm_values,feature,val)
+  all_p_values = {}
+  all_fpkm_values.each_pair do |gene_name, nums|
+    next unless nums.any? { |e| e != 0 }
+    numbers = nums#.join(",")
+    p_value = run_anova(numbers,feature,val)
+    all_p_values[gene_name] = p_value
+  end
+  all_p_values
+end
+
+def q_values(all_p_values)
+  all_q_vals = R.q_vals(all_p_values.values)
+  all_with_q_values = {}
+  i = 0
+  all_p_values.each_pair do |key,value|
+    all_with_q_values[key] = [key, all_q_vals[i]]
+    i += 1
+  end
+  all_with_q_values
 end
 
 def run(argv)
@@ -221,12 +272,15 @@ def run(argv)
 
   all_fpkm_values = all_fpkm(argv,genes)
 
-  factors, rep = format_groups(options[:groups])
+  feature, rep, val = format_groups(options[:groups])
 
+  all_p_values = p_values(all_fpkm_values,feature,val)
 
+  #all_with_q_values = q_values(all_p_values)
+  print all_p_values
 end
 
-#run(ARGV)
+run(ARGV)
 
 
 

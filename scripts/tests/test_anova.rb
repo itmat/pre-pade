@@ -13,10 +13,10 @@ class TestAnova < Test::Unit::TestCase
     assert_equal(l,"df")
   end
 
-  def test_rsruby_anova()
-    test = R.runAnova("3,4,5,6,7,8","rep(\"I\",3),rep(\"K\",3)")
-    assert_equal(test,"df")
-  end
+  #def test_rsruby_anova()
+  #  test = run_anova([1,2,1,10,4,12],"rep(\"L\",3),rep(\"K\",3)",6)
+  #  assert_equal(test,0.03908894533720031)
+  #end
 
   def test_calc_length()
     starts = [1,5,9]
@@ -45,11 +45,31 @@ class TestAnova < Test::Unit::TestCase
     assert_equal(all_fpkm_values["CG9999-RA"],[0.02536311658242118, 0.03320909286790296])
   end
 
-  def test_format_groups()
-    feature, rep = format_groups("3,4,5")
-    assert_equal(feature[0],"F0")
-    assert_equal(rep[0],3)
+  #def test_format_groups()
+  #  feature, rep, val = format_groups("3,4,5")
+  #  assert_equal(val,3)
+  #  assert_equal(rep,"3,4,5")
+  #  assert_equal(feature,"rep(\"F0\",3),rep(\"F1\",4),rep(\"F2\",5)")
+  #end
+
+  def test_p_values()
+    genes = get_genes("test_data/dm3.gtf")
+    all_fpkm_values = all_fpkm(["test_data/short_67.htseq","test_data/short_67.htseq","test_data/short_67.htseq",
+      "test_data/short.htseq","test_data/short.htseq","test_data/short.htseq"],genes)
+    feature, rep, val = format_groups("3,3")
+    l = p_values(all_fpkm_values,feature,val)
+    assert_equal(l["CG9996-RB"],6.822293201375393e-63)
   end
+
+  #def test_q_values()
+  #  genes = get_genes("test_data/dm3.gtf")
+  #  all_fpkm_values = all_fpkm(["test_data/short_67.htseq","test_data/short_67.htseq","test_data/short_67.htseq",
+  #    "test_data/short.htseq","test_data/short.htseq","test_data/short.htseq"],genes)
+  #  feature, rep, val = format_groups("3,3")
+  #  all_p_values = p_values(all_fpkm_values,feature,val)
+  #  q_val = q_values(all_p_values)
+  #  assert_equal(q_val,10)
+  #end
 
   def test_run()
 
