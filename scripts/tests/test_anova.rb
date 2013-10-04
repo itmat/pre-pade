@@ -33,6 +33,19 @@ class TestAnova < Test::Unit::TestCase
     assert_equal(htseq_obj.number_of_fragments,2767)
   end
 
+  def test_all_fpkm()
+    genes = get_genes("test_data/dm3.gtf")
+    all_fpkm_values = all_fpkm(["test_data/short_67.htseq",
+      "test_data/short.htseq"],genes)
+    assert_equal(all_fpkm_values["CG9999-RA"],[0.02536311658242118, 0.03320909286790296])
+  end
+
+  def test_format_groups()
+    [feature, rep] = format_groups("3,4,5")
+    assert_equal(feature[0],"F1")
+    assert_equal(rep[0],5)
+  end
+
   def test_run()
 
   end
