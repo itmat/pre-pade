@@ -9,8 +9,13 @@ class TestAnova < Test::Unit::TestCase
   end
 
   def test_rsruby()
-    l = R.runAnova("df",123)
+    l = R.runAnovaTest("df",123)
     assert_equal(l,"df")
+  end
+
+  def test_rsruby_anova()
+    test = R.runAnova("3,4,5,6,7,8","rep(\"I\",3),rep(\"K\",3)")
+    assert_equal(test,"df")
   end
 
   def test_calc_length()

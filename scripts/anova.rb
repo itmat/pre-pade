@@ -20,8 +20,12 @@ R.eval_R("avgData <- function(d) {
   dd
 }")
 
-R.eval_R("runAnova <- function(info,csv_file) {
+R.eval_R("runAnovaTest <- function(info,csv_file) {
   info
+}")
+
+R.eval_R("runAnova <- function(numbers,groups) {
+  podwt <- data.frame(num=c(numbers),groups=factor(groups))
 }")
 
 ####################################################
