@@ -198,7 +198,7 @@ end
 def format_groups(groups)
   groups = groups.split(",").map { |e| e.to_i  }
   rep = []
-  factors = []
+  feature = []
   groups.each_with_index do |e,i|
     rep[i] = e
     feature[i] = "F#{i}"
@@ -217,7 +217,7 @@ def run(argv)
 
   all_fpkm_values = all_fpkm(argv,genes)
 
-  [factors, rep ] = format_groups(options[:groups])
+  factors, rep = format_groups(options[:groups])
 
 
 end

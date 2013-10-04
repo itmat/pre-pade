@@ -41,9 +41,9 @@ class TestAnova < Test::Unit::TestCase
   end
 
   def test_format_groups()
-    [feature, rep] = format_groups("3,4,5")
-    assert_equal(feature[0],"F1")
-    assert_equal(rep[0],5)
+    feature, rep = format_groups("3,4,5")
+    assert_equal(feature[0],"F0")
+    assert_equal(rep[0],3)
   end
 
   def test_run()
