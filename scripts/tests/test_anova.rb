@@ -45,12 +45,12 @@ class TestAnova < Test::Unit::TestCase
     assert_equal(all_fpkm_values["CG9999-RA"],[0.02536311658242118, 0.03320909286790296])
   end
 
-  #def test_format_groups()
-  #  feature, rep, val = format_groups("3,4,5")
-  #  assert_equal(val,3)
-  #  assert_equal(rep,"3,4,5")
-  #  assert_equal(feature,"rep(\"F0\",3),rep(\"F1\",4),rep(\"F2\",5)")
-  #end
+  def test_format_groups()
+    feature, rep, val = format_groups("3,4,5")
+    assert_equal(val,3)
+    assert_equal(rep,"3,4,5")
+    assert_equal(feature,"rep(\"F0\",3),rep(\"F1\",4),rep(\"F2\",5)")
+  end
 
   def test_p_values()
     genes = get_genes("test_data/dm3.gtf")

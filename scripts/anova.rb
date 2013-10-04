@@ -27,7 +27,7 @@ R.eval_R("runAnovaTest <- function(info,csv_file) {
   info
 }")
 
-R.eval_R("q_vals <- function(p) {
+R.eval_R("qVals <- function(p) {
   fxp = ecdf(p)
   q = p/fxp(p)
 }")
@@ -36,8 +36,10 @@ def run_anova(numbers,groups,val)
   #R = RSRuby.instance()
   R.eval_R(<<-RCOMMAND)
     runAnova <- function(numbers) {
-    podwt <- data.frame(num=numbers,groups=factor(c(#{groups})))
-    fitpodwt <- lm(num~groups, data=podwt)
+    num = numbers
+    groups = factor(c(#{groups}))
+    podwt <- data.frame(num = numbers,groups = factor(c(#{groups})))
+    fitpodwt <- lm(num ~ groups, data=podwt)
     d_anova <- anova(fitpodwt)
     d_anova[1,5]
   }
@@ -235,7 +237,7 @@ def format_groups(groups)
   end
   val = groups.length
   feature = feature.join(",")
-  puts "feature: #{feature}"
+  #puts "feature: #{feature}"
   rep = rep.join(",")
   [feature, rep, val]
 end
@@ -243,20 +245,32 @@ end
 def p_values(all_fpkm_values,feature,val)
   all_p_values = {}
   all_fpkm_values.each_pair do |gene_name, nums|
-    next unless nums.any? { |e| e != 0 }
+    #puts "gene_name: #{gene_name}"
+    #next unless nums.any? { |e| e != 0 }
+    #puts "gene_name: #{gene_name} YES"
     numbers = nums#.join(",")
+    #puts "Nums: #{numbers}"
     p_value = run_anova(numbers,feature,val)
+    p_value = 0 if p_value == []
+    #puts p_value
+
     all_p_values[gene_name] = p_value
   end
   all_p_values
 end
 
 def q_values(all_p_values)
-  all_q_vals = R.q_vals(all_p_values.values)
+  new_p_values = {}
+  all_p_values.each_pair do |k, v|
+    next if v == 0
+    new_p_values[k] = v
+  end
+
+  all_q_vals = R.qVals(new_p_values.values)
   all_with_q_values = {}
   i = 0
-  all_p_values.each_pair do |key,value|
-    all_with_q_values[key] = [key, all_q_vals[i]]
+  new_p_values.each_pair do |key,value|
+    all_with_q_values[key] = [value, all_q_vals[i]]
     i += 1
   end
   all_with_q_values
@@ -273,11 +287,12 @@ def run(argv)
   all_fpkm_values = all_fpkm(argv,genes)
 
   feature, rep, val = format_groups(options[:groups])
-
   all_p_values = p_values(all_fpkm_values,feature,val)
 
-  #all_with_q_values = q_values(all_p_values)
-  print all_p_values
+  all_with_q_values = q_values(all_p_values)
+  all_with_q_values.each_pair do |key,value|
+    puts "#{key}\t#{value.join("\t")}"
+  end
 end
 
 run(ARGV)
