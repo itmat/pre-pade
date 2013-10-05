@@ -251,6 +251,7 @@ def p_values(all_fpkm_values,feature,val)
     #puts "gene_name: #{gene_name}"
     #next unless nums.any? { |e| e != 0 }
     #puts "gene_name: #{gene_name} YES"
+    $logger.info("Working on #{gene_name}")
     numbers = nums#.join(",")
     #puts "Nums: #{numbers}"
     p_value = run_anova(numbers,feature,val)
