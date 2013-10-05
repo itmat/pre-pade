@@ -4,6 +4,8 @@ require 'rsruby'
 require 'optparse'
 require 'logger'
 
+
+$logger = Logger.new(STDERR)
 # R Functions
 ####################################################
 
@@ -59,18 +61,18 @@ end
 
 # Initialize logger
 def setup_logger(loglevel)
-  logger = Logger.new(STDERR)
+  
   case loglevel
   when "debug"
-    logger.level = Logger::DEBUG
+    $logger.level = Logger::DEBUG
   when "warn"
-    logger.level = Logger::WARN
+    $logger.level = Logger::WARN
   when "info"
-    logger.level = Logger::INFO
+    $logger.level = Logger::INFO
   else
-    logger.level = Logger::ERROR
+    $logger.level = Logger::ERROR
   end
-  logger
+  $logger
 end
 
 def setup_options(args)
@@ -253,7 +255,7 @@ def p_values(all_fpkm_values,feature,val)
     p_value = run_anova(numbers,feature,val)
     p_value = 0 if p_value == []
     #puts p_value
-
+    $logger.debug("P_value for #{numbers.join(",")} is #{p_value}")
     all_p_values[gene_name] = p_value
   end
   all_p_values
@@ -278,9 +280,9 @@ end
 
 def run(argv)
   options = setup_options(argv)
-  logger = setup_logger(options[:log_level])
-  logger.debug(options)
-  logger.debug(argv)
+  $logger = setup_logger(options[:log_level])
+  $logger.debug(options)
+  $logger.debug(argv)
 
   genes = get_genes(options[:gtf_file])
 
@@ -291,7 +293,7 @@ def run(argv)
 
   all_with_q_values = q_values(all_p_values)
   all_with_q_values.each_pair do |key,value|
-    puts "#{key}\t#{value.join("\t")}"
+    puts "#{key}\t#{value.join("\t")}\t#{all_fpkm_values[key].join("\t")}"
   end
 end
 
