@@ -217,6 +217,7 @@ end
 def all_fpkm(filenames,genes)
   all_fpkm_values = {}
   filenames.each do |file|
+    $logger.info("Working on #{file}")
     hts_obj = HTSseq.new(file)
     hts_obj.read
     hts_obj.genes.each_pair do |gene_name, count|
