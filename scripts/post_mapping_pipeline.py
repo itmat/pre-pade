@@ -22,9 +22,15 @@ def get_arguments():
         help="An output file_name. Default: 'run_job.sh'"
     )
     args.add_argument(
-        '--sungrid', '-s',
+        '--sungrid', '-g',
         action='store_true',
         help="Sun grid engine cluster?"
+    )
+    args.add_argument(
+        '--species', '-s',
+        type=str,
+        choices= ["hg19","mm9","drosophila"],
+        help="Species used in experiment"
     )
     args.add_argument(
         '--debug', '-d',
@@ -103,7 +109,10 @@ def main():
         f = open(out_file,'w')
         f.write(LSF_header)
         f.write(settings)
-        f.write("sam_filter.py -i RUM.sam -r RUM.rejected.sam -v -s drosophila\n")
+        species = ""
+        if args.species:
+            species = "-s "
+        f.write("sam_filter.py -i RUM.sam -r RUM.rejected.sam -v " + species + "\n")
         f.write("sam_filter_uniq.py RUM.filtered.sam RUM.separated\n")
         f.write("sam2mappingstats.pl RUM.separated.nuniq.sam > RUM.separated.nuniq_mapping_stats\n")
         f.write("sam2mappingstats.pl RUM.separated.uniq.sam > RUM.separated.uniq_mapping_stats\n")
