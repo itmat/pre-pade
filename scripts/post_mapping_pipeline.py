@@ -94,11 +94,11 @@ def main():
                     "#BSUB -q max_mem30\n")
         if args.sungrid:
             LSF_header=("#!/bin/sh\n\n"
-                    "#\$ -N " + job_name  + "\n"
-                    "#\$ -V\n"
-                    "#\$ -cwd\n"
-                    "#\$ -j y\n"
-                    "#\$ -l h_vmem=15G\n")
+                    "#$ -N " + job_name  + "\n"
+                    "#$ -V\n"
+                    "#$ -cwd\n"
+                    "#$ -j y\n"
+                    "#$ -l h_vmem=15G\n")
         logging.debug(LSF_header)
         out_file = base_dir + "/" + job_name + "_jobfile"
         logging.debug("Outfile: " + out_file)
