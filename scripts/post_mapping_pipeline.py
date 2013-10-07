@@ -22,6 +22,11 @@ def get_arguments():
         help="An output file_name. Default: 'run_job.sh'"
     )
     args.add_argument(
+        '--sungrid', '-s',
+        action='store_true',
+        help="Sun grid engine cluster?"
+    )
+    args.add_argument(
         '--debug', '-d',
         action='store_true',
         help="Print debugging information"
@@ -81,11 +86,20 @@ def main():
                     "#BSUB -oo outfile.%J\n"
                     "#BSUB -eo errorfile.%J\n"
                     "#BSUB -q max_mem30\n")
+        if args.sungrid:
+            LSF_header=("#!/bin/sh\n\n"
+                    "#\$ -N " + job_name  + "\n"
+                    "#\$ -V\n"
+                    "#\$ -cwd\n"
+                    "#\$ -j y\n"
+                    "#\$ -l h_vmem=15G\n")
         logging.debug(LSF_header)
         out_file = base_dir + "/" + job_name + "_jobfile"
         logging.debug("Outfile: " + out_file)
         settings=("module load python-2.7.5\n"
                   "export PYTHONPATH=~/my_python2.7/lib/python2.7/site-packages/\n")
+        if args.sungrid:
+            settings=""
         f = open(out_file,'w')
         f.write(LSF_header)
         f.write(settings)

@@ -103,3 +103,12 @@ feature that was covered by at least one read.
   reads that have a unique alignment as well as reads that have
   multiple alignments.
 
+## Scripts
+
+To run scripts on the cluster:
+
+    virtualenv ~/my_python2.6 --system-site-packages
+    export PYTHONPATH=~/my_python2.6/lib/python2.6/site-packages/
+    easy_install --install-dir ~/my_python2.6/lib/python2.6/site-packages argparse
+
+    
