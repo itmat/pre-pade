@@ -93,13 +93,12 @@ def main():
     logging.debug("I=%s ; O=%s" % (args.input, args.output))
 
     # handle species
-    if args.species:
-        if args.species == "drosophila":
-            logging.debug("You picked drosophila!")
-            re_conanical_chr  = re.compile(r'chr[2-4XYM][L,R]*[Het]*$')
-        else:
-            # A regex for grabbing canonical chromosomes from human/mouse
-            re_conanical_chr  = re.compile(r'chr[0-9XY]{1,2}$')
+    if args.species == "drosophila":
+        logging.debug("You picked drosophila!")
+        re_conanical_chr  = re.compile(r'chr[2-4XYM][L,R]*[Het]*$')
+    else:
+        # A regex for grabbing canonical chromosomes from human/mouse
+        re_conanical_chr  = re.compile(r'chr[0-9XY]{1,2}$')
 
     # When input filename given, handle missing output filename
     if not args.output:
