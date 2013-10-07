@@ -34,13 +34,24 @@ R.eval_R("qVals <- function(p) {
   q = p/fxp(p)
 }")
 
-def initialize_anova(groups)
+#def initialize_anova(groups)
+#   R.eval_R(<<-RCOMMAND)
+#    runAnova <- function(numbers) {
+#    num = numbers
+#    groups = factor(c(#{groups}))
+#    podwt <- data.frame(num = numbers,groups = factor(c(#{groups})))
+#    fitpodwt <- lm(num ~ groups, data=podwt)
+#    d_anova <- anova(fitpodwt)
+#    d_anova[1,5]
+#  }
+#RCOMMAND
+#end
+
+def initialize_anova(groups,val)
    R.eval_R(<<-RCOMMAND)
     runAnova <- function(numbers) {
-    num = numbers
-    groups = factor(c(#{groups}))
-    podwt <- data.frame(num = numbers,groups = factor(c(#{groups})))
-    fitpodwt <- lm(num ~ groups, data=podwt)
+    podwt <- data.frame(num = numbers,groups = factor(c(#{groups})),val=c(rep(1,#{val})))
+    fitpodwt <- lm(val~num * groups, data=podwt)
     d_anova <- anova(fitpodwt)
     d_anova[1,5]
   }
@@ -251,7 +262,7 @@ def format_groups(groups)
 end
 
 def p_values(all_fpkm_values,feature,val)
-  initialize_anova(feature)
+  initialize_anova(feature,val)
   all_p_values = {}
   all_fpkm_values.each_pair do |gene_name, nums|
     #puts "gene_name: #{gene_name}"
