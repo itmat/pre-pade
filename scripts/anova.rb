@@ -34,9 +34,8 @@ R.eval_R("qVals <- function(p) {
   q = p/fxp(p)
 }")
 
-def run_anova(numbers,groups,val)
-  #R = RSRuby.instance()
-  R.eval_R(<<-RCOMMAND)
+def initialize_anova(groups)
+   R.eval_R(<<-RCOMMAND)
     runAnova <- function(numbers) {
     num = numbers
     groups = factor(c(#{groups}))
@@ -46,6 +45,12 @@ def run_anova(numbers,groups,val)
     d_anova[1,5]
   }
 RCOMMAND
+end
+
+
+def run_anova(numbers,groups,val)
+  #R = RSRuby.instance()
+ 
   #  fitpodwt <- lm(num~groups, data=podwt)
   #  d_anova <- anova(fitpodwt)
   #  d_anova[1,5]
@@ -246,12 +251,14 @@ def format_groups(groups)
 end
 
 def p_values(all_fpkm_values,feature,val)
+  initialize_anova(feature)
   all_p_values = {}
   all_fpkm_values.each_pair do |gene_name, nums|
     #puts "gene_name: #{gene_name}"
     #next unless nums.any? { |e| e != 0 }
     #puts "gene_name: #{gene_name} YES"
     $logger.info("Working on #{gene_name}")
+    $logger.info("For these numbers #{nums.join}")
     numbers = nums#.join(",")
     #puts "Nums: #{numbers}"
     p_value = run_anova(numbers,feature,val)

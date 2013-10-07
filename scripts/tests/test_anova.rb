@@ -14,6 +14,7 @@ class TestAnova < Test::Unit::TestCase
   end
 
   #def test_rsruby_anova()
+  #   initialize_anova(groups)
   #  test = run_anova([1,2,1,10,4,12],"rep(\"L\",3),rep(\"K\",3)",6)
   #  assert_equal(test,0.03908894533720031)
   #end
