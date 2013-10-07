@@ -113,7 +113,10 @@ def main():
         old_dir = os.getcwd()
         os.chdir(base_dir)
         logging.debug("Current work dir: " + os.getcwd())
-        commando = "bsub < " + job_name + "_jobfile"
+        if args.sungrid:
+            commando = "qsub " + job_name + "_jobfile"
+        else:
+            commando = "bsub < " + job_name + "_jobfile"
         logging.debug(commando)
         logging.debug(os.system(commando))
         os.chdir(old_dir)
