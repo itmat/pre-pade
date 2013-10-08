@@ -88,7 +88,6 @@ def setup_logger(loglevel)
   else
     $logger.level = Logger::ERROR
   end
-  $logger
 end
 
 def setup_options(args)
