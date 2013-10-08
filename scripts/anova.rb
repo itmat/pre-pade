@@ -34,34 +34,34 @@ R.eval_R("qVals <- function(p) {
   q = p/fxp(p)
 }")
 
-def initialize_anova(groups)
-   R.eval_R(<<-RCOMMAND)
-    runAnova <- function(numbers) {
-    num = numbers
-    groups = factor(c(#{groups}))
-    podwt <- data.frame(num = numbers,groups = factor(c(#{groups})))
-    fitpodwt <- lm(num ~ groups, data=podwt)
-    d_anova <- anova(fitpodwt)
-    d_anova[1,5]
-  }
-RCOMMAND
-end
-
-#def initialize_anova(groups,val)
+#def initialize_anova(groups)
 #   R.eval_R(<<-RCOMMAND)
 #    runAnova <- function(numbers) {
-#    podwt <- data.frame(num = numbers,groups = factor(c(#{groups})),val=c(rep(1,#{val})))
-#    fitpodwt <- lm(val~num * groups, data=podwt)
+#    num = numbers
+#    groups = factor(c(#{groups}))
+#    podwt <- data.frame(num = numbers,groups = factor(c(#{groups})))
+#    fitpodwt <- lm(num ~ groups, data=podwt)
 #    d_anova <- anova(fitpodwt)
 #    d_anova[1,5]
 #  }
 #RCOMMAND
 #end
 
+def initialize_anova(groups,val)
+   R.eval_R(<<-RCOMMAND)
+    runAnova <- function(numbers) {
+    podwt <- data.frame(num = numbers,groups = factor(c(#{groups})),val=c(rep(1,#{val})))
+    fitpodwt <- lm(val~num * groups, data=podwt)
+    d_anova <- anova(fitpodwt)
+    d_anova[1,5]
+  }
+RCOMMAND
+end
+
 
 def run_anova(numbers,groups,val)
   #R = RSRuby.instance()
- 
+
   #  fitpodwt <- lm(num~groups, data=podwt)
   #  d_anova <- anova(fitpodwt)
   #  d_anova[1,5]
@@ -77,7 +77,7 @@ end
 
 # Initialize logger
 def setup_logger(loglevel)
-  
+
   case loglevel
   when "debug"
     $logger.level = Logger::DEBUG
@@ -262,7 +262,8 @@ def format_groups(groups)
 end
 
 def p_values(all_fpkm_values,feature,val)
-  initialize_anova(feature)
+  initialize_anova(feature,val)
+  #initialize_anova(feature)
   all_p_values = {}
   all_fpkm_values.each_pair do |gene_name, nums|
     #puts "gene_name: #{gene_name}"
