@@ -300,7 +300,7 @@ end
 
 def run(argv)
   options = setup_options(argv)
-  $logger = setup_logger(options[:log_level])
+  setup_logger(options[:log_level])
   $logger.debug(options)
   $logger.debug(argv)
 
