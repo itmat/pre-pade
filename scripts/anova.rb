@@ -51,11 +51,12 @@ def initialize_anova(groups,val)
    R.eval_R(<<-RCOMMAND)
     runAnova <- function(numbers) {
     podwt <- data.frame(num = numbers,groups = factor(c(#{groups})),val=c(rep(1,#{val})))
-    fitpodwt <- lm(val~num * groups, data=podwt)
+    fitpodwt <- lm(num~groups * val, data=podwt)
     d_anova <- anova(fitpodwt)
     d_anova[1,5]
   }
 RCOMMAND
+  #fitpodwt <- lm(val~num * groups, data=podwt)
 end
 
 
