@@ -238,7 +238,8 @@ def all_fpkm(filenames,genes)
     hts_obj.genes.each_pair do |gene_name, count|
       gene_obj = genes.select { |e| e.name == gene_name }[0]
       all_fpkm_values[gene_name] = [] if !all_fpkm_values.has_key?(gene_name)
-      all_fpkm_values[gene_name] << fpkm(count,gene_obj.length,hts_obj.number_of_fragments)
+      #all_fpkm_values[gene_name] << fpkm(count,gene_obj.length,hts_obj.number_of_fragments)
+      all_fpkm_values[gene_name] << count
     end
   end
   all_fpkm_values
