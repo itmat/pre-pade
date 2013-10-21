@@ -108,9 +108,14 @@ def main():
 
     mapping_stats_files = []
 
+    patterns = args.GLOB_PATTERN.replace("'","").split(" ")
     # grab the list of mapping stats files from the glob pattern
-    for fn in glob.glob(args.GLOB_PATTERN):
-        mapping_stats_files.append(fn)
+    for pat in patterns:
+        for fn in glob.glob(pat):
+            #print(fn)
+            mapping_stats_files.append(fn)
+    logging.info("\t".join(mapping_stats_files))
+
     headers = ['Sample Name',
         "Total read pairs",
         "Total aligned fragments",
