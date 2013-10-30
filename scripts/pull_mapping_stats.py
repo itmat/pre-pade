@@ -55,6 +55,11 @@ def format_percentage(num):
     logging.debug("Formatting as %: " + str(num))
     return ("%0.2f" % (num * 100))  + "%"
 
+def format_percentage_contig(num):
+    '''Formats a percentage for printing: used for %contig column only'''
+    logging.debug("Formatting as %: " + str(num))
+    return ("%0.4f" % (num * 100)) + "%"
+
 def format_integer(num):
     '''Formats an integer for printing'''
     logging.debug("Formatting as Integer: " + str(num))
@@ -260,7 +265,7 @@ def main():
             format_integer(total_non_unique),
             format_percentage(total_non_unique_percentage),
             format_percentage(chrm_reads_percentage),
-            format_percentage(contig_reads_percentage)]))
+            format_percentage_contig(contig_reads_percentage)]))
 
     report.writerow(['Minimums',
         min_reads_num,
@@ -292,7 +297,7 @@ def main():
         format_integer(min_non_unique),
         format_percentage(min_non_unique_per),
         format_percentage(min_chrm_percentage),
-        format_percentage(min_contig_percentage)]))
+        format_percentage_contig(min_contig_percentage)]))
     logging.info("\t".join(['Maximums',
         format_integer(max_reads_num),
         format_integer(max_aligned_num),
@@ -302,7 +307,7 @@ def main():
         format_integer(max_non_unique),
         format_percentage(max_non_unique_per),
         format_percentage(max_chrm_percentage),
-        format_percentage(max_contig_percentage),
+        format_percentage_contig(max_contig_percentage),
         ]))
 
 if __name__ == '__main__':
