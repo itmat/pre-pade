@@ -88,15 +88,23 @@ def determine_entries_status2(entry):
     return status
 
 def determine_entries_status(entries):
-    count = 0
+    #count = 0
     status = 'unmapped'
-    if not entries[0].is_unmapped:
-        status = 'uniq'
-    # check to see if this has more that one entry
-    if len(entries) > 2 and entries[0].is_paired:
-        status = 'nuniq'
-    elif len(entries) > 1 and not entries[0].is_paired:
-        status = 'nuniq'
+    entry = entries[0]
+    tags = entry.tags
+    for tag in tags:
+        if (tag[0] == 'HI' or tag[0] == "NH"):
+            if tag[1] == 1:
+                status = 'uniq'
+            else:
+                status = 'nuniq'
+    #if not entries[0].is_unmapped:
+    #    status = 'uniq'
+    ## check to see if this has more that one entry
+    #if len(entries) > 2 and entries[0].is_paired:
+    #    status = 'nuniq'
+    #elif len(entries) > 1 and not entries[0].is_paired:
+    #    status = 'nuniq'
     e = entries[0]
     logging.debug("E {e}: length={l} paired={p} secondary={s} mapped={m} status={t}".format(
         e=e.qname,
@@ -145,27 +153,22 @@ def main():
     # Classic Python iteration using PySAM's fetch() function is
     # **much** slower than using the loop below.
     last_entry = None
-    try: 
-        while True:
-            #entries, last_entry = get_next_alignments(src,last_entry)
-            #if not last_entry:
-            #    break
-            entry = src.next()
-            uniq_written = False
-            nu_written = False
-            status = determine_entries_status2(entry)
-            writer = None
-            if status == 'uniq':
-                write_entries(entry, uniq)
-                total_uniq += 1
-            elif status == 'nuniq':
-                write_entries(entry, nuniq)
-                total_nu += 1
-            elif 'unmapped':
-                total_unmapped += 1
-
-    except StopIteration,e:
-        pass
+    while True:
+        entries, last_entry = get_next_alignments(src,last_entry)
+        if not last_entry:
+            break
+        uniq_written = False
+        nu_written = False
+        status = determine_entries_status(entries)
+        writer = None
+        if status == 'uniq':
+            write_entries(entries, uniq)
+            total_uniq += 1
+        elif status == 'nuniq':
+            write_entries(entries, nuniq)
+            total_nu += 1
+        elif 'unmapped':
+            total_unmapped += 1
 
     src.close()
     uniq.close()
