@@ -75,6 +75,18 @@ def get_next_alignments(samfile,last_entry):
         last_entry = None
     return (entries,last_entry)
 
+def determine_entries_status2(entry):
+    status = 'unmapped'
+    tags = entry.tags
+    #logging.debug("NAME: " + valid_entry.qname)
+    for tag in old_tags:
+        if (tag[0] == 'HI' or tag[0] == "NH"):
+            if tag[1] == 1:
+                status = 'uniq'
+            else:
+                status = 'nuniq'
+    return status
+
 def determine_entries_status(entries):
     count = 0
     status = 'unmapped'
@@ -133,22 +145,28 @@ def main():
     # Classic Python iteration using PySAM's fetch() function is
     # **much** slower than using the loop below.
     last_entry = None
-    while True:
-        entries, last_entry = get_next_alignments(src,last_entry)
-        if not last_entry:
-            break
-        uniq_written = False
-        nu_written = False
-        status = determine_entries_status(entries)
-        writer = None
-        if status == 'uniq':
-            write_entries(entries, uniq)
-            total_uniq += 1
-        elif status == 'nuniq':
-            write_entries(entries, nuniq)
-            total_nu += 1
-        elif 'unmapped':
-            total_unmapped += 1
+    try: 
+        while True:
+            #entries, last_entry = get_next_alignments(src,last_entry)
+            #if not last_entry:
+            #    break
+            entry = src.next()
+            uniq_written = False
+            nu_written = False
+            status = determine_entries_status2(entry)
+            writer = None
+            if status == 'uniq':
+                write_entries(entry, uniq)
+                total_uniq += 1
+            elif status == 'nuniq':
+                write_entries(entry, nuniq)
+                total_nu += 1
+            elif 'unmapped':
+                total_unmapped += 1
+
+    except StopIteration,e:
+        pass
+
     src.close()
     uniq.close()
     nuniq.close()
