@@ -138,6 +138,7 @@ def main():
     try:
         while True:
             entry = src.next()
+            logging.debug(entry)
             #logging.debug(entry.tags)
             if not last_entry:
                 last_entry = entry

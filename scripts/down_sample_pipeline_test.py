@@ -45,6 +45,12 @@ def get_arguments():
         help="fai file with chromosome annotation (obtained from `samtools faidx *.fa`)."
     )
     args.add_argument(
+        '-i','--fa_file',
+        required=True,
+        type=argparse.FileType('r'),
+        help="The genome fasta file."
+    )
+    args.add_argument(
         '-d','--debug',
         action='store_true',
         help="Print debugging information"
@@ -176,7 +182,12 @@ def main():
         #f.write("htseq-count --stranded=no " + ms_fn + "_combined.sam " + str(args.gtf_file.name) + " > " + ms_fn + "_quantified_htseq\n")
         # MAPPING STATS
         f.write("sam2mappingstats.pl " + ms_fn + "_combined.sam > " + ms_fn + "_mapping_stats.txt\n")
-        
+        #junctions
+        f.write("cd /gpfs/fs121/hts/Tools/rum/bin\n")
+        f.write("perl make_RUM_junctions_file.pl --sam-in " + ms_fn + "_combined.sam --genome " + str(args.fa_file.name) + " --genes " + str(args.gtf_file.name) + " --all-rum-out " + ms_fn + "_combined_junctions_all.rum --all-bed-out " + ms_fn + "_combined_junctions_all.bed --high-bed-out " + ms_fn + "_combined_junctions-high-quality.bed --sam-out " + ms_fn + "_combined_junctions.sam\n")
+        f.write("perl rum_merge_junctions -output " + ms_fn + "_combined_junctions_all_sorted.rum " + ms_fn + "_combined_junctions_all.rum\n")
+        f.write("perl rum_junctions_to_bed -a " + ms_fn + "_combined_junctions_all.bed --high-quality " + ms_fn + "_combined_junctions-high-quality.bed " + ms_fn + "_combined_junctions_all_sorted.rum\n")
+
         f.flush()
         os.fsync(f.fileno())
         f.close
@@ -186,7 +197,7 @@ def main():
         if args.sungrid:
             commando = "qsub " + out_file
         logging.debug(commando)
-        logging.debug(os.system(commando))
+       # logging.debug(os.system(commando))
         #os.chdir(current_dir)
 
 if __name__ == '__main__':

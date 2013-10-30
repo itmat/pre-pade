@@ -68,19 +68,21 @@ def format_integer(num):
 def get_sample_name(bdir):
     logging.debug("Grabbing sample name from basedir: " + bdir)
     sn  = None
-    if os.path.exists(os.path.join(bdir,'rum_job_report.txt')):
-        fn = os.path.join(bdir,'rum_job_report.txt')
-        logging.debug("Grabbing sample name from file: " + fn )
-        data = open(fn,'rU').readlines()
-        sn= re.findall(r'Job name : (\S+)', data[9])[0]
-    elif os.path.exists(os.path.join(bdir,'rum.log_master')):
-        fn = os.path.join(bdir,'rum.log_master')
-        logging.debug("Grabbing sample name from file: " + fn )
-        data = open(fn,'rU').readlines()
-        sn =  re.findall(r'name: (\S+)', data[6])[0]
-    else:
-        raise Exception("Log file not found. Can't determine sample name")
+    sn = bdir.split("/")[0]
     logging.debug("Grabbed sample_name: " + sn)
+#    if os.path.exists(os.path.join(bdir,'rum_job_report.txt')):
+#        fn = os.path.join(bdir,'rum_job_report.txt')
+#        logging.debug("Grabbing sample name from file: " + fn )
+#        data = open(fn,'rU').readlines()
+#        sn= re.findall(r'Job name : (\S+)', data[9])[0]
+#    elif os.path.exists(os.path.join(bdir,'rum.log_master')):
+#        fn = os.path.join(bdir,'rum.log_master')
+#        logging.debug("Grabbing sample name from file: " + fn )
+#        data = open(fn,'rU').readlines()
+#        sn =  re.findall(r'name: (\S+)', data[6])[0]
+#    else:
+#        raise Exception("Log file not found. Can't determine sample name")
+#    logging.debug("Grabbed sample_name: " + sn)
     return sn
 
 def main():
