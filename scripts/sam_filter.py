@@ -157,7 +157,7 @@ def main():
                             tag[1] = tag[1] - multi_count/2
                             tag = (tag[0],int(tag[1]))
                             #logging.debug("After " + str(tag))
-                        if tag[0] == 'HI' and entry_rejected :
+                        if (tag[0] == 'HI' or tag[0] == "NH") and entry_rejected :
                             #logging.debug("yes")
                             tag = list(tag)
                             tag[1] = valid_count
