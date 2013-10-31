@@ -68,7 +68,7 @@ def format_integer(num):
 def get_sample_name(bdir):
     logging.debug("Grabbing sample name from basedir: " + bdir)
     sn  = None
-    sn = bdir.split("/")[0]
+    sn = bdir.split("/")[1]
     logging.debug("Grabbed sample_name: " + sn)
 #    if os.path.exists(os.path.join(bdir,'rum_job_report.txt')):
 #        fn = os.path.join(bdir,'rum_job_report.txt')
