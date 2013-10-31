@@ -93,7 +93,7 @@ def determine_entries_status(entries):
     entry = entries[0]
     tags = entry.tags
     for tag in tags:
-        if (tag[0] == 'HI' or tag[0] == "NH"):
+        if (tag[0] == 'IH' or tag[0] == "NH"):
             if tag[1] == 1:
                 status = 'uniq'
             else:
@@ -155,8 +155,8 @@ def main():
     last_entry = None
     while True:
         entries, last_entry = get_next_alignments(src,last_entry)
-        if not last_entry:
-            break
+        #if not last_entry:
+        #    break
         uniq_written = False
         nu_written = False
         status = determine_entries_status(entries)
@@ -169,6 +169,8 @@ def main():
             total_nu += 1
         elif 'unmapped':
             total_unmapped += 1
+        if not last_entry:
+            break
 
     src.close()
     uniq.close()
