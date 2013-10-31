@@ -234,6 +234,10 @@ def main():
                         first = False
                 valid_entry.tags = valid_entry.tags + [tag]
             target.write(valid_entry)
+        if valid_written:
+            total_output_tally += 1
+        elif entry_rejected:
+            rejected_output_tally += 1
 
 
 
