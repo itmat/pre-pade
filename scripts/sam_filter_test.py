@@ -236,9 +236,10 @@ def main():
             target.write(valid_entry)
         if valid_written:
             total_output_tally += 1
-        elif entry_rejected:
+    else:
+        if entry_rejected:
             rejected_output_tally += 1
-
+            totally_rejected_tally += 1
 
 
 
