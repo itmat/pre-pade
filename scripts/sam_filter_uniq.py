@@ -75,17 +75,17 @@ def get_next_alignments(samfile,last_entry):
         last_entry = None
     return (entries,last_entry)
 
-def determine_entries_status2(entry):
-    status = 'unmapped'
-    tags = entry.tags
-    #logging.debug("NAME: " + valid_entry.qname)
-    for tag in old_tags:
-        if (tag[0] == 'HI' or tag[0] == "NH"):
-            if tag[1] == 1:
-                status = 'uniq'
-            else:
-                status = 'nuniq'
-    return status
+#def determine_entries_status2(entry):
+#    status = 'unmapped'
+#    tags = entry.tags
+#    #logging.debug("NAME: " + valid_entry.qname)
+#    for tag in old_tags:
+#        if (tag[0] == 'HI' or tag[0] == "NH"):
+#            if tag[1] == 1:
+#                status = 'uniq'
+#            else:
+#                status = 'nuniq'
+#    return status
 
 def determine_entries_status(entries):
     #count = 0

@@ -183,11 +183,11 @@ def main():
                 #elif entry_rejected and not valid_written and not reject_written:
                 #   totally_rejected_tally += 1
             
-            last_entry = entry
-            
-            valid_written = False
-            reject_written = False
-            entry_rejected = False
+                last_entry = entry
+                
+                valid_written = False
+                reject_written = False
+                entry_rejected = False
             
             if valid_chrs.has_key(entry.rname):
                 valid_entries.append(entry)
