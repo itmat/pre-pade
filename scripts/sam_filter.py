@@ -155,6 +155,7 @@ def main():
                         if tag[0] == 'IH' and entry_rejected :
                             #logging.debug("Before " + str(tag))
                             tag = list(tag)
+                            # multi_count for rejected scaffolds
                             tag[1] = tag[1] - multi_count/2
                             tag = (tag[0],int(tag[1]))
                             #logging.debug("After " + str(tag))
@@ -173,18 +174,21 @@ def main():
                     target.write(valid_entry)
                 valid_entries = []
                 multi_count = 0
-                entry_rejected = False
+                
                 if valid_written:
                     total_output_tally += 1
-                elif reject_written:
+                elif entry_rejected:
                     rejected_output_tally += 1
                     totally_rejected_tally += 1
-                elif entry_rejected and not valid_written and not reject_written:
-                    totally_rejected_tally += 1
+                #elif entry_rejected and not valid_written and not reject_written:
+                #   totally_rejected_tally += 1
+            
             last_entry = entry
-
+            
             valid_written = False
             reject_written = False
+            entry_rejected = False
+            
             if valid_chrs.has_key(entry.rname):
                 valid_entries.append(entry)
                 #target.write(entry)
@@ -200,6 +204,44 @@ def main():
 
     except StopIteration,e:
         pass
+
+    if valid_entries != []:
+        valid_count = len(valid_entries)/2
+        #logging.debug(valid_count)
+        first = True
+        for valid_entry in valid_entries:
+            old_tags = valid_entry.tags
+            valid_entry.tags = []
+            #logging.debug("NAME: " + valid_entry.qname)
+            for tag in old_tags:
+                if tag[0] == 'IH' and entry_rejected :
+                    #logging.debug("Before " + str(tag))
+                    tag = list(tag)
+                    # multi_count for rejected scaffolds
+                    tag[1] = tag[1] - multi_count/2
+                    tag = (tag[0],int(tag[1]))
+                    #logging.debug("After " + str(tag))
+                if (tag[0] == 'HI' or tag[0] == "NH") and entry_rejected :
+                    #logging.debug("yes")
+                    tag = list(tag)
+                    tag[1] = valid_count
+                    tag = (tag[0],int(tag[1]))
+                    #logging.debug("HI: " + str(tag))
+                    if not first:
+                        valid_count -= 1
+                        first = True
+                    else:
+                        first = False
+                valid_entry.tags = valid_entry.tags + [tag]
+            target.write(valid_entry)
+        if valid_written:
+            total_output_tally += 1
+    else:
+        if entry_rejected:
+            rejected_output_tally += 1
+            totally_rejected_tally += 1
+
+
 
     src.close()
     target.close()
