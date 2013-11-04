@@ -135,29 +135,46 @@ def main():
     valid_entries = []
     multi_count = 0
     entry_rejected = False
+    paired = False
     try:
         while True:
             entry = src.next()
-            logging.debug(entry)
+            #logging.debug(entry)
             #logging.debug(entry.tags)
             if not last_entry:
                 last_entry = entry
 
             if last_entry.qname != entry.qname:
-                valid_count = len(valid_entries)/2
+
+                if len(valid_entries)>0 and valid_entries[0].is_paired:
+                    valid_count = len(valid_entries)/2
+                    count = valid_count*2 + 1
+                    paired = True
+                else:
+                    valid_count = len(valid_entries)
+                    count = valid_count
+                    paired = False
+                if multi_count > 0:
+                    entry_rejected = True
                 #logging.debug(valid_count)
                 first = True
+
                 for valid_entry in valid_entries:
                     old_tags = valid_entry.tags
                     valid_entry.tags = []
-                    #logging.debug("NAME: " + valid_entry.qname)
+                    logging.debug("NAME: " + valid_entry.qname)
+                    logging.debug(valid_entry.tags)
                     for tag in old_tags:
                         if tag[0] == 'IH' and entry_rejected :
                             #logging.debug("Before " + str(tag))
                             tag = list(tag)
                             # multi_count for rejected scaffolds
-                            tag[1] = tag[1] - multi_count/2
+                            if paired:
+                                tag[1] = count/2
+                            else:
+                                tag[1] = count
                             tag = (tag[0],int(tag[1]))
+                            count -= 1
                             #logging.debug("After " + str(tag))
                         if (tag[0] == 'HI' or tag[0] == "NH") and entry_rejected :
                             #logging.debug("yes")
@@ -171,10 +188,11 @@ def main():
                             else:
                                 first = False
                         valid_entry.tags = valid_entry.tags + [tag]
+                        logging.debug(valid_entry.tags)
                     target.write(valid_entry)
                 valid_entries = []
                 multi_count = 0
-                
+
                 if valid_written:
                     total_output_tally += 1
                 elif entry_rejected:
@@ -182,17 +200,18 @@ def main():
                     totally_rejected_tally += 1
                 #elif entry_rejected and not valid_written and not reject_written:
                 #   totally_rejected_tally += 1
-            
+
                 last_entry = entry
-                
+
                 valid_written = False
                 reject_written = False
                 entry_rejected = False
-            
+
             if valid_chrs.has_key(entry.rname):
                 valid_entries.append(entry)
                 #target.write(entry)
                 valid_written = True
+                entry_rejected = False
             else:
                 #logging.debug("I got rejected " + str(entry))
                 entry_rejected = True
