@@ -194,8 +194,6 @@ def main():
 
 
                     target.write(valid_entry)
-                    if valid_entry.qname == "HWI-ST965:404:c1jc0acxx:5:1101:10000:64374":
-                        exit(1)
                 valid_entries = []
                 multi_count = 0
 
