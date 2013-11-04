@@ -229,20 +229,35 @@ def main():
         pass
 
     if valid_entries != []:
-        valid_count = len(valid_entries)/2
+
+        if len(valid_entries)>0 and valid_entries[0].is_paired:
+            valid_count = len(valid_entries)/2
+            count = valid_count*2 + 1
+            paired = True
+        else:
+            valid_count = len(valid_entries)
+            count = valid_count
+            paired = False
+        if multi_count > 0:
+            entry_rejected = True
         #logging.debug(valid_count)
         first = True
         for valid_entry in valid_entries:
             old_tags = valid_entry.tags
             valid_entry.tags = []
-            #logging.debug("NAME: " + valid_entry.qname)
+            logging.debug("NAME: " + valid_entry.qname)
+            logging.debug(valid_entry.tags)
             for tag in old_tags:
                 if tag[0] == 'IH' and entry_rejected :
                     #logging.debug("Before " + str(tag))
                     tag = list(tag)
                     # multi_count for rejected scaffolds
-                    tag[1] = tag[1] - multi_count/2
+                    if paired:
+                        tag[1] = count/2
+                    else:
+                        tag[1] = count
                     tag = (tag[0],int(tag[1]))
+                    count -= 1
                     #logging.debug("After " + str(tag))
                 if (tag[0] == 'HI' or tag[0] == "NH") and entry_rejected :
                     #logging.debug("yes")
@@ -256,7 +271,9 @@ def main():
                     else:
                         first = False
                 valid_entry.tags = valid_entry.tags + [tag]
+                logging.debug(valid_entry.tags)
             target.write(valid_entry)
+
         if valid_written:
             total_output_tally += 1
     else:
