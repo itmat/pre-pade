@@ -162,12 +162,10 @@ def main():
                 for valid_entry in valid_entries:
                     old_tags = valid_entry.tags
                     valid_entry.tags = []
-
-
-                    logging.debug("NAME: " + valid_entry.qname)
-                    logging.debug(valid_entry.tags)
+                    #logging.debug("NAME: " + valid_entry.qname)
+                    #logging.debug(old_tags)
                     for tag in old_tags:
-                        if tag[0] == 'IH' and entry_rejected :
+                        if tag[0] == 'HI' and entry_rejected :
                             #logging.debug("Before " + str(tag))
                             tag = list(tag)
                             # multi_count for rejected scaffolds
@@ -177,23 +175,27 @@ def main():
                                 tag[1] = count
                             tag = (tag[0],int(tag[1]))
                             count -= 1
+                            #logging.debug(count)
                             #logging.debug("After " + str(tag))
-                        if (tag[0] == 'HI' or tag[0] == "NH") and entry_rejected :
+                        if (tag[0] == 'IH' or tag[0] == "NH") and entry_rejected :
                             #logging.debug("yes")
                             tag = list(tag)
                             tag[1] = valid_count
                             tag = (tag[0],int(tag[1]))
                             #logging.debug("HI: " + str(tag))
-                            if not first:
+                            if not first and paired:
                                 valid_count -= 1
                                 first = True
                             else:
                                 first = False
                         valid_entry.tags = valid_entry.tags + [tag]
-                        logging.debug(valid_entry.tags)
+                    #logging.debug(valid_entry.tags)
+
 
 
                     target.write(valid_entry)
+                #if len(valid_entries) > 0 and valid_entries[0].qname == "HWI-ST965:404:c1jc0acxx:5:1101:10094:12400":
+                #    exit(1)
                 valid_entries = []
                 multi_count = 0
 
@@ -215,7 +217,7 @@ def main():
                 valid_entries.append(entry)
                 #target.write(entry)
                 valid_written = True
-                entry_rejected = False
+                #entry_rejected = False
             else:
                 #logging.debug("I got rejected " + str(entry))
                 entry_rejected = True
@@ -245,10 +247,10 @@ def main():
         for valid_entry in valid_entries:
             old_tags = valid_entry.tags
             valid_entry.tags = []
-            logging.debug("NAME: " + valid_entry.qname)
-            logging.debug(valid_entry.tags)
+            #logging.debug("NAME: " + valid_entry.qname)
+            #logging.debug(old_tags)
             for tag in old_tags:
-                if tag[0] == 'IH' and entry_rejected :
+                if tag[0] == 'HI' and entry_rejected :
                     #logging.debug("Before " + str(tag))
                     tag = list(tag)
                     # multi_count for rejected scaffolds
@@ -258,20 +260,21 @@ def main():
                         tag[1] = count
                     tag = (tag[0],int(tag[1]))
                     count -= 1
+                    #logging.debug(count)
                     #logging.debug("After " + str(tag))
-                if (tag[0] == 'HI' or tag[0] == "NH") and entry_rejected :
+                if (tag[0] == 'IH' or tag[0] == "NH") and entry_rejected :
                     #logging.debug("yes")
                     tag = list(tag)
                     tag[1] = valid_count
                     tag = (tag[0],int(tag[1]))
                     #logging.debug("HI: " + str(tag))
-                    if not first:
+                    if not first and paired:
                         valid_count -= 1
                         first = True
                     else:
                         first = False
                 valid_entry.tags = valid_entry.tags + [tag]
-                logging.debug(valid_entry.tags)
+            #logging.debug(valid_entry.tags)
             target.write(valid_entry)
 
         if valid_written:
