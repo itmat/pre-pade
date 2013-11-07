@@ -127,7 +127,7 @@ def main():
         else:
             commando = "bsub < " + job_name + "_jobfile"
         logging.debug(commando)
-        logging.debug(os.system(commando))
+        #logging.debug(os.system(commando))
         os.chdir(old_dir)
         
 if __name__ == '__main__':

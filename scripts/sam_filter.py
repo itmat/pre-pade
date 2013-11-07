@@ -136,6 +136,7 @@ def main():
     multi_count = 0
     entry_rejected = False
     paired = False
+    valid_written = False
     try:
         while True:
             entry = src.next()
